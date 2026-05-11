@@ -22,8 +22,8 @@ from werkzeug.utils import secure_filename
 
 
 APP_NAME = "discourseLab"
-APP_PHASE = "5"
-CURRENT_PHASE_LABEL = "Phase 5 — Memos and basic codebook"
+APP_PHASE = "6"
+CURRENT_PHASE_LABEL = "Phase 6 — Grounded Theory workspace"
 DEFAULT_PROJECT_NAME = "Demo Project"
 DEFAULT_PROJECT_DESCRIPTION = "Initial local discourseLab project."
 DEFAULT_CODE_COLOR = "#f4c542"
@@ -46,6 +46,15 @@ MEMO_STATUSES = {
     "use_in_article": "Use in article",
     "archived": "Archived",
 }
+GT_COLUMNS = [
+    "gt_conditions",
+    "gt_context",
+    "gt_actions_interactions",
+    "gt_consequences",
+    "gt_properties",
+    "gt_dimensions",
+    "gt_theoretical_note",
+]
 
 BASE_DIR = Path(__file__).resolve().parent
 INSTANCE_DIR = BASE_DIR / "instance"
@@ -81,6 +90,7 @@ def create_app() -> Flask:
         latest_coded_segments = get_latest_coded_segments(active_project["id"])
         latest_memos = get_latest_memos(active_project["id"])
         codes_missing_definitions = get_codes_missing_definitions(active_project["id"])
+        gt_preview = get_gt_structure_preview(active_project["id"])
         return render_template(
             "dashboard.html",
             title="Dashboard",
@@ -94,6 +104,7 @@ def create_app() -> Flask:
             latest_coded_segments=latest_coded_segments,
             latest_memos=latest_memos,
             codes_missing_definitions=codes_missing_definitions,
+            gt_preview=gt_preview,
             current_phase=CURRENT_PHASE_LABEL,
             memo_type_labels=MEMO_TYPES,
             memo_status_labels=MEMO_STATUSES,
@@ -286,13 +297,15 @@ def create_app() -> Flask:
     @app.route("/codes")
     def codes():
         active_project = get_active_project()
-        open_codes = get_open_codes_for_project(active_project["id"])
+        code_type_filter = request.args.get("code_type", "all").strip()
+        codes_rows = get_codes_for_project(active_project["id"], code_type_filter)
         return render_template(
             "codes.html",
             title="Codes",
             active_page="codes",
             active_project=active_project,
-            open_codes=open_codes,
+            codes=codes_rows,
+            code_type_filter=code_type_filter,
             default_code_color=DEFAULT_CODE_COLOR,
         )
 
@@ -342,6 +355,11 @@ def create_app() -> Flask:
             usage_count=get_code_usage_count(code_id),
             code_memos=get_memos_for_entity(active_project["id"], "code", code_id),
             coded_segments=get_segments_for_code(code_id, active_project["id"]),
+            parent_code=get_parent_code(code["parent_id"], active_project["id"]) if code["parent_id"] else None,
+            child_open_codes=get_child_codes(code_id, active_project["id"], "open"),
+            child_axial_codes=get_child_codes(code_id, active_project["id"], "axial"),
+            category_open_codes=get_open_codes_under_category(code_id, active_project["id"]),
+            hierarchy_segments=get_hierarchy_segments_for_code(code, active_project["id"]),
             memo_type_labels=MEMO_TYPES,
             memo_status_labels=MEMO_STATUSES,
         )
@@ -360,6 +378,8 @@ def create_app() -> Flask:
             active_page="codes",
             active_project=active_project,
             code=code,
+            axial_codes=get_gt_axial_codes(active_project["id"]),
+            categories=get_gt_categories(active_project["id"]),
         )
 
     @app.route("/codes/<int:code_id>/edit", methods=["POST"])
@@ -373,6 +393,7 @@ def create_app() -> Flask:
         name = request.form.get("name", "").strip()
         description = request.form.get("description", "").strip()
         color = normalize_code_color(request.form.get("color", ""))
+        parent_id_raw = request.form.get("parent_id", "").strip()
         definition = request.form.get("definition", "").strip()
         include_when = request.form.get("include_when", "").strip()
         exclude_when = request.form.get("exclude_when", "").strip()
@@ -381,14 +402,26 @@ def create_app() -> Flask:
         if not name:
             flash("Code name is required.", "error")
             return redirect(url_for("edit_code", code_id=code_id))
+        parent_id = None
+        if parent_id_raw:
+            if not parent_id_raw.isdigit():
+                flash("Invalid GT hierarchy operation.", "error")
+                return redirect(url_for("edit_code", code_id=code_id))
+            parent_id = int(parent_id_raw)
+            valid, message = validate_parent_assignment(
+                code_id, code["code_type"], parent_id, active_project["id"]
+            )
+            if not valid:
+                flash(message, "error")
+                return redirect(url_for("edit_code", code_id=code_id))
 
         execute_write(
             """
             UPDATE codes
             SET name = ?, description = ?, color = ?, definition = ?,
                 include_when = ?, exclude_when = ?, example = ?,
-                analytical_note = ?, updated_at = CURRENT_TIMESTAMP
-            WHERE id = ? AND project_id = ? AND code_type = 'open'
+                analytical_note = ?, parent_id = ?, updated_at = CURRENT_TIMESTAMP
+            WHERE id = ? AND project_id = ?
             """,
             (
                 name,
@@ -399,6 +432,7 @@ def create_app() -> Flask:
                 exclude_when,
                 example,
                 analytical_note,
+                parent_id,
                 code_id,
                 active_project["id"],
             ),
@@ -422,9 +456,20 @@ def create_app() -> Flask:
             abort(404)
 
         db = get_db()
-        db.execute("DELETE FROM segment_codes WHERE code_id = ?", (code_id,))
+        if code["code_type"] == "open":
+            db.execute("DELETE FROM segment_codes WHERE code_id = ?", (code_id,))
+        if code["code_type"] == "axial":
+            db.execute(
+                "UPDATE codes SET parent_id = NULL WHERE parent_id = ? AND code_type = 'open'",
+                (code_id,),
+            )
+        if code["code_type"] == "category":
+            db.execute(
+                "UPDATE codes SET parent_id = NULL WHERE parent_id = ? AND code_type = 'axial'",
+                (code_id,),
+            )
         db.execute(
-            "DELETE FROM codes WHERE id = ? AND project_id = ? AND code_type = 'open'",
+            "DELETE FROM codes WHERE id = ? AND project_id = ?",
             (code_id, active_project["id"]),
         )
         db.commit()
@@ -433,9 +478,9 @@ def create_app() -> Flask:
             entity_type="code",
             entity_id=code_id,
             action="delete_open_code",
-            details=f"Deleted open code: {code['name']}",
+            details=f"Deleted {code['code_type']} code: {code['name']}",
         )
-        flash(f"Deleted open code: {code['name']}", "success")
+        flash(f"Deleted code: {code['name']}", "success")
         return redirect(url_for("codes"))
 
     @app.route("/segments/<int:segment_id>/codes", methods=["POST"])
@@ -651,15 +696,138 @@ def create_app() -> Flask:
 
     @app.route("/gt")
     def gt_workspace():
-        return render_placeholder(
+        active_project = get_active_project()
+        return render_template(
             "gt_workspace.html",
             title="Grounded Theory Workspace",
             active_page="gt",
-            panel_title="Grounded Theory Workspace",
-            panel_body=(
-                "This workspace will support open coding, axial coding, category development, "
-                "constant comparison, and theoretical memo-writing."
-            ),
+            active_project=active_project,
+            open_codes=get_gt_open_codes(active_project["id"]),
+            axial_codes=get_gt_axial_codes(active_project["id"]),
+            categories=get_gt_categories(active_project["id"]),
+            default_code_color=DEFAULT_CODE_COLOR,
+        )
+
+    @app.route("/gt/axial/create", methods=["POST"])
+    def create_axial_code():
+        return create_gt_code("axial", "create_axial_code", "Created axial code")
+
+    @app.route("/gt/category/create", methods=["POST"])
+    def create_category_code():
+        return create_gt_code("category", "create_category", "Created category")
+
+    @app.route("/gt/open/<int:open_code_id>/assign-axial", methods=["POST"])
+    def assign_open_to_axial(open_code_id: int):
+        return assign_code_parent(
+            child_id=open_code_id,
+            child_type="open",
+            parent_type="axial",
+            form_field="axial_code_id",
+            action="assign_open_to_axial",
+            success_template="Assigned open code {child} to axial code {parent}",
+        )
+
+    @app.route("/gt/open/<int:open_code_id>/unassign", methods=["POST"])
+    def unassign_open_from_axial(open_code_id: int):
+        return unassign_code_parent(open_code_id, "open", "unassign_open_from_axial")
+
+    @app.route("/gt/axial/<int:axial_code_id>/assign-category", methods=["POST"])
+    def assign_axial_to_category(axial_code_id: int):
+        return assign_code_parent(
+            child_id=axial_code_id,
+            child_type="axial",
+            parent_type="category",
+            form_field="category_code_id",
+            action="assign_axial_to_category",
+            success_template="Assigned axial code {child} to category {parent}",
+        )
+
+    @app.route("/gt/axial/<int:axial_code_id>/unassign", methods=["POST"])
+    def unassign_axial_from_category(axial_code_id: int):
+        return unassign_code_parent(axial_code_id, "axial", "unassign_axial_from_category")
+
+    @app.route("/gt/codes/<int:code_id>/edit")
+    def edit_gt_code(code_id: int):
+        active_project = get_active_project()
+        code = get_code_for_project(code_id, active_project["id"])
+        if code is None:
+            flash("Code not found.", "error")
+            abort(404)
+        if code["code_type"] == "open":
+            return redirect(url_for("edit_code", code_id=code_id))
+        return render_template(
+            "gt_code_edit.html",
+            title=f"Edit GT Code: {code['name']}",
+            active_page="gt",
+            active_project=active_project,
+            code=code,
+        )
+
+    @app.route("/gt/codes/<int:code_id>/edit", methods=["POST"])
+    def update_gt_code(code_id: int):
+        active_project = get_active_project()
+        code = get_code_for_project(code_id, active_project["id"])
+        if code is None or code["code_type"] not in {"axial", "category"}:
+            flash("Code not found.", "error")
+            abort(404)
+
+        name = request.form.get("name", "").strip()
+        if not name:
+            flash("Code name is required.", "error")
+            return redirect(url_for("edit_gt_code", code_id=code_id))
+        values = (
+            name,
+            request.form.get("description", "").strip(),
+            normalize_code_color(request.form.get("color", "")),
+            request.form.get("definition", "").strip(),
+            request.form.get("analytical_note", "").strip(),
+            request.form.get("gt_conditions", "").strip(),
+            request.form.get("gt_context", "").strip(),
+            request.form.get("gt_actions_interactions", "").strip(),
+            request.form.get("gt_consequences", "").strip(),
+            request.form.get("gt_properties", "").strip(),
+            request.form.get("gt_dimensions", "").strip(),
+            request.form.get("gt_theoretical_note", "").strip(),
+            code_id,
+            active_project["id"],
+        )
+        execute_write(
+            """
+            UPDATE codes
+            SET name = ?, description = ?, color = ?, definition = ?,
+                analytical_note = ?, gt_conditions = ?, gt_context = ?,
+                gt_actions_interactions = ?, gt_consequences = ?,
+                gt_properties = ?, gt_dimensions = ?, gt_theoretical_note = ?,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = ? AND project_id = ?
+            """,
+            values,
+        )
+        log_action(
+            active_project["id"],
+            "code",
+            code_id,
+            "update_gt_code",
+            f"Updated GT code: {name}",
+        )
+        flash(f"Updated GT code: {name}", "success")
+        return redirect(url_for("gt_workspace"))
+
+    @app.route("/gt/compare")
+    def gt_compare():
+        active_project = get_active_project()
+        open_codes = get_open_codes_for_project(active_project["id"])
+        code_a = get_compare_code(request.args.get("code_a"), active_project["id"])
+        code_b = get_compare_code(request.args.get("code_b"), active_project["id"])
+        return render_template(
+            "gt_compare.html",
+            title="Constant Comparison",
+            active_page="gt",
+            active_project=active_project,
+            open_codes=open_codes,
+            code_a=code_a,
+            code_b=code_b,
+            memo_status_labels=MEMO_STATUSES,
         )
 
     @app.route("/cda")
@@ -749,6 +917,13 @@ def run_migrations() -> None:
     if "name" not in segment_columns:
         db.execute("ALTER TABLE segments ADD COLUMN name TEXT")
         db.commit()
+    code_columns = {
+        row["name"] for row in db.execute("PRAGMA table_info(codes)").fetchall()
+    }
+    for column in GT_COLUMNS:
+        if column not in code_columns:
+            db.execute(f"ALTER TABLE codes ADD COLUMN {column} TEXT")
+    db.commit()
 
 
 def query_one(sql: str, params: tuple = ()) -> sqlite3.Row | None:
@@ -809,6 +984,14 @@ def get_dashboard_counts(project_id: int) -> dict[str, int]:
             FROM codes
             WHERE project_id = ? AND code_type = 'open'
             """,
+            (project_id,),
+        )["count"],
+        "axial_codes": query_one(
+            "SELECT COUNT(*) AS count FROM codes WHERE project_id = ? AND code_type = 'axial'",
+            (project_id,),
+        )["count"],
+        "categories": query_one(
+            "SELECT COUNT(*) AS count FROM codes WHERE project_id = ? AND code_type = 'category'",
             (project_id,),
         )["count"],
         "segments": query_one(
@@ -1040,14 +1223,25 @@ def get_segment_for_project(segment_id: int, project_id: int) -> sqlite3.Row | N
 
 
 def get_open_codes_for_project(project_id: int) -> list[sqlite3.Row]:
+    return get_codes_for_project(project_id, "open")
+
+
+def get_codes_for_project(project_id: int, code_type_filter: str = "all") -> list[sqlite3.Row]:
+    where = "codes.project_id = ?"
+    params = [project_id]
+    if code_type_filter in {"open", "axial", "category"}:
+        where += " AND codes.code_type = ?"
+        params.append(code_type_filter)
     return query_all(
-        """
+        f"""
         SELECT
             codes.id,
             codes.name,
             codes.description,
             codes.code_type,
             codes.color,
+            codes.parent_id,
+            parent.name AS parent_name,
             codes.definition,
             codes.include_when,
             codes.exclude_when,
@@ -1065,22 +1259,25 @@ def get_open_codes_for_project(project_id: int) -> list[sqlite3.Row]:
             END AS completeness
         FROM codes
         LEFT JOIN segment_codes ON segment_codes.code_id = codes.id
-        WHERE codes.project_id = ? AND codes.code_type = 'open'
+        LEFT JOIN codes AS parent ON parent.id = codes.parent_id
+        WHERE {where}
         GROUP BY codes.id
-        ORDER BY codes.name COLLATE NOCASE
+        ORDER BY codes.code_type, codes.name COLLATE NOCASE
         """,
-        (project_id,),
+        tuple(params),
     )
 
 
 def get_code_for_project(code_id: int, project_id: int) -> sqlite3.Row | None:
     return query_one(
         """
-        SELECT id, project_id, name, description, code_type, color,
+        SELECT id, project_id, name, description, code_type, color, parent_id,
                definition, include_when, exclude_when, example, analytical_note,
+               gt_conditions, gt_context, gt_actions_interactions, gt_consequences,
+               gt_properties, gt_dimensions, gt_theoretical_note,
                created_at, updated_at
         FROM codes
-        WHERE id = ? AND project_id = ? AND code_type = 'open'
+        WHERE id = ? AND project_id = ?
         """,
         (code_id, project_id),
     )
@@ -1098,6 +1295,184 @@ def segment_has_code(segment_id: int, code_id: int) -> bool:
         )
         is not None
     )
+
+
+def create_gt_code(code_type: str, action: str, detail_prefix: str):
+    active_project = get_active_project()
+    name = request.form.get("name", "").strip()
+    description = request.form.get("description", "").strip()
+    color = normalize_code_color(request.form.get("color", ""))
+    if not name:
+        flash("Code name is required.", "error")
+        return redirect(url_for("gt_workspace"))
+    code_id = execute_write(
+        """
+        INSERT INTO codes (project_id, name, description, code_type, color)
+        VALUES (?, ?, ?, ?, ?)
+        """,
+        (active_project["id"], name, description, code_type, color),
+    )
+    log_action(active_project["id"], "code", code_id, action, f"{detail_prefix}: {name}")
+    flash(f"{detail_prefix}: {name}", "success")
+    return redirect(url_for("gt_workspace"))
+
+
+def assign_code_parent(
+    child_id: int,
+    child_type: str,
+    parent_type: str,
+    form_field: str,
+    action: str,
+    success_template: str,
+):
+    active_project = get_active_project()
+    child = get_code_for_project(child_id, active_project["id"])
+    parent_id_raw = request.form.get(form_field, "").strip()
+    if child is None or child["code_type"] != child_type or not parent_id_raw.isdigit():
+        flash("Invalid GT hierarchy operation.", "error")
+        return redirect(url_for("gt_workspace"))
+    parent_id = int(parent_id_raw)
+    valid, message = validate_parent_assignment(
+        child_id, child_type, parent_id, active_project["id"]
+    )
+    if not valid:
+        flash(message, "error")
+        return redirect(url_for("gt_workspace"))
+    parent = get_code_for_project(parent_id, active_project["id"])
+    execute_write(
+        "UPDATE codes SET parent_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+        (parent_id, child_id),
+    )
+    details = success_template.format(child=child["name"], parent=parent["name"])
+    log_action(active_project["id"], "code", child_id, action, details)
+    flash(details, "success")
+    return redirect(url_for("gt_workspace"))
+
+
+def unassign_code_parent(code_id: int, expected_type: str, action: str):
+    active_project = get_active_project()
+    code = get_code_for_project(code_id, active_project["id"])
+    if code is None or code["code_type"] != expected_type:
+        flash("Invalid GT hierarchy operation.", "error")
+        return redirect(url_for("gt_workspace"))
+    execute_write(
+        "UPDATE codes SET parent_id = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+        (code_id,),
+    )
+    log_action(
+        active_project["id"],
+        "code",
+        code_id,
+        action,
+        f"Unassigned {expected_type} code: {code['name']}",
+    )
+    flash(f"Unassigned code: {code['name']}", "success")
+    return redirect(url_for("gt_workspace"))
+
+
+def validate_parent_assignment(
+    code_id: int, child_type: str, parent_id: int, project_id: int
+) -> tuple[bool, str]:
+    if code_id == parent_id:
+        return False, "Invalid GT hierarchy operation."
+    parent = get_code_for_project(parent_id, project_id)
+    expected_parent = {"open": "axial", "axial": "category"}.get(child_type)
+    if expected_parent is None or parent is None or parent["code_type"] != expected_parent:
+        return False, "Invalid GT hierarchy operation."
+    return True, ""
+
+
+def get_parent_code(parent_id: int, project_id: int) -> sqlite3.Row | None:
+    return get_code_for_project(parent_id, project_id)
+
+
+def get_child_codes(parent_id: int, project_id: int, code_type: str) -> list[sqlite3.Row]:
+    return query_all(
+        """
+        SELECT id, name, description, color, code_type
+        FROM codes
+        WHERE parent_id = ? AND project_id = ? AND code_type = ?
+        ORDER BY name COLLATE NOCASE
+        """,
+        (parent_id, project_id, code_type),
+    )
+
+
+def get_open_codes_under_category(category_id: int, project_id: int) -> list[sqlite3.Row]:
+    return query_all(
+        """
+        SELECT open_code.id, open_code.name, open_code.description, open_code.color,
+               axial_code.name AS axial_name
+        FROM codes AS axial_code
+        JOIN codes AS open_code ON open_code.parent_id = axial_code.id
+        WHERE axial_code.parent_id = ? AND axial_code.project_id = ?
+          AND open_code.project_id = ? AND axial_code.code_type = 'axial'
+          AND open_code.code_type = 'open'
+        ORDER BY axial_code.name COLLATE NOCASE, open_code.name COLLATE NOCASE
+        """,
+        (category_id, project_id, project_id),
+    )
+
+
+def get_gt_open_codes(project_id: int) -> list[dict]:
+    rows = query_all(
+        """
+        SELECT codes.*, parent.name AS parent_name,
+               COUNT(segment_codes.segment_id) AS assigned_segment_count
+        FROM codes
+        LEFT JOIN codes AS parent ON parent.id = codes.parent_id
+        LEFT JOIN segment_codes ON segment_codes.code_id = codes.id
+        WHERE codes.project_id = ? AND codes.code_type = 'open'
+        GROUP BY codes.id
+        ORDER BY codes.name COLLATE NOCASE
+        """,
+        (project_id,),
+    )
+    return [dict(row) for row in rows]
+
+
+def get_gt_axial_codes(project_id: int) -> list[dict]:
+    rows = query_all(
+        """
+        SELECT codes.*, parent.name AS parent_name
+        FROM codes
+        LEFT JOIN codes AS parent ON parent.id = codes.parent_id
+        WHERE codes.project_id = ? AND codes.code_type = 'axial'
+        ORDER BY codes.name COLLATE NOCASE
+        """,
+        (project_id,),
+    )
+    result = []
+    for row in rows:
+        code = dict(row)
+        code["child_open_count"] = len(get_child_codes(row["id"], project_id, "open"))
+        code["hierarchy_segment_count"] = len(get_hierarchy_segments_for_code(row, project_id))
+        result.append(code)
+    return result
+
+
+def get_gt_categories(project_id: int) -> list[dict]:
+    rows = query_all(
+        """
+        SELECT *
+        FROM codes
+        WHERE project_id = ? AND code_type = 'category'
+        ORDER BY name COLLATE NOCASE
+        """,
+        (project_id,),
+    )
+    result = []
+    for row in rows:
+        code = dict(row)
+        axial_children = get_child_codes(row["id"], project_id, "axial")
+        code["child_axial_count"] = len(axial_children)
+        code["child_open_count"] = sum(
+            len(get_child_codes(axial["id"], project_id, "open"))
+            for axial in axial_children
+        )
+        code["hierarchy_segment_count"] = len(get_hierarchy_segments_for_code(row, project_id))
+        result.append(code)
+    return result
 
 
 def get_code_usage_count(code_id: int) -> int:
@@ -1125,6 +1500,81 @@ def get_segments_for_code(code_id: int, project_id: int) -> list[sqlite3.Row]:
         """,
         (code_id, project_id),
     )
+
+
+def get_hierarchy_segments_for_code(code: sqlite3.Row | dict, project_id: int) -> list[sqlite3.Row]:
+    if code["code_type"] == "open":
+        return get_segments_for_code(code["id"], project_id)
+    if code["code_type"] == "axial":
+        return query_all(
+            """
+            SELECT DISTINCT segments.id, COALESCE(segments.name, '') AS name,
+                   segments.selected_text, segments.note, documents.id AS document_id,
+                   documents.title AS document_title
+            FROM codes AS open_code
+            JOIN segment_codes ON segment_codes.code_id = open_code.id
+            JOIN segments ON segments.id = segment_codes.segment_id
+            JOIN documents ON documents.id = segments.document_id
+            WHERE open_code.parent_id = ? AND documents.project_id = ?
+            ORDER BY documents.title COLLATE NOCASE, segments.start_offset
+            """,
+            (code["id"], project_id),
+        )
+    if code["code_type"] == "category":
+        return query_all(
+            """
+            SELECT DISTINCT segments.id, COALESCE(segments.name, '') AS name,
+                   segments.selected_text, segments.note, documents.id AS document_id,
+                   documents.title AS document_title
+            FROM codes AS axial_code
+            JOIN codes AS open_code ON open_code.parent_id = axial_code.id
+            JOIN segment_codes ON segment_codes.code_id = open_code.id
+            JOIN segments ON segments.id = segment_codes.segment_id
+            JOIN documents ON documents.id = segments.document_id
+            WHERE axial_code.parent_id = ? AND documents.project_id = ?
+            ORDER BY documents.title COLLATE NOCASE, segments.start_offset
+            """,
+            (code["id"], project_id),
+        )
+    return []
+
+
+def get_compare_code(code_id_raw: str | None, project_id: int) -> dict | None:
+    if not code_id_raw or not code_id_raw.isdigit():
+        return None
+    code = get_code_for_project(int(code_id_raw), project_id)
+    if code is None or code["code_type"] != "open":
+        return None
+    result = dict(code)
+    result["segments"] = get_segments_for_code(code["id"], project_id)
+    result["usage_count"] = len(result["segments"])
+    return result
+
+
+def get_gt_structure_preview(project_id: int) -> dict[str, int]:
+    return {
+        "open_without_axial": query_one(
+            """
+            SELECT COUNT(*) AS count FROM codes
+            WHERE project_id = ? AND code_type = 'open' AND parent_id IS NULL
+            """,
+            (project_id,),
+        )["count"],
+        "axial_without_category": query_one(
+            """
+            SELECT COUNT(*) AS count FROM codes
+            WHERE project_id = ? AND code_type = 'axial' AND parent_id IS NULL
+            """,
+            (project_id,),
+        )["count"],
+        "categories": query_one(
+            """
+            SELECT COUNT(*) AS count FROM codes
+            WHERE project_id = ? AND code_type = 'category'
+            """,
+            (project_id,),
+        )["count"],
+    }
 
 
 def get_documents_for_memo_links(project_id: int) -> list[sqlite3.Row]:
@@ -1437,9 +1887,11 @@ def build_codebook_markdown(active_project: sqlite3.Row) -> str:
         """
         SELECT
             codes.*,
+            parent.name AS parent_name,
             COUNT(segment_codes.segment_id) AS usage_count
         FROM codes
         LEFT JOIN segment_codes ON segment_codes.code_id = codes.id
+        LEFT JOIN codes AS parent ON parent.id = codes.parent_id
         WHERE codes.project_id = ?
         GROUP BY codes.id
         ORDER BY codes.code_type COLLATE NOCASE, codes.name COLLATE NOCASE
@@ -1457,6 +1909,7 @@ def build_codebook_markdown(active_project: sqlite3.Row) -> str:
                 f"## {code['name']}",
                 "",
                 f"- Type: {code['code_type']}",
+                f"- Parent: {code['parent_name'] or 'None'}",
                 f"- Usage count: {code['usage_count']}",
                 "",
                 f"**Description:** {code['description'] or ''}",
@@ -1473,6 +1926,25 @@ def build_codebook_markdown(active_project: sqlite3.Row) -> str:
                 "",
             ]
         )
+        if code["code_type"] in {"axial", "category"}:
+            lines.extend(
+                [
+                    f"**GT conditions:** {code['gt_conditions'] or ''}",
+                    "",
+                    f"**GT context:** {code['gt_context'] or ''}",
+                    "",
+                    f"**GT actions/interactions:** {code['gt_actions_interactions'] or ''}",
+                    "",
+                    f"**GT consequences:** {code['gt_consequences'] or ''}",
+                    "",
+                    f"**GT properties:** {code['gt_properties'] or ''}",
+                    "",
+                    f"**GT dimensions:** {code['gt_dimensions'] or ''}",
+                    "",
+                    f"**GT theoretical note:** {code['gt_theoretical_note'] or ''}",
+                    "",
+                ]
+            )
     return "\n".join(lines)
 
 

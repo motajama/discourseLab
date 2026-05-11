@@ -24,6 +24,27 @@
                 <input type="color" name="color" value="{{ code.color }}">
             </label>
         </div>
+        {% if code.code_type == "open" %}
+            <label>
+                <span>Axial parent</span>
+                <select name="parent_id">
+                    <option value="">None</option>
+                    {% for axial in axial_codes %}
+                        <option value="{{ axial.id }}" {{ "selected" if code.parent_id == axial.id else "" }}>{{ axial.name }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+        {% elif code.code_type == "axial" %}
+            <label>
+                <span>Category parent</span>
+                <select name="parent_id">
+                    <option value="">None</option>
+                    {% for category in categories %}
+                        <option value="{{ category.id }}" {{ "selected" if code.parent_id == category.id else "" }}>{{ category.name }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+        {% endif %}
         <label>
             <span>Description</span>
             <textarea name="description" rows="5">{{ code.description or "" }}</textarea>

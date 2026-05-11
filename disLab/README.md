@@ -1,6 +1,6 @@
 # discourseLab
 
-Phase: 5 — Memos and basic codebook
+Phase: 6 — Grounded Theory workspace
 
 discourseLab is a local lightweight qualitative analysis workspace for discourse analysis, critical discourse analysis, and grounded theory.
 
@@ -20,49 +20,45 @@ The application runs at:
 http://127.0.0.1:5000
 ```
 
-## Dependencies
-
-- Flask
-- python-docx
-
 ## Verification
 
 1. Start the app with `python app.py`.
 2. Open `http://127.0.0.1:5000`.
-3. Go to Memos.
-4. Create a project memo.
-5. Create a memo linked to a document.
-6. Create a memo linked to a segment.
-7. Create a memo linked to a code.
-8. Edit a memo.
-9. Filter memos by type and status.
-10. Delete a memo.
-11. Go to Codes.
-12. Open a code detail page.
-13. Edit a code and fill in definition, include_when, exclude_when, example, and analytical_note.
-14. Confirm the codebook completeness indicator changes.
-15. Go to Exports.
-16. Download codebook Markdown.
-17. Confirm dashboard memo count updates.
-18. Confirm audit log shows memo actions.
-19. Restart the app and confirm memos and codebook fields persist.
+3. Create or confirm at least two open codes exist.
+4. Go to GT Workspace.
+5. Create an axial code.
+6. Create a category.
+7. Assign an open code to the axial code.
+8. Assign the axial code to the category.
+9. Open the code detail page and confirm hierarchy appears.
+10. Edit GT fields for the axial code.
+11. Edit GT fields for the category.
+12. Go to `/gt/compare`.
+13. Compare two open codes.
+14. Create a comparison memo.
+15. Confirm dashboard counts update.
+16. Confirm codebook Markdown export includes open, axial, and category codes.
+17. Restart the app and confirm GT hierarchy persists.
 
-## Current Phase 5
+## Current Phase 6
 
-Phase 5 adds memos and a basic codebook:
+Phase 6 adds the Grounded Theory workspace:
 
-- Project, document, segment, code, methodological, theoretical, reflexive, comparison, and negative case memos
-- Memo statuses: draft, important, use in article, archived
-- Memo creation, editing, deletion, filtering, and linked entity labels
-- Document-level and segment-level memos in the document reading view
-- Code detail pages with linked memos and assigned segments
-- Codebook fields for open codes
-- Codebook completeness indicators
-- Markdown codebook export at `/exports/codebook.md`
+- Three-column Open Codes, Axial Codes, Categories board
+- Axial code and category creation
+- Open code to axial code assignment
+- Axial code to category assignment
+- GT-specific fields for axial and category codes
+- Code detail hierarchy views
+- Constant comparison screen for open codes
+- Comparison memo creation
+- GT structure preview on the dashboard
+- Codebook Markdown export including hierarchy and GT fields
 
-This phase does not implement axial coding, category coding, GT workspace functionality, CDA markers, actor maps, voice/silence reports, relation model building, PNG/SVG/TikZ model export, coded segments CSV export, full project JSON export, AI features, authentication, or cloud functionality.
+This phase does not implement CDA markers, actor maps, voice/silence reports, modality tracking, metaphor tracking, presupposition tracking, relation model building, PNG/SVG/TikZ model export, full coded segments CSV export, full project JSON export, AI features, authentication, or cloud functionality.
 
 ## Planned Later Phases
 
-- Phase 6: Add grounded theory and CDA workspaces
-- Later: Add axial coding, category coding, model building, and export packages
+- CDA workspace behavior
+- Model building and relation visualization
+- Additional export formats

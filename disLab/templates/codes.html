@@ -28,16 +28,21 @@
 </section>
 
 <section class="info-panel">
-    <h2>Open Codes</h2>
-    {% if open_codes %}
+    <h2>Code List</h2>
+    <div class="detail-actions">
+        {% for value, label in [("all", "All"), ("open", "Open"), ("axial", "Axial"), ("category", "Category")] %}
+            <a class="button-secondary" href="{{ url_for('codes', code_type=value) }}">{{ label }}</a>
+        {% endfor %}
+    </div>
+    {% if codes %}
         <div class="table-wrap">
             <table class="data-table">
                 <thead>
                     <tr>
                         <th>Color</th>
                         <th>Name</th>
-                        <th>Description</th>
                         <th>Type</th>
+                        <th>Parent</th>
                         <th>Assigned segments</th>
                         <th>Codebook</th>
                         <th>Created at</th>
@@ -45,18 +50,22 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {% for code in open_codes %}
+                    {% for code in codes %}
                         <tr>
                             <td><span class="color-swatch" style="background: {{ code.color }}"></span></td>
                             <td>{{ code.name }}</td>
-                            <td>{{ code.description or "" }}</td>
                             <td>{{ code.code_type }}</td>
+                            <td>{{ code.parent_name or "None" }}</td>
                             <td>{{ code.assigned_segment_count }}</td>
                             <td><span class="status-badge">{{ code.completeness }}</span></td>
                             <td>{{ code.created_at }}</td>
                             <td class="actions-cell">
                                 <a class="button-secondary" href="{{ url_for('code_detail', code_id=code.id) }}">View</a>
-                                <a class="button-secondary" href="{{ url_for('edit_code', code_id=code.id) }}">Edit</a>
+                                {% if code.code_type in ["axial", "category"] %}
+                                    <a class="button-secondary" href="{{ url_for('edit_gt_code', code_id=code.id) }}">Edit</a>
+                                {% else %}
+                                    <a class="button-secondary" href="{{ url_for('edit_code', code_id=code.id) }}">Edit</a>
+                                {% endif %}
                                 <form action="{{ url_for('delete_code', code_id=code.id) }}" method="post">
                                     <button type="submit" class="button-danger">Delete</button>
                                 </form>

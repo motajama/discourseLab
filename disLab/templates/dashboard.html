@@ -21,6 +21,14 @@
         <span class="metric-label">Open Codes</span>
     </article>
     <article class="metric-card">
+        <span class="metric-value">{{ counts.axial_codes }}</span>
+        <span class="metric-label">Axial Codes</span>
+    </article>
+    <article class="metric-card">
+        <span class="metric-value">{{ counts.categories }}</span>
+        <span class="metric-label">Categories</span>
+    </article>
+    <article class="metric-card">
         <span class="metric-value">{{ counts.coded_segments }}</span>
         <span class="metric-label">Coded Segments</span>
     </article>
@@ -69,17 +77,16 @@
         <h2>Prepared Workflow</h2>
         <p class="workflow-line">Documents -> Segments -> Open Codes -> Axial Codes -> Categories -> Model -> Export</p>
         <p>
-            Phase 5 adds memo writing, memo links, codebook fields, and Markdown
-            codebook export before axial coding, category coding, CDA tools, GT tools,
-            and model exports are added.
+            Phase 6 adds the Grounded Theory hierarchy from open codes to axial codes
+            and categories, plus GT fields and constant comparison support.
         </p>
     </article>
 
     <article class="info-panel">
         <h2>Next Steps</h2>
         <ol class="next-steps">
-            <li>Phase 6: Add GT and CDA workspaces.</li>
-            <li>Later: Add axial coding, categories, model building, and exports.</li>
+            <li>Later: Add CDA workspace behavior.</li>
+            <li>Later: Add model building and visual exports.</li>
         </ol>
     </article>
 
@@ -196,6 +203,15 @@
         {% else %}
             <p>All open codes have definitions.</p>
         {% endif %}
+    </article>
+
+    <article class="info-panel">
+        <h2>GT Structure Preview</h2>
+        <ul class="compact-list">
+            <li><span>Open codes without axial parent</span><span>{{ gt_preview.open_without_axial }}</span></li>
+            <li><span>Axial codes without category parent</span><span>{{ gt_preview.axial_without_category }}</span></li>
+            <li><span>Categories</span><span>{{ gt_preview.categories }}</span></li>
+        </ul>
     </article>
 </section>
 {% endblock %}

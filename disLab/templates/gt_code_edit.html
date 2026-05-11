@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="page-header">
+    <p class="eyebrow">{{ code.code_type }} code</p>
+    <h1>Edit GT Fields</h1>
+    <p>Active project: {{ active_project.name }}</p>
+</section>
+
+<section class="detail-actions">
+    <a class="button-secondary" href="{{ url_for('gt_workspace') }}">Back to GT Workspace</a>
+</section>
+
+<section class="info-panel">
+    <h2>{{ code.name }}</h2>
+    <form class="document-form" action="{{ url_for('update_gt_code', code_id=code.id) }}" method="post">
+        <div class="form-grid">
+            <label><span>Name</span><input type="text" name="name" value="{{ code.name }}" required></label>
+            <label><span>Color</span><input type="color" name="color" value="{{ code.color }}"></label>
+        </div>
+        <label><span>Description</span><textarea name="description" rows="3">{{ code.description or "" }}</textarea></label>
+        <label><span>Definition</span><textarea name="definition" rows="3">{{ code.definition or "" }}</textarea></label>
+        <label><span>Analytical note</span><textarea name="analytical_note" rows="3">{{ code.analytical_note or "" }}</textarea></label>
+        <div class="form-grid">
+            <label><span>Conditions</span><textarea name="gt_conditions" rows="4">{{ code.gt_conditions or "" }}</textarea></label>
+            <label><span>Context</span><textarea name="gt_context" rows="4">{{ code.gt_context or "" }}</textarea></label>
+        </div>
+        <div class="form-grid">
+            <label><span>Actions/interactions</span><textarea name="gt_actions_interactions" rows="4">{{ code.gt_actions_interactions or "" }}</textarea></label>
+            <label><span>Consequences</span><textarea name="gt_consequences" rows="4">{{ code.gt_consequences or "" }}</textarea></label>
+        </div>
+        <div class="form-grid">
+            <label><span>Properties</span><textarea name="gt_properties" rows="4">{{ code.gt_properties or "" }}</textarea></label>
+            <label><span>Dimensions</span><textarea name="gt_dimensions" rows="4">{{ code.gt_dimensions or "" }}</textarea></label>
+        </div>
+        <label><span>Theoretical note</span><textarea name="gt_theoretical_note" rows="5">{{ code.gt_theoretical_note or "" }}</textarea></label>
+        <button type="submit" class="button-primary">Save GT fields</button>
+    </form>
+</section>
+{% endblock %}

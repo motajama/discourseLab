@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="page-header">
+    <h1>Constant Comparison</h1>
+    <p>Active project: {{ active_project.name }}</p>
+</section>
+
+<section class="info-panel import-panel">
+    <h2>Select Open Codes</h2>
+    <form class="filter-form" action="{{ url_for('gt_compare') }}" method="get">
+        <label>
+            <span>First open code</span>
+            <select name="code_a" required>
+                <option value="">Choose code</option>
+                {% for code in open_codes %}
+                    <option value="{{ code.id }}" {{ "selected" if code_a and code_a.id == code.id else "" }}>{{ code.name }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label>
+            <span>Second open code</span>
+            <select name="code_b" required>
+                <option value="">Choose code</option>
+                {% for code in open_codes %}
+                    <option value="{{ code.id }}" {{ "selected" if code_b and code_b.id == code.id else "" }}>{{ code.name }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <button type="submit" class="button-primary">Compare</button>
+    </form>
+</section>
+
+{% if code_a and code_b %}
+<section class="comparison-grid">
+    {% for code in [code_a, code_b] %}
+        <article class="info-panel">
+            <h2><span class="color-swatch small" style="background: {{ code.color }}"></span>{{ code.name }}</h2>
+            <p>{{ code.description or "No description" }}</p>
+            <p><strong>Definition:</strong> {{ code.definition or "Missing definition" }}</p>
+            <p class="muted-text">{{ code.usage_count }} assigned segments</p>
+            {% if code.segments %}
+                <div class="segment-list">
+                    {% for segment in code.segments %}
+                        <article class="segment-card">
+                            <h3>{{ segment.name or "Segment" }}</h3>
+                            <p class="muted-text">{{ segment.document_title }}</p>
+                            <blockquote>{{ segment.selected_text }}</blockquote>
+                            <p>{{ segment.note or "No segment note" }}</p>
+                        </article>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p>No assigned segments.</p>
+            {% endif %}
+        </article>
+    {% endfor %}
+</section>
+
+<section class="info-panel">
+    <h2>Comparison Prompts</h2>
+    <ul>
+        <li>What do these segments have in common?</li>
+        <li>Where do they differ?</li>
+        <li>Does one code describe a condition, action, interaction, or consequence?</li>
+        <li>Should these codes remain separate?</li>
+        <li>Should they be linked under the same axial code?</li>
+        <li>Is there a negative case?</li>
+    </ul>
+    <form class="document-form" action="{{ url_for('create_memo') }}" method="post">
+        <input type="hidden" name="memo_type" value="comparison">
+        <input type="hidden" name="linked_entity_type" value="">
+        <input type="hidden" name="linked_entity_id" value="">
+        <input type="hidden" name="next_url" value="{{ request.full_path }}">
+        <label><span>Title</span><input type="text" name="title" required></label>
+        <label><span>Body</span><textarea name="body" rows="5" required></textarea></label>
+        <label>
+            <span>Status</span>
+            <select name="status">
+                {% for value, label in memo_status_labels.items() %}
+                    <option value="{{ value }}">{{ label }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <button type="submit" class="button-primary">Create comparison memo</button>
+    </form>
+</section>
+{% endif %}
+
+{% include "_gt_helper.html" %}
+{% endblock %}
