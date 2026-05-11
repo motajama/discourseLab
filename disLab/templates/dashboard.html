@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="page-header">
+    <p class="eyebrow">Active project</p>
+    <h1>{{ project.name }}</h1>
+    <p>{{ project.description }}</p>
+</section>
+
+<section class="metrics-grid" aria-label="Project counts">
+    <article class="metric-card">
+        <span class="metric-value">{{ counts.documents }}</span>
+        <span class="metric-label">Documents</span>
+    </article>
+    <article class="metric-card">
+        <span class="metric-value">{{ counts.codes }}</span>
+        <span class="metric-label">Codes</span>
+    </article>
+    <article class="metric-card">
+        <span class="metric-value">{{ counts.segments }}</span>
+        <span class="metric-label">Segments</span>
+    </article>
+    <article class="metric-card">
+        <span class="metric-value">{{ counts.memos }}</span>
+        <span class="metric-label">Memos</span>
+    </article>
+</section>
+
+<section class="info-panel">
+    <h2>Prepared Workflow</h2>
+    <p class="workflow-line">Documents -> Segments -> Open Codes -> Axial Codes -> Categories -> Model -> Export</p>
+    <p>
+        Phase 0 establishes the local Flask and SQLite foundation for a later discourse analysis,
+        critical discourse analysis, and grounded theory workspace.
+    </p>
+</section>
+{% endblock %}
