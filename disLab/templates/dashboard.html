@@ -41,6 +41,10 @@
         <span class="metric-label">Discourse Features</span>
     </article>
     <article class="metric-card">
+        <span class="metric-value">{{ counts.relations }}</span>
+        <span class="metric-label">Relations</span>
+    </article>
+    <article class="metric-card">
         <span class="metric-value">{{ counts.memos }}</span>
         <span class="metric-label">Memos</span>
     </article>
@@ -93,8 +97,8 @@
         <h2>Prepared Workflow</h2>
         <p class="workflow-line">Projects -> Documents -> Segments -> Analysis Mode -> Exports</p>
         <p>
-            Phase 9 adds project management and methodology modes so each project can
-            use Generic, Grounded Theory, CDA, or Mixed workflows.
+            Phase 10 adds analytical relations so project entities can be connected
+            into an explicit research argument.
         </p>
     </article>
 
@@ -114,6 +118,24 @@
             <li><span>Most frequent actor relation type</span><span>{{ cda_preview.top_relation_type }}</span></li>
             <li><span>Most frequent discourse feature type</span><span>{{ cda_preview.top_feature_type }}</span></li>
         </ul>
+    </article>
+
+    <article class="info-panel">
+        <h2>Model Preview</h2>
+        <ul class="compact-list">
+            <li><span>Total relations</span><span>{{ model_preview.total }}</span></li>
+            <li><span>Strong relations</span><span>{{ model_preview.strong }}</span></li>
+            <li><span>Uncertain relations</span><span>{{ model_preview.uncertain }}</span></li>
+            <li><span>Most common relation type</span><span>{{ model_preview.top_relation_type }}</span></li>
+        </ul>
+        {% if model_preview.latest_relations %}
+            <h3>Latest relations</h3>
+            <ul class="compact-list">
+                {% for relation in model_preview.latest_relations %}
+                    <li><span>{{ relation.source_label }}</span><span>{{ relation.relation_label }} → {{ relation.target_label }}</span></li>
+                {% endfor %}
+            </ul>
+        {% endif %}
     </article>
 
     <article class="info-panel">

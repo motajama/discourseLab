@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="page-header">
+    <p class="eyebrow">Analytical relation</p>
+    <h1>Edit Relation</h1>
+    <p>Active project: {{ active_project.name }}</p>
+</section>
+
+<section class="detail-actions">
+    <a class="button-secondary" href="{{ url_for('model_builder') }}">Back to Model</a>
+</section>
+
+<section class="info-panel">
+    <h2>{{ relation.title or "Relation #" ~ relation.id }}</h2>
+    <form class="document-form" action="{{ url_for('update_relation', relation_id=relation.id) }}" method="post">
+        <label>
+            <span>Title</span>
+            <input type="text" name="title" value="{{ relation.title or '' }}">
+        </label>
+        <div class="form-grid">
+            <label>
+                <span>Source entity</span>
+                <select name="source_entity" required>
+                    {% for entity in entities %}
+                        <option value="{{ entity.value }}" {{ "selected" if entity.value == relation.source_value else "" }}>[{{ entity.type_label }}] {{ entity.label }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <label>
+                <span>Relation type</span>
+                <select name="relation_type" required>
+                    {% for value, label in relation_type_labels.items() %}
+                        <option value="{{ value }}" {{ "selected" if value == relation.relation_type else "" }}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+        </div>
+        <div class="form-grid">
+            <label>
+                <span>Target entity</span>
+                <select name="target_entity" required>
+                    {% for entity in entities %}
+                        <option value="{{ entity.value }}" {{ "selected" if entity.value == relation.target_value else "" }}>[{{ entity.type_label }}] {{ entity.label }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <label>
+                <span>Strength</span>
+                <select name="strength" required>
+                    {% for value, label in relation_strength_labels.items() %}
+                        <option value="{{ value }}" {{ "selected" if value == relation.strength else "" }}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+        </div>
+        <label>
+            <span>Analytical memo</span>
+            <textarea name="memo" rows="5">{{ relation.memo or "" }}</textarea>
+        </label>
+        <label>
+            <span>Evidence note</span>
+            <textarea name="evidence_note" rows="5">{{ relation.evidence_note or "" }}</textarea>
+        </label>
+        <button type="submit" class="button-primary">Save relation</button>
+    </form>
+</section>
+{% endblock %}

@@ -150,6 +150,16 @@
                                 <dd>{{ segment.created_at }}</dd>
                             </div>
                         </dl>
+                        <div class="relation-mini-panel">
+                            <a class="button-secondary compact-button" href="{{ url_for('model_entity', entity_type='segment', entity_id=segment.id) }}">Relations: {{ segment.relation_count }}</a>
+                            {% if segment.relations %}
+                                <ul class="compact-list">
+                                    {% for relation in segment.relations %}
+                                        <li><span>{{ relation.relation_label }}</span><span>{{ relation.target_label if relation.source_type == 'segment' else relation.source_label }}</span></li>
+                                    {% endfor %}
+                                </ul>
+                            {% endif %}
+                        </div>
                     </details>
 
                     <details class="segment-section" open>

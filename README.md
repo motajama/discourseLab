@@ -1,10 +1,12 @@
 # discourseLab
 
-discourseLab is a local, lightweight qualitative analysis workspace for discourse analysis, critical discourse analysis, and grounded theory.
+discourseLab is a local, lightweight qualitative analysis workspace for discourse analysis, critical discourse analysis, grounded theory, and generic qualitative coding.
 
 It runs on your own computer in a web browser. It does not require an account, cloud service, npm, Node, React, or external web services.
 
-Current phase: **Phase 9 — Project modes and project management**
+Current phase: **Phase 10 — Relations and analytical model builder**
+
+The analytical model builder connects project entities such as segments, codes, categories, actors, discourse features, memos, and research questions into explicit analytical relations.
 
 ## What You Need
 
@@ -239,8 +241,22 @@ py app.py
 9. Create an open code and assign it to a segment.
 10. If the project supports CDA, create CDA markers, actors, and discourse features.
 11. If the project supports GT, use the GT workspace for axial codes, categories, and comparison.
-12. Go to **Exports**.
-13. Download the codebook, coded segments, memos, available methodology reports, project summary, JSON archive, or complete ZIP package.
+12. Ensure you have at least one segment, one code, one memo, and optionally one actor or discourse feature.
+13. Open **Model**.
+14. Create a relation between a segment and a code.
+15. Create a relation between an actor and a code or discourse feature if CDA data exists.
+16. Create a relation between an open, axial, or category code if GT data exists.
+17. Add memo and evidence notes to the relation.
+18. Edit the relation.
+19. Open the entity-centered view for one related entity.
+20. Filter relations by type and strength.
+21. Create a research question from the Model page.
+22. Link a relation to the research question.
+23. Download `/exports/model.md`.
+24. Download `/exports/model.json`.
+25. Download the complete research package ZIP and confirm `analytical_model.md` and `analytical_model.json` are included.
+26. Restart the app and confirm relations persist.
+27. Confirm data remains scoped to the active project.
 
 ## Data Storage
 
@@ -307,7 +323,7 @@ http://127.0.0.1:5001
 ## Project Notes
 
 - App name: discourseLab
-- Current phase: Phase 9 — Project modes and project management
+- Current phase: Phase 10 — Relations and analytical model builder
 - Technology: Python, Flask, SQLite, HTML, CSS, vanilla JavaScript
 - Runs locally in your browser
 - No authentication

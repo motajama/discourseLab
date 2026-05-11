@@ -28,8 +28,8 @@ from werkzeug.utils import secure_filename
 
 
 APP_NAME = "discourseLab"
-APP_PHASE = "9"
-CURRENT_PHASE_LABEL = "Phase 9 — Project modes and project management"
+APP_PHASE = "10"
+CURRENT_PHASE_LABEL = "Phase 10 — Relations and analytical model builder"
 DEFAULT_PROJECT_NAME = "Demo Project"
 DEFAULT_PROJECT_DESCRIPTION = "Initial local discourseLab project."
 DEFAULT_CODE_COLOR = "#f4c542"
@@ -129,6 +129,60 @@ DISCOURSE_FEATURE_TYPES = {
     "power_relation": "Power relation",
     "other": "Other",
 }
+RELATION_ENTITY_TYPES = {
+    "document": "Document",
+    "segment": "Segment",
+    "code": "Code",
+    "memo": "Memo",
+    "research_question": "Research question",
+    "discourse_marker": "CDA marker",
+    "actor": "Actor",
+    "discourse_feature": "Discourse feature",
+}
+RELATION_TYPES = {
+    "supports": "Supports",
+    "contradicts": "Contradicts",
+    "elaborates": "Elaborates",
+    "explains": "Explains",
+    "is_evidence_for": "Is evidence for",
+    "is_example_of": "Is example of",
+    "is_negative_case_for": "Is negative case for",
+    "is_part_of": "Is part of",
+    "contrasts_with": "Contrasts with",
+    "leads_to": "Leads to",
+    "conditions": "Conditions",
+    "causes": "Causes",
+    "enables": "Enables",
+    "limits": "Limits",
+    "transforms_into": "Transforms into",
+    "open_code_supports_axial_code": "Open code supports axial code",
+    "axial_code_supports_category": "Axial code supports category",
+    "category_integrates": "Category integrates",
+    "property_of": "Property of",
+    "dimension_of": "Dimension of",
+    "consequence_of": "Consequence of",
+    "condition_for": "Condition for",
+    "frames": "Frames",
+    "legitimizes": "Legitimizes",
+    "delegitimizes": "Delegitimizes",
+    "naturalizes": "Naturalizes",
+    "silences": "Silences",
+    "foregrounds": "Foregrounds",
+    "backgrounds": "Backgrounds",
+    "individualizes": "Individualizes",
+    "aggregates": "Aggregates",
+    "constructs_actor_as": "Constructs actor as",
+    "reproduces_power_relation": "Reproduces power relation",
+    "challenges_power_relation": "Challenges power relation",
+    "presupposes": "Presupposes",
+    "metaphorizes": "Metaphorizes",
+}
+RELATION_STRENGTHS = {
+    "weak": "Weak",
+    "moderate": "Moderate",
+    "strong": "Strong",
+    "uncertain": "Uncertain",
+}
 
 BASE_DIR = Path(__file__).resolve().parent
 INSTANCE_DIR = BASE_DIR / "instance"
@@ -176,6 +230,7 @@ def create_app() -> Flask:
         codes_missing_definitions = get_codes_missing_definitions(active_project["id"])
         gt_preview = get_gt_structure_preview(active_project["id"])
         cda_preview = get_cda_dashboard_preview(active_project["id"])
+        model_preview = get_model_dashboard_preview(active_project["id"])
         return render_template(
             "dashboard.html",
             title="Dashboard",
@@ -191,6 +246,7 @@ def create_app() -> Flask:
             codes_missing_definitions=codes_missing_definitions,
             gt_preview=gt_preview,
             cda_preview=cda_preview,
+            model_preview=model_preview,
             current_phase=CURRENT_PHASE_LABEL,
             export_links=get_dashboard_export_links(),
             memo_type_labels=MEMO_TYPES,
@@ -607,6 +663,8 @@ def create_app() -> Flask:
             child_axial_codes=get_child_codes(code_id, active_project["id"], "axial"),
             category_open_codes=get_open_codes_under_category(code_id, active_project["id"]),
             hierarchy_segments=get_hierarchy_segments_for_code(code, active_project["id"]),
+            model_relations=get_relations_for_entity(active_project["id"], "code", code_id, limit=5),
+            model_relation_count=get_relation_count_for_entity(active_project["id"], "code", code_id),
             memo_type_labels=MEMO_TYPES,
             memo_status_labels=MEMO_STATUSES,
         )
@@ -1470,6 +1528,198 @@ def create_app() -> Flask:
             relation_type_labels=ACTOR_RELATION_TYPES,
         )
 
+    @app.route("/model")
+    def model_builder():
+        active_project = get_active_project()
+        filters = {
+            "relation_type": request.args.get("relation_type", "").strip(),
+            "strength": request.args.get("strength", "").strip(),
+            "source_type": request.args.get("source_type", "").strip(),
+            "target_type": request.args.get("target_type", "").strip(),
+            "involves_type": request.args.get("involves_type", "").strip(),
+            "q": request.args.get("q", "").strip(),
+        }
+        entities = get_relation_entity_options(active_project["id"])
+        return render_template(
+            "model.html",
+            title="Analytical Model",
+            active_page="model",
+            active_project=active_project,
+            entities=entities,
+            relations=get_relations_for_project(active_project["id"], filters),
+            relation_counts=get_model_counts(active_project["id"]),
+            filters=filters,
+            relation_type_labels=RELATION_TYPES,
+            relation_strength_labels=RELATION_STRENGTHS,
+            entity_type_labels=RELATION_ENTITY_TYPES,
+            research_questions=get_research_questions_for_project(active_project["id"]),
+            mode_prompts=get_model_mode_prompts(active_project),
+        )
+
+    @app.route("/model/relations/create", methods=["POST"])
+    def create_relation():
+        active_project = get_active_project()
+        data, error = validate_relation_form(active_project["id"])
+        if error:
+            flash(error, "error")
+            return redirect(url_for("model_builder"))
+        relation_id = execute_write(
+            """
+            INSERT INTO relations (
+                project_id, source_type, source_id, target_type, target_id,
+                relation_type, memo, title, strength, evidence_note, updated_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+            """,
+            (
+                active_project["id"],
+                data["source_type"],
+                data["source_id"],
+                data["target_type"],
+                data["target_id"],
+                data["relation_type"],
+                data["memo"],
+                data["title"],
+                data["strength"],
+                data["evidence_note"],
+            ),
+        )
+        log_action(
+            active_project["id"],
+            "relation",
+            relation_id,
+            "create_relation",
+            f"Created relation: {data['source_label']} {data['relation_type']} {data['target_label']}",
+        )
+        flash("Relation created.", "success")
+        return redirect(url_for("model_builder"))
+
+    @app.route("/model/relations/<int:relation_id>/edit")
+    def edit_relation(relation_id: int):
+        active_project = get_active_project()
+        relation = get_relation_for_project(relation_id, active_project["id"])
+        if relation is None:
+            flash("Relation not found.", "error")
+            abort(404)
+        return render_template(
+            "relation_edit.html",
+            title="Edit Relation",
+            active_page="model",
+            active_project=active_project,
+            relation=relation,
+            entities=get_relation_entity_options(active_project["id"]),
+            relation_type_labels=RELATION_TYPES,
+            relation_strength_labels=RELATION_STRENGTHS,
+        )
+
+    @app.route("/model/relations/<int:relation_id>/edit", methods=["POST"])
+    def update_relation(relation_id: int):
+        active_project = get_active_project()
+        relation = get_relation_for_project(relation_id, active_project["id"])
+        if relation is None:
+            flash("Relation not found.", "error")
+            abort(404)
+        data, error = validate_relation_form(active_project["id"])
+        if error:
+            flash(error, "error")
+            return redirect(url_for("edit_relation", relation_id=relation_id))
+        execute_write(
+            """
+            UPDATE relations
+            SET source_type = ?, source_id = ?, target_type = ?, target_id = ?,
+                relation_type = ?, memo = ?, title = ?, strength = ?,
+                evidence_note = ?, updated_at = CURRENT_TIMESTAMP
+            WHERE id = ? AND project_id = ?
+            """,
+            (
+                data["source_type"],
+                data["source_id"],
+                data["target_type"],
+                data["target_id"],
+                data["relation_type"],
+                data["memo"],
+                data["title"],
+                data["strength"],
+                data["evidence_note"],
+                relation_id,
+                active_project["id"],
+            ),
+        )
+        log_action(
+            active_project["id"],
+            "relation",
+            relation_id,
+            "update_relation",
+            f"Updated relation: {data['title'] or relation_id}",
+        )
+        flash("Relation updated.", "success")
+        return redirect(url_for("model_builder"))
+
+    @app.route("/model/relations/<int:relation_id>/delete", methods=["POST"])
+    def delete_relation(relation_id: int):
+        active_project = get_active_project()
+        relation = get_relation_for_project(relation_id, active_project["id"])
+        if relation is None:
+            flash("Relation not found.", "error")
+            abort(404)
+        execute_write(
+            "DELETE FROM relations WHERE id = ? AND project_id = ?",
+            (relation_id, active_project["id"]),
+        )
+        log_action(
+            active_project["id"],
+            "relation",
+            relation_id,
+            "delete_relation",
+            f"Deleted relation: {relation['title'] or relation_id}",
+        )
+        flash("Relation deleted.", "success")
+        return redirect(url_for("model_builder"))
+
+    @app.route("/model/entity/<entity_type>/<int:entity_id>")
+    def model_entity(entity_type: str, entity_id: int):
+        active_project = get_active_project()
+        entity = get_entity_reference(entity_type, entity_id, active_project["id"])
+        if entity is None:
+            flash("Invalid model entity.", "error")
+            abort(404)
+        return render_template(
+            "model_entity.html",
+            title=f"Model Entity: {entity['label']}",
+            active_page="model",
+            active_project=active_project,
+            entity=entity,
+            outgoing_relations=get_entity_relations(active_project["id"], entity_type, entity_id, "outgoing"),
+            incoming_relations=get_entity_relations(active_project["id"], entity_type, entity_id, "incoming"),
+            related_memos=get_related_memos_for_model_entity(active_project["id"], entity_type, entity_id),
+            mode_prompts=get_model_mode_prompts(active_project),
+        )
+
+    @app.route("/research-questions/create", methods=["POST"])
+    def create_research_question():
+        active_project = get_active_project()
+        question = request.form.get("question", "").strip()
+        note = request.form.get("note", "").strip()
+        if not question:
+            flash("Research question is required.", "error")
+            return redirect(url_for("model_builder"))
+        question_id = execute_write(
+            """
+            INSERT INTO research_questions (project_id, question, note)
+            VALUES (?, ?, ?)
+            """,
+            (active_project["id"], question, note),
+        )
+        log_action(
+            active_project["id"],
+            "research_question",
+            question_id,
+            "create_research_question",
+            f"Created research question: {truncate_text(question, 80)}",
+        )
+        flash("Research question created.", "success")
+        return redirect(url_for("model_builder"))
+
     @app.route("/exports")
     def exports():
         active_project = get_active_project()
@@ -1551,6 +1801,20 @@ def create_app() -> Flask:
             {
                 "title": "Project exports",
                 "cards": [
+                    {
+                        "title": "Analytical model Markdown",
+                        "description": "Readable relation model with summaries and entity-centered counts.",
+                        "format": "Markdown",
+                        "endpoint": "export_model_markdown",
+                        "button": "Download model",
+                    },
+                    {
+                        "title": "Analytical model JSON",
+                        "description": "Structured relation model with entity labels for downstream use.",
+                        "format": "JSON",
+                        "endpoint": "export_model_json",
+                        "button": "Download model JSON",
+                    },
                     {
                         "title": "Project summary Markdown",
                         "description": "Readable project overview with counts, top items, and audit summary.",
@@ -1663,6 +1927,24 @@ def create_app() -> Flask:
             generate_project_summary_markdown(active_project),
             "discourseLab_project_summary.md",
             "text/markdown; charset=utf-8",
+        )
+
+    @app.route("/exports/model.md")
+    def export_model_markdown():
+        active_project = get_active_project()
+        return download_text(
+            generate_model_markdown(active_project),
+            "discourseLab_analytical_model.md",
+            "text/markdown; charset=utf-8",
+        )
+
+    @app.route("/exports/model.json")
+    def export_model_json():
+        active_project = get_active_project()
+        return download_text(
+            generate_model_json(active_project),
+            "discourseLab_analytical_model.json",
+            "application/json; charset=utf-8",
         )
 
     @app.route("/exports/project.json")
@@ -1779,6 +2061,33 @@ def run_migrations() -> None:
     for column in GT_COLUMNS:
         if column not in code_columns:
             db.execute(f"ALTER TABLE codes ADD COLUMN {column} TEXT")
+    relation_columns = {
+        row["name"] for row in db.execute("PRAGMA table_info(relations)").fetchall()
+    }
+    relation_migrations = {
+        "title": "ALTER TABLE relations ADD COLUMN title TEXT",
+        "strength": "ALTER TABLE relations ADD COLUMN strength TEXT DEFAULT 'moderate'",
+        "evidence_note": "ALTER TABLE relations ADD COLUMN evidence_note TEXT",
+        "updated_at": "ALTER TABLE relations ADD COLUMN updated_at TEXT",
+    }
+    for column, sql in relation_migrations.items():
+        if column not in relation_columns:
+            db.execute(sql)
+    db.execute(
+        """
+        UPDATE relations
+        SET strength = 'moderate'
+        WHERE strength IS NULL OR TRIM(strength) = ''
+           OR strength NOT IN ('weak', 'moderate', 'strong', 'uncertain')
+        """
+    )
+    db.execute(
+        """
+        UPDATE relations
+        SET updated_at = created_at
+        WHERE updated_at IS NULL OR TRIM(updated_at) = ''
+        """
+    )
     db.executescript(
         """
         CREATE TABLE IF NOT EXISTS discourse_markers (
@@ -2103,6 +2412,79 @@ def get_cda_dashboard_preview(project_id: int) -> dict[str, str | int]:
     }
 
 
+def get_model_dashboard_preview(project_id: int) -> dict:
+    top_relation = query_one(
+        """
+        SELECT relation_type, COUNT(*) AS count
+        FROM relations
+        WHERE project_id = ?
+        GROUP BY relation_type
+        ORDER BY count DESC, relation_type
+        LIMIT 1
+        """,
+        (project_id,),
+    )
+    latest = get_relations_for_project(project_id, {}, limit=5)
+    return {
+        **get_model_counts(project_id),
+        "top_relation_type": top_relation["relation_type"] if top_relation else "None yet",
+        "latest_relations": latest,
+    }
+
+
+def get_model_counts(project_id: int) -> dict[str, int]:
+    return {
+        "total": query_one(
+            "SELECT COUNT(*) AS count FROM relations WHERE project_id = ?", (project_id,)
+        )["count"],
+        "strong": query_one(
+            "SELECT COUNT(*) AS count FROM relations WHERE project_id = ? AND strength = 'strong'",
+            (project_id,),
+        )["count"],
+        "uncertain": query_one(
+            "SELECT COUNT(*) AS count FROM relations WHERE project_id = ? AND strength = 'uncertain'",
+            (project_id,),
+        )["count"],
+        "gt_categories": query_one(
+            """
+            SELECT COUNT(*) AS count
+            FROM relations
+            LEFT JOIN codes AS source_code
+                ON source_code.id = relations.source_id
+               AND relations.source_type = 'code'
+               AND source_code.project_id = relations.project_id
+            LEFT JOIN codes AS target_code
+                ON target_code.id = relations.target_id
+               AND relations.target_type = 'code'
+               AND target_code.project_id = relations.project_id
+            WHERE relations.project_id = ?
+              AND (source_code.code_type = 'category' OR target_code.code_type = 'category')
+            """,
+            (project_id,),
+        )["count"],
+        "cda_entities": query_one(
+            """
+            SELECT COUNT(*) AS count
+            FROM relations
+            WHERE project_id = ?
+              AND (
+                source_type IN ('actor', 'discourse_marker', 'discourse_feature')
+                OR target_type IN ('actor', 'discourse_marker', 'discourse_feature')
+              )
+            """,
+            (project_id,),
+        )["count"],
+        "negative_cases": query_one(
+            """
+            SELECT COUNT(*) AS count
+            FROM relations
+            WHERE project_id = ? AND relation_type = 'is_negative_case_for'
+            """,
+            (project_id,),
+        )["count"],
+    }
+
+
 def get_documents_for_project(project_id: int) -> list[sqlite3.Row]:
     return query_all(
         """
@@ -2268,6 +2650,8 @@ def get_segments_for_document(document_id: int, project_id: int | None = None) -
         segment["actors"] = get_segment_actors_for_segment(row["id"])
         segment["features"] = get_discourse_features_for_segment(row["id"])
         segment["memos"] = get_memos_for_entity(project_id, "segment", row["id"])
+        segment["relations"] = get_relations_for_entity(project_id, "segment", row["id"], limit=3) if project_id else []
+        segment["relation_count"] = get_relation_count_for_entity(project_id, "segment", row["id"]) if project_id else 0
         segments.append(segment)
     return segments
 
@@ -2366,9 +2750,15 @@ def get_actors_for_project(project_id: int) -> list[sqlite3.Row]:
         """
         SELECT actors.id, actors.name, actors.actor_type, actors.description,
                actors.created_at, actors.updated_at,
-               COUNT(segment_actors.id) AS annotation_count
+               COUNT(DISTINCT segment_actors.id) AS annotation_count,
+               COUNT(DISTINCT relations.id) AS relation_count
         FROM actors
         LEFT JOIN segment_actors ON segment_actors.actor_id = actors.id
+        LEFT JOIN relations ON relations.project_id = actors.project_id
+            AND (
+                (relations.source_type = 'actor' AND relations.source_id = actors.id)
+                OR (relations.target_type = 'actor' AND relations.target_id = actors.id)
+            )
         WHERE actors.project_id = ?
         GROUP BY actors.id
         ORDER BY actors.name COLLATE NOCASE
@@ -2598,6 +2988,338 @@ def get_segment_for_project(segment_id: int, project_id: int) -> sqlite3.Row | N
         """,
         (segment_id, project_id),
     )
+
+
+def get_relation_entity_options(project_id: int) -> list[dict]:
+    entities = []
+    for entity_type in RELATION_ENTITY_TYPES:
+        entities.extend(get_entities_for_type(entity_type, project_id))
+    return sorted(entities, key=lambda entity: (entity["type_label"], entity["label"].lower()))
+
+
+def get_entities_for_type(entity_type: str, project_id: int) -> list[dict]:
+    if entity_type == "document":
+        rows = query_all(
+            "SELECT id, title, note FROM documents WHERE project_id = ? ORDER BY title COLLATE NOCASE",
+            (project_id,),
+        )
+        return [
+            make_entity_option("document", row["id"], f"Document: {row['title']}", row["note"])
+            for row in rows
+        ]
+    if entity_type == "segment":
+        rows = query_all(
+            """
+            SELECT segments.id, COALESCE(segments.name, '') AS name,
+                   segments.selected_text, segments.note, documents.title AS document_title
+            FROM segments
+            JOIN documents ON documents.id = segments.document_id
+            WHERE documents.project_id = ?
+            ORDER BY documents.title COLLATE NOCASE, segments.start_offset
+            """,
+            (project_id,),
+        )
+        return [
+            make_entity_option(
+                "segment",
+                row["id"],
+                f"Segment: {row['name'] or truncate_text(row['selected_text'], 70)} — {row['document_title']}",
+                row["note"],
+            )
+            for row in rows
+        ]
+    if entity_type == "code":
+        rows = query_all(
+            "SELECT id, name, code_type, description FROM codes WHERE project_id = ? ORDER BY code_type, name COLLATE NOCASE",
+            (project_id,),
+        )
+        return [
+            make_entity_option(
+                "code",
+                row["id"],
+                f"Code: {row['name']} ({row['code_type']})",
+                row["description"],
+            )
+            for row in rows
+        ]
+    if entity_type == "memo":
+        rows = query_all(
+            "SELECT id, title, memo_type, body FROM memos WHERE project_id = ? ORDER BY title COLLATE NOCASE",
+            (project_id,),
+        )
+        return [
+            make_entity_option(
+                "memo", row["id"], f"Memo: {row['title']} ({row['memo_type']})", row["body"]
+            )
+            for row in rows
+        ]
+    if entity_type == "research_question":
+        rows = query_all(
+            "SELECT id, question, note FROM research_questions WHERE project_id = ? ORDER BY id",
+            (project_id,),
+        )
+        return [
+            make_entity_option(
+                "research_question",
+                row["id"],
+                f"RQ: {truncate_text(row['question'], 90)}",
+                row["note"],
+            )
+            for row in rows
+        ]
+    if entity_type == "discourse_marker":
+        rows = query_all(
+            "SELECT id, name, marker_type, description FROM discourse_markers WHERE project_id = ? ORDER BY name COLLATE NOCASE",
+            (project_id,),
+        )
+        return [
+            make_entity_option(
+                "discourse_marker",
+                row["id"],
+                f"CDA marker: {row['name']} ({row['marker_type']})",
+                row["description"],
+            )
+            for row in rows
+        ]
+    if entity_type == "actor":
+        rows = query_all(
+            "SELECT id, name, actor_type, description FROM actors WHERE project_id = ? ORDER BY name COLLATE NOCASE",
+            (project_id,),
+        )
+        return [
+            make_entity_option(
+                "actor", row["id"], f"Actor: {row['name']} ({row['actor_type']})", row["description"]
+            )
+            for row in rows
+        ]
+    if entity_type == "discourse_feature":
+        rows = query_all(
+            """
+            SELECT discourse_features.id, discourse_features.feature_type,
+                   discourse_features.value, discourse_features.interpretation,
+                   documents.title AS document_title
+            FROM discourse_features
+            JOIN segments ON segments.id = discourse_features.segment_id
+            JOIN documents ON documents.id = segments.document_id
+            WHERE documents.project_id = ?
+            ORDER BY discourse_features.feature_type, discourse_features.value COLLATE NOCASE
+            """,
+            (project_id,),
+        )
+        return [
+            make_entity_option(
+                "discourse_feature",
+                row["id"],
+                f"Feature: {row['feature_type']} — {truncate_text(row['value'], 70)}",
+                row["interpretation"],
+            )
+            for row in rows
+        ]
+    return []
+
+
+def make_entity_option(entity_type: str, entity_id: int, label: str, meta: str | None = None) -> dict:
+    return {
+        "type": entity_type,
+        "id": entity_id,
+        "value": f"{entity_type}:{entity_id}",
+        "label": label,
+        "type_label": RELATION_ENTITY_TYPES[entity_type],
+        "meta": meta or "",
+    }
+
+
+def get_entity_reference(entity_type: str, entity_id: int, project_id: int) -> dict | None:
+    if entity_type not in RELATION_ENTITY_TYPES:
+        return None
+    for entity in get_entities_for_type(entity_type, project_id):
+        if entity["id"] == entity_id:
+            return entity
+    return None
+
+
+def parse_entity_value(raw_value: str) -> tuple[str | None, int | None]:
+    try:
+        entity_type, entity_id_raw = raw_value.split(":", 1)
+    except ValueError:
+        return None, None
+    if entity_type not in RELATION_ENTITY_TYPES or not entity_id_raw.isdigit():
+        return None, None
+    return entity_type, int(entity_id_raw)
+
+
+def validate_relation_form(project_id: int) -> tuple[dict, str | None]:
+    source_type, source_id = parse_entity_value(request.form.get("source_entity", "").strip())
+    target_type, target_id = parse_entity_value(request.form.get("target_entity", "").strip())
+    if source_type is None or source_id is None:
+        return {}, "Invalid source entity."
+    if target_type is None or target_id is None:
+        return {}, "Invalid target entity."
+    if source_type == target_type and source_id == target_id:
+        return {}, "A relation cannot link an entity to itself."
+    relation_type = request.form.get("relation_type", "").strip()
+    if relation_type not in RELATION_TYPES:
+        return {}, "Invalid relation type."
+    strength = request.form.get("strength", "moderate").strip()
+    if strength not in RELATION_STRENGTHS:
+        return {}, "Invalid strength."
+    source = get_entity_reference(source_type, source_id, project_id)
+    if source is None:
+        return {}, "Invalid source entity."
+    target = get_entity_reference(target_type, target_id, project_id)
+    if target is None:
+        return {}, "Invalid target entity."
+    return {
+        "title": request.form.get("title", "").strip(),
+        "source_type": source_type,
+        "source_id": source_id,
+        "source_label": source["label"],
+        "target_type": target_type,
+        "target_id": target_id,
+        "target_label": target["label"],
+        "relation_type": relation_type,
+        "strength": strength,
+        "memo": request.form.get("memo", "").strip(),
+        "evidence_note": request.form.get("evidence_note", "").strip(),
+    }, None
+
+
+def hydrate_relation(row: sqlite3.Row, project_id: int) -> dict:
+    relation = row_to_dict(row)
+    source = get_entity_reference(row["source_type"], row["source_id"], project_id)
+    target = get_entity_reference(row["target_type"], row["target_id"], project_id)
+    relation["source_label"] = source["label"] if source else f"{row['source_type']} #{row['source_id']}"
+    relation["target_label"] = target["label"] if target else f"{row['target_type']} #{row['target_id']}"
+    relation["relation_label"] = RELATION_TYPES.get(row["relation_type"], row["relation_type"])
+    relation["strength_label"] = RELATION_STRENGTHS.get(row["strength"], row["strength"])
+    relation["source_value"] = f"{row['source_type']}:{row['source_id']}"
+    relation["target_value"] = f"{row['target_type']}:{row['target_id']}"
+    return relation
+
+
+def get_relations_for_project(project_id: int, filters: dict, limit: int | None = None) -> list[dict]:
+    sql = "SELECT * FROM relations WHERE project_id = ?"
+    params: list = [project_id]
+    if filters.get("relation_type") in RELATION_TYPES:
+        sql += " AND relation_type = ?"
+        params.append(filters["relation_type"])
+    if filters.get("strength") in RELATION_STRENGTHS:
+        sql += " AND strength = ?"
+        params.append(filters["strength"])
+    if filters.get("source_type") in RELATION_ENTITY_TYPES:
+        sql += " AND source_type = ?"
+        params.append(filters["source_type"])
+    if filters.get("target_type") in RELATION_ENTITY_TYPES:
+        sql += " AND target_type = ?"
+        params.append(filters["target_type"])
+    if filters.get("involves_type") in RELATION_ENTITY_TYPES:
+        sql += " AND (source_type = ? OR target_type = ?)"
+        params.extend([filters["involves_type"], filters["involves_type"]])
+    q = filters.get("q", "").strip()
+    sql += " ORDER BY datetime(created_at) DESC, id DESC"
+    if limit is not None:
+        sql += " LIMIT ?"
+        params.append(limit)
+    relations = [hydrate_relation(row, project_id) for row in query_all(sql, tuple(params))]
+    if q:
+        q_lower = q.lower()
+        relations = [
+            relation
+            for relation in relations
+            if q_lower in relation["source_label"].lower()
+            or q_lower in relation["target_label"].lower()
+            or q_lower in (relation["title"] or "").lower()
+            or q_lower in (relation["memo"] or "").lower()
+            or q_lower in (relation["evidence_note"] or "").lower()
+        ]
+    return relations
+
+
+def get_relation_for_project(relation_id: int, project_id: int) -> dict | None:
+    row = query_one("SELECT * FROM relations WHERE id = ? AND project_id = ?", (relation_id, project_id))
+    if row is None:
+        return None
+    return hydrate_relation(row, project_id)
+
+
+def get_entity_relations(project_id: int, entity_type: str, entity_id: int, direction: str) -> list[dict]:
+    if direction == "outgoing":
+        filters = {"source_type": entity_type}
+        relations = get_relations_for_project(project_id, filters)
+        return [relation for relation in relations if relation["source_id"] == entity_id]
+    filters = {"target_type": entity_type}
+    relations = get_relations_for_project(project_id, filters)
+    return [relation for relation in relations if relation["target_id"] == entity_id]
+
+
+def get_relations_for_entity(project_id: int, entity_type: str, entity_id: int, limit: int | None = None) -> list[dict]:
+    relations = get_relations_for_project(project_id, {}, limit=None)
+    result = [
+        relation for relation in relations
+        if (relation["source_type"] == entity_type and relation["source_id"] == entity_id)
+        or (relation["target_type"] == entity_type and relation["target_id"] == entity_id)
+    ]
+    return result[:limit] if limit else result
+
+
+def get_relation_count_for_entity(project_id: int, entity_type: str, entity_id: int) -> int:
+    return query_one(
+        """
+        SELECT COUNT(*) AS count
+        FROM relations
+        WHERE project_id = ?
+          AND ((source_type = ? AND source_id = ?) OR (target_type = ? AND target_id = ?))
+        """,
+        (project_id, entity_type, entity_id, entity_type, entity_id),
+    )["count"]
+
+
+def get_related_memos_for_model_entity(project_id: int, entity_type: str, entity_id: int) -> list[sqlite3.Row]:
+    if entity_type not in {"document", "segment", "code"}:
+        return []
+    return get_memos_for_entity(project_id, entity_type, entity_id)
+
+
+def get_research_questions_for_project(project_id: int) -> list[sqlite3.Row]:
+    return query_all(
+        """
+        SELECT id, question, note, created_at, updated_at
+        FROM research_questions
+        WHERE project_id = ?
+        ORDER BY datetime(created_at) DESC, id DESC
+        """,
+        (project_id,),
+    )
+
+
+def get_model_mode_prompts(active_project: sqlite3.Row) -> list[str]:
+    generic = [
+        "What does this relation explain?",
+        "What is the evidence for this relation?",
+        "Is the relation strong, weak, or uncertain?",
+        "Is there a negative case?",
+        "Does the relation help answer a research question?",
+    ]
+    gt = [
+        "Is this a condition, action/interaction, consequence, property, or dimension?",
+        "Does this open code support an axial code?",
+        "Does this axial code support a category?",
+        "Does this relation help integrate the emerging theory?",
+    ]
+    cda = [
+        "Who benefits from this relation?",
+        "Does this relation legitimize or naturalize a power structure?",
+        "Does it foreground or background an actor?",
+        "Does it show how discourse constructs an actor or social problem?",
+        "Does it reveal voice, silence, access, or dominance?",
+    ]
+    if active_project["methodology_mode"] == "gt":
+        return generic + gt
+    if active_project["methodology_mode"] == "cda":
+        return generic + cda
+    if active_project["methodology_mode"] == "mixed":
+        return generic + gt + cda
+    return generic
 
 
 def get_open_codes_for_project(project_id: int) -> list[sqlite3.Row]:
@@ -3010,6 +3732,7 @@ def get_memos_for_project(project_id: int, filters: dict) -> list[dict]:
     for row in query_all(sql, tuple(params)):
         memo = dict(row)
         memo["linked_entity_label"] = get_linked_entity_label(memo, project_id)
+        memo["relation_count"] = get_relation_count_for_entity(project_id, "memo", memo["id"])
         memos.append(memo)
     return memos
 
@@ -3276,6 +3999,7 @@ def get_dashboard_export_links() -> list[dict[str, str]]:
         {"label": "Codebook", "endpoint": "export_codebook_markdown"},
         {"label": "Coded segments", "endpoint": "export_coded_segments_csv"},
         {"label": "Memos", "endpoint": "export_memos_markdown"},
+        {"label": "Analytical model", "endpoint": "export_model_markdown"},
         {"label": "Project package", "endpoint": "export_project_package"},
     ]
 
@@ -3929,6 +4653,128 @@ def generate_project_json(active_project: sqlite3.Row) -> str:
     return json.dumps(data, indent=2, ensure_ascii=False)
 
 
+def get_model_export_data(active_project: sqlite3.Row) -> dict:
+    project_id = active_project["id"]
+    relations = get_relations_for_project(project_id, {})
+    entities = {}
+    for relation in relations:
+        for side in ("source", "target"):
+            key = (relation[f"{side}_type"], relation[f"{side}_id"])
+            entities[key] = {
+                "type": relation[f"{side}_type"],
+                "id": relation[f"{side}_id"],
+                "label": relation[f"{side}_label"],
+            }
+    return {
+        "project": row_to_dict(active_project),
+        "methodology_mode": active_project["methodology_mode"],
+        "generated_at": export_timestamp(),
+        "entities": list(entities.values()),
+        "relations": [
+            {
+                "id": relation["id"],
+                "title": relation["title"],
+                "source_type": relation["source_type"],
+                "source_id": relation["source_id"],
+                "source_label": relation["source_label"],
+                "target_type": relation["target_type"],
+                "target_id": relation["target_id"],
+                "target_label": relation["target_label"],
+                "relation_type": relation["relation_type"],
+                "strength": relation["strength"],
+                "memo": relation["memo"],
+                "evidence_note": relation["evidence_note"],
+                "created_at": relation["created_at"],
+                "updated_at": relation["updated_at"],
+            }
+            for relation in relations
+        ],
+    }
+
+
+def generate_model_markdown(active_project: sqlite3.Row) -> str:
+    data = get_model_export_data(active_project)
+    counts = get_model_counts(active_project["id"])
+    relations = data["relations"]
+    lines = [
+        "# Analytical Model",
+        "",
+        f"Project: {active_project['name']}",
+        f"Methodology mode: {METHODOLOGY_MODES.get(active_project['methodology_mode'], active_project['methodology_mode'])}",
+        f"Exported: {data['generated_at']}",
+        "",
+        "## Summary",
+        "",
+        f"- Total relations: {counts['total']}",
+        f"- Strong relations: {counts['strong']}",
+        f"- Uncertain relations: {counts['uncertain']}",
+        f"- Negative case relations: {counts['negative_cases']}",
+        "",
+        "## Relations",
+        "",
+    ]
+    if not relations:
+        lines.extend(["No analytical relations created yet.", ""])
+    for relation in relations:
+        lines.extend(
+            [
+                f"### {relation['title'] or 'Relation #' + str(relation['id'])}",
+                "",
+                f"Source: {relation['source_label']}",
+                f"Relation: {relation['relation_type']}",
+                f"Target: {relation['target_label']}",
+                f"Strength: {relation['strength']}",
+                "",
+                "Memo:",
+                "",
+                relation["memo"] or "",
+                "",
+                "Evidence:",
+                "",
+                relation["evidence_note"] or "",
+                "",
+            ]
+        )
+    lines.extend(["## Relations by type", ""])
+    by_type: dict[str, list] = {}
+    for relation in relations:
+        by_type.setdefault(relation["relation_type"], []).append(relation)
+    if by_type:
+        for relation_type, type_relations in sorted(by_type.items()):
+            lines.extend([f"### {relation_type}", ""])
+            for relation in type_relations:
+                lines.append(
+                    f"- {relation['source_label']} -> {relation_type} -> {relation['target_label']}"
+                )
+            lines.append("")
+    else:
+        lines.extend(["No relation types yet.", ""])
+    lines.extend(["## Entity-centered summaries", ""])
+    if data["entities"]:
+        for entity in data["entities"]:
+            outgoing = len(
+                [
+                    relation for relation in relations
+                    if relation["source_type"] == entity["type"] and relation["source_id"] == entity["id"]
+                ]
+            )
+            incoming = len(
+                [
+                    relation for relation in relations
+                    if relation["target_type"] == entity["type"] and relation["target_id"] == entity["id"]
+                ]
+            )
+            lines.append(f"- {entity['label']}: {outgoing} outgoing, {incoming} incoming")
+    else:
+        lines.append("No related entities yet.")
+    lines.append("")
+    return "\n".join(lines)
+
+
+def generate_model_json(active_project: sqlite3.Row) -> str:
+    return json.dumps(get_model_export_data(active_project), indent=2, ensure_ascii=False)
+
+
 def generate_project_package_zip(active_project: sqlite3.Row) -> bytes:
     timestamp = export_timestamp()
     readme = "\n".join(
@@ -3947,6 +4793,8 @@ def generate_project_package_zip(active_project: sqlite3.Row) -> bytes:
             "- memos.md",
             "- project_summary.md",
             "- project.json",
+            "- analytical_model.md",
+            "- analytical_model.json",
             *(
                 ["- gt_hierarchy.md"]
                 if project_supports_gt(active_project)
@@ -3958,7 +4806,7 @@ def generate_project_package_zip(active_project: sqlite3.Row) -> bytes:
                 else []
             ),
             "",
-            "Uploaded source documents are not included in this package in Phase 9.",
+            "Uploaded source documents are not included in this package in Phase 10.",
             "",
         ]
     )
@@ -3969,6 +4817,8 @@ def generate_project_package_zip(active_project: sqlite3.Row) -> bytes:
         "memos.md": generate_memos_markdown(active_project),
         "project_summary.md": generate_project_summary_markdown(active_project),
         "project.json": generate_project_json(active_project),
+        "analytical_model.md": generate_model_markdown(active_project),
+        "analytical_model.json": generate_model_json(active_project),
         "README_EXPORT.txt": readme,
     }
     if project_supports_gt(active_project):

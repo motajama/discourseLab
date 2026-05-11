@@ -1,0 +1,211 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="page-header">
+    <p class="eyebrow">Phase 10 — Relations and analytical model builder</p>
+    <h1>Analytical Model</h1>
+    <p>
+        The analytical model connects codes, categories, actors, discourse features,
+        memos, and segments into an explicit research argument.
+    </p>
+</section>
+
+<section class="dashboard-grid">
+    <article class="info-panel">
+        <h2>Active Project</h2>
+        <dl class="metadata-list">
+            <div><dt>Name</dt><dd>{{ active_project.name }}</dd></div>
+            <div><dt>Methodology</dt><dd>{{ methodology_mode_labels[active_project.methodology_mode] }}</dd></div>
+        </dl>
+    </article>
+    <article class="info-panel">
+        <h2>Model Summary</h2>
+        <ul class="compact-list">
+            <li><span>Total relations</span><span>{{ relation_counts.total }}</span></li>
+            <li><span>Strong relations</span><span>{{ relation_counts.strong }}</span></li>
+            <li><span>Uncertain relations</span><span>{{ relation_counts.uncertain }}</span></li>
+            <li><span>Relations involving GT categories</span><span>{{ relation_counts.gt_categories }}</span></li>
+            <li><span>Relations involving CDA actors/features</span><span>{{ relation_counts.cda_entities }}</span></li>
+            <li><span>Negative case relations</span><span>{{ relation_counts.negative_cases }}</span></li>
+        </ul>
+    </article>
+</section>
+
+<section class="info-panel import-panel">
+    <h2>Create Relation</h2>
+    <form class="document-form" action="{{ url_for('create_relation') }}" method="post">
+        <label>
+            <span>Title</span>
+            <input type="text" name="title" placeholder="Optional relation title">
+        </label>
+        <div class="form-grid">
+            <label>
+                <span>Source entity</span>
+                <select name="source_entity" required>
+                    <option value="">Choose source</option>
+                    {% for entity in entities %}
+                        <option value="{{ entity.value }}">[{{ entity.type_label }}] {{ entity.label }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <label>
+                <span>Relation type</span>
+                <select name="relation_type" required>
+                    <option value="">Choose relation</option>
+                    {% for value, label in relation_type_labels.items() %}
+                        <option value="{{ value }}">{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+        </div>
+        <div class="form-grid">
+            <label>
+                <span>Target entity</span>
+                <select name="target_entity" required>
+                    <option value="">Choose target</option>
+                    {% for entity in entities %}
+                        <option value="{{ entity.value }}">[{{ entity.type_label }}] {{ entity.label }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <label>
+                <span>Strength</span>
+                <select name="strength" required>
+                    {% for value, label in relation_strength_labels.items() %}
+                        <option value="{{ value }}" {{ "selected" if value == "moderate" else "" }}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+        </div>
+        <label>
+            <span>Analytical memo</span>
+            <textarea name="memo" rows="4"></textarea>
+        </label>
+        <label>
+            <span>Evidence note</span>
+            <textarea name="evidence_note" rows="4"></textarea>
+        </label>
+        <button type="submit" class="button-primary">Create relation</button>
+    </form>
+</section>
+
+<section class="info-panel import-panel research-question-panel">
+    <h2>Research Questions</h2>
+    <form class="annotation-form" action="{{ url_for('create_research_question') }}" method="post">
+        <label>
+            <span>Question</span>
+            <input type="text" name="question" required>
+        </label>
+        <label>
+            <span>Note</span>
+            <input type="text" name="note">
+        </label>
+        <button type="submit" class="button-secondary">Add question</button>
+    </form>
+    {% if research_questions %}
+        <ul class="compact-list">
+            {% for question in research_questions %}
+                <li>
+                    <span>{{ question.question }}</span>
+                    <span>{{ question.note or "No note" }}</span>
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p>No research questions yet.</p>
+    {% endif %}
+</section>
+
+<section class="info-panel import-panel">
+    <h2>Filters</h2>
+    <form class="filter-form model-filter-form" action="{{ url_for('model_builder') }}" method="get">
+        <label>
+            <span>Relation type</span>
+            <select name="relation_type">
+                <option value="">All</option>
+                {% for value, label in relation_type_labels.items() %}
+                    <option value="{{ value }}" {{ "selected" if filters.relation_type == value else "" }}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label>
+            <span>Strength</span>
+            <select name="strength">
+                <option value="">All</option>
+                {% for value, label in relation_strength_labels.items() %}
+                    <option value="{{ value }}" {{ "selected" if filters.strength == value else "" }}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label>
+            <span>Involves type</span>
+            <select name="involves_type">
+                <option value="">All</option>
+                {% for value, label in entity_type_labels.items() %}
+                    <option value="{{ value }}" {{ "selected" if filters.involves_type == value else "" }}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label>
+            <span>Source type</span>
+            <select name="source_type">
+                <option value="">All</option>
+                {% for value, label in entity_type_labels.items() %}
+                    <option value="{{ value }}" {{ "selected" if filters.source_type == value else "" }}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label>
+            <span>Target type</span>
+            <select name="target_type">
+                <option value="">All</option>
+                {% for value, label in entity_type_labels.items() %}
+                    <option value="{{ value }}" {{ "selected" if filters.target_type == value else "" }}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label>
+            <span>Search</span>
+            <input type="search" name="q" value="{{ filters.q }}">
+        </label>
+        <button type="submit" class="button-secondary">Apply filters</button>
+        <a class="button-secondary" href="{{ url_for('model_builder') }}">Clear</a>
+    </form>
+</section>
+
+<section class="info-panel">
+    <h2>Relations</h2>
+    {% if relations %}
+        <div class="relation-list">
+            {% for relation in relations %}
+                <article class="relation-card">
+                    <div class="relation-card-header">
+                        <div>
+                            <h3>{{ relation.title or "Relation #" ~ relation.id }}</h3>
+                            <span class="strength-badge strength-{{ relation.strength }}">{{ relation.strength_label }}</span>
+                        </div>
+                        <div class="actions-cell">
+                            <a class="button-secondary" href="{{ url_for('edit_relation', relation_id=relation.id) }}">Edit</a>
+                            <form action="{{ url_for('delete_relation', relation_id=relation.id) }}" method="post">
+                                <button type="submit" class="button-danger">Delete</button>
+                            </form>
+                        </div>
+                    </div>
+                    <div class="relation-flow">
+                        <a class="entity-label" href="{{ url_for('model_entity', entity_type=relation.source_type, entity_id=relation.source_id) }}">{{ relation.source_label }}</a>
+                        <span class="relation-arrow">{{ relation.relation_label }} →</span>
+                        <a class="entity-label" href="{{ url_for('model_entity', entity_type=relation.target_type, entity_id=relation.target_id) }}">{{ relation.target_label }}</a>
+                    </div>
+                    {% if relation.memo %}<p><strong>Memo:</strong> {{ relation.memo[:240] }}{% if relation.memo|length > 240 %}...{% endif %}</p>{% endif %}
+                    {% if relation.evidence_note %}<p><strong>Evidence:</strong> {{ relation.evidence_note[:240] }}{% if relation.evidence_note|length > 240 %}...{% endif %}</p>{% endif %}
+                    <p class="muted-text">Created {{ relation.created_at }} · Updated {{ relation.updated_at or "not recorded" }}</p>
+                </article>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p>No relations match the current filters.</p>
+    {% endif %}
+</section>
+
+{% include "_model_helper.html" %}
+{% endblock %}

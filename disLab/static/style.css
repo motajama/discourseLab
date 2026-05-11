@@ -861,6 +861,101 @@ button:disabled {
     font-size: 0.9rem;
 }
 
+.relation-list {
+    display: grid;
+    gap: 14px;
+}
+
+.relation-card {
+    padding: 16px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: #fbfcfd;
+}
+
+.relation-card h3 {
+    margin: 0;
+    font-size: 1rem;
+}
+
+.relation-card-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 14px;
+    margin-bottom: 12px;
+}
+
+.relation-flow {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    align-items: center;
+    gap: 12px;
+    margin: 10px 0;
+}
+
+.entity-label {
+    display: inline-block;
+    padding: 9px 10px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: #ffffff;
+    color: var(--text);
+    text-decoration: none;
+    overflow-wrap: anywhere;
+}
+
+.relation-arrow {
+    color: var(--accent-dark);
+    font-weight: 700;
+    text-align: center;
+}
+
+.strength-badge {
+    display: inline-flex;
+    align-items: center;
+    min-height: 26px;
+    width: fit-content;
+    border-radius: 999px;
+    padding: 4px 9px;
+    background: var(--surface-muted);
+    color: var(--text);
+    font-size: 0.82rem;
+    font-weight: 700;
+}
+
+.strength-strong {
+    background: #e4f3e8;
+    color: #245737;
+}
+
+.strength-weak {
+    background: #f3efe4;
+    color: #6d531d;
+}
+
+.strength-uncertain {
+    background: #fff1ef;
+    color: #8a2d24;
+}
+
+.model-helper ul,
+.research-question-panel ul {
+    margin-top: 12px;
+}
+
+.compact-relations .relation-card {
+    padding: 12px;
+}
+
+.relation-mini-panel {
+    margin-top: 12px;
+}
+
+.model-filter-form {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .disabled-panel {
     border-left: 4px solid var(--border);
 }
@@ -1019,6 +1114,7 @@ button:disabled {
     }
 
     .filter-form,
+    .model-filter-form,
     .gt-board,
     .comparison-grid,
     .export-grid,
@@ -1045,6 +1141,18 @@ button:disabled {
     .actor-relation-card,
     .discourse-feature-card {
         flex-direction: column;
+    }
+
+    .relation-card-header {
+        flex-direction: column;
+    }
+
+    .relation-flow {
+        grid-template-columns: 1fr;
+    }
+
+    .relation-arrow {
+        text-align: left;
     }
 
     .selection-helper {

@@ -111,6 +111,26 @@
 </section>
 
 <section class="info-panel">
+    <div class="segment-card-header">
+        <h2>Analytical Relations</h2>
+        <a class="button-secondary" href="{{ url_for('model_entity', entity_type='code', entity_id=code.id) }}">Open relation map</a>
+    </div>
+    <p class="muted-text">{{ model_relation_count }} relations involve this code.</p>
+    {% if model_relations %}
+        <ul class="compact-list">
+            {% for relation in model_relations %}
+                <li>
+                    <span>{{ relation.source_label }}</span>
+                    <span>{{ relation.relation_label }} → {{ relation.target_label }}</span>
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p>No analytical relations involve this code yet.</p>
+    {% endif %}
+</section>
+
+<section class="info-panel">
     <h2>Related Segments</h2>
     {% set related_segments = hierarchy_segments if code.code_type in ["axial", "category"] else coded_segments %}
     {% if related_segments %}

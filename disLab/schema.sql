@@ -166,8 +166,12 @@ CREATE TABLE relations (
     target_type TEXT NOT NULL,
     target_id INTEGER NOT NULL,
     relation_type TEXT NOT NULL,
+    title TEXT,
+    strength TEXT DEFAULT 'moderate',
     memo TEXT,
+    evidence_note TEXT,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT,
     FOREIGN KEY (project_id) REFERENCES projects (id) ON DELETE CASCADE
 );
 

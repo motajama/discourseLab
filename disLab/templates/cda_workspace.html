@@ -117,7 +117,7 @@
                 {% for actor in actors %}
                     <li>
                         <span>{{ actor.name }}</span>
-                        <span>{{ actor_type_labels[actor.actor_type] }} · {{ actor.annotation_count }} annotations</span>
+                        <span>{{ actor_type_labels[actor.actor_type] }} · {{ actor.annotation_count }} annotations · {{ actor.relation_count }} relations</span>
                         {% if actor.description %}<span>{{ actor.description }}</span>{% endif %}
                         <form action="{{ url_for('delete_actor', actor_id=actor.id) }}" method="post">
                             <button type="submit" class="button-danger compact-button">Delete</button>

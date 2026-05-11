@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="page-header">
+    <p class="eyebrow">Entity-centered model view</p>
+    <h1>{{ entity.label }}</h1>
+    <p>{{ entity.type_label }} · Active project: {{ active_project.name }}</p>
+</section>
+
+<section class="detail-actions">
+    <a class="button-secondary" href="{{ url_for('model_builder') }}">Back to Model</a>
+</section>
+
+<section class="dashboard-grid">
+    <article class="info-panel">
+        <h2>Entity Metadata</h2>
+        <dl class="metadata-list">
+            <div><dt>Type</dt><dd>{{ entity.type_label }}</dd></div>
+            <div><dt>ID</dt><dd>{{ entity.id }}</dd></div>
+            <div><dt>Notes</dt><dd>{{ entity.meta or "No metadata" }}</dd></div>
+        </dl>
+    </article>
+    <article class="info-panel">
+        <h2>Related Memos</h2>
+        {% if related_memos %}
+            <ul class="compact-list">
+                {% for memo in related_memos %}
+                    <li><span>{{ memo.title }}</span><span>{{ memo.memo_type }} · {{ memo.status }}</span></li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p>No directly linked memos for this entity.</p>
+        {% endif %}
+    </article>
+</section>
+
+<section class="dashboard-grid">
+    <article class="info-panel">
+        <h2>Outgoing Relations</h2>
+        {% if outgoing_relations %}
+            <div class="relation-list compact-relations">
+                {% for relation in outgoing_relations %}
+                    <article class="relation-card">
+                        <h3>{{ relation.title or "Relation #" ~ relation.id }}</h3>
+                        <div class="relation-flow">
+                            <span class="entity-label">{{ relation.source_label }}</span>
+                            <span class="relation-arrow">{{ relation.relation_label }} →</span>
+                            <a class="entity-label" href="{{ url_for('model_entity', entity_type=relation.target_type, entity_id=relation.target_id) }}">{{ relation.target_label }}</a>
+                        </div>
+                        <span class="strength-badge strength-{{ relation.strength }}">{{ relation.strength_label }}</span>
+                    </article>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p>No outgoing relations.</p>
+        {% endif %}
+    </article>
+
+    <article class="info-panel">
+        <h2>Incoming Relations</h2>
+        {% if incoming_relations %}
+            <div class="relation-list compact-relations">
+                {% for relation in incoming_relations %}
+                    <article class="relation-card">
+                        <h3>{{ relation.title or "Relation #" ~ relation.id }}</h3>
+                        <div class="relation-flow">
+                            <a class="entity-label" href="{{ url_for('model_entity', entity_type=relation.source_type, entity_id=relation.source_id) }}">{{ relation.source_label }}</a>
+                            <span class="relation-arrow">{{ relation.relation_label }} →</span>
+                            <span class="entity-label">{{ relation.target_label }}</span>
+                        </div>
+                        <span class="strength-badge strength-{{ relation.strength }}">{{ relation.strength_label }}</span>
+                    </article>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p>No incoming relations.</p>
+        {% endif %}
+    </article>
+</section>
+
+{% include "_model_helper.html" %}
+{% endblock %}
