@@ -4,7 +4,7 @@ discourseLab is a local, lightweight qualitative analysis workspace for discours
 
 It runs on your own computer in a web browser. It does not require an account, cloud service, npm, Node, React, or external web services.
 
-Current phase: **Phase 7 — CDA workspace**
+Current phase: **Phase 8 — Exports and research outputs**
 
 ## What You Need
 
@@ -240,6 +240,8 @@ py app.py
 10. Return to the document and assign CDA markers, actors, and discourse features to segments.
 11. Open `/cda/features` to view discourse features.
 12. Open `/cda/voice-silence` to view actor voice and silence counts.
+13. Go to **Exports**.
+14. Download the codebook, coded segments, memos, CDA reports, project summary, JSON archive, or complete ZIP package.
 
 ## Data Storage
 
@@ -306,7 +308,7 @@ http://127.0.0.1:5001
 ## Project Notes
 
 - App name: discourseLab
-- Current phase: Phase 7 — CDA workspace
+- Current phase: Phase 8 — Exports and research outputs
 - Technology: Python, Flask, SQLite, HTML, CSS, vanilla JavaScript
 - Runs locally in your browser
 - No authentication

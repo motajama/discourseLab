@@ -77,8 +77,8 @@
         <h2>Prepared Workflow</h2>
         <p class="workflow-line">Documents -> Segments -> Open Codes / CDA Markers -> Actors -> Features -> Reports</p>
         <p>
-            Phase 7 adds a working CDA workspace for markers, actor voice and silence
-            annotations, discourse features, and basic CDA reports.
+            Phase 8 adds robust research outputs for codebooks, coded segments,
+            memos, GT hierarchy, CDA reports, project summaries, JSON, and ZIP packages.
         </p>
     </article>
 
@@ -86,7 +86,7 @@
         <h2>Next Steps</h2>
         <ol class="next-steps">
             <li>Later: Add model building and visual exports.</li>
-            <li>Later: Add additional export formats.</li>
+            <li>Later: Add inter-coder workflows.</li>
         </ol>
     </article>
 
@@ -98,6 +98,15 @@
             <li><span>Most frequent actor relation type</span><span>{{ cda_preview.top_relation_type }}</span></li>
             <li><span>Most frequent discourse feature type</span><span>{{ cda_preview.top_feature_type }}</span></li>
         </ul>
+    </article>
+
+    <article class="info-panel">
+        <h2>Available Exports</h2>
+        <div class="link-row">
+            {% for export_link in export_links %}
+                <a class="button-secondary" href="{{ url_for(export_link.endpoint) }}">{{ export_link.label }}</a>
+            {% endfor %}
+        </div>
     </article>
 
     <article class="info-panel">

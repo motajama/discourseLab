@@ -2,43 +2,28 @@
 
 {% block content %}
 <section class="page-header">
+    <p class="eyebrow">Phase 8 — Exports and research outputs</p>
     <h1>Exports</h1>
     <p>Active project: {{ active_project.name }}</p>
 </section>
 
-<section class="export-grid">
-    <article class="info-panel export-card">
-        <h2>Codebook Markdown</h2>
-        <p>Download the current project codebook as a Markdown file.</p>
-        <a class="button-primary" href="{{ url_for('export_codebook_markdown') }}">Download codebook</a>
-    </article>
-    <article class="info-panel export-card inactive">
-        <h2>Coded segments CSV</h2>
-        <p>Prepared for a future phase.</p>
-    </article>
-    <article class="info-panel export-card inactive">
-        <h2>Memos Markdown</h2>
-        <p>Prepared for a future phase.</p>
-    </article>
-    <article class="info-panel export-card inactive">
-        <h2>Model PNG/SVG/TikZ</h2>
-        <p>Prepared for a future phase.</p>
-    </article>
-    <article class="info-panel export-card inactive">
-        <h2>Full project JSON</h2>
-        <p>Prepared for a future phase.</p>
-    </article>
-    <article class="info-panel export-card inactive">
-        <h2>CDA features CSV</h2>
-        <p>Prepared for a future phase.</p>
-    </article>
-    <article class="info-panel export-card inactive">
-        <h2>Actor voice/silence report CSV</h2>
-        <p>Prepared for a future phase.</p>
-    </article>
-    <article class="info-panel export-card inactive">
-        <h2>CDA analytical report Markdown</h2>
-        <p>Prepared for a future phase.</p>
-    </article>
-</section>
+{% for section in export_sections %}
+    <section class="export-section">
+        <div class="section-heading">
+            <h2>{{ section.title }}</h2>
+        </div>
+        <div class="export-grid">
+            {% for card in section.cards %}
+                <article class="info-panel export-card">
+                    <div class="export-card-header">
+                        <h3>{{ card.title }}</h3>
+                        <span class="format-badge">{{ card.format }}</span>
+                    </div>
+                    <p>{{ card.description }}</p>
+                    <a class="button-primary" href="{{ url_for(card.endpoint) }}">{{ card.button }}</a>
+                </article>
+            {% endfor %}
+        </div>
+    </section>
+{% endfor %}
 {% endblock %}

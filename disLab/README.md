@@ -1,6 +1,6 @@
 # discourseLab
 
-Phase: 7 — CDA workspace
+Phase: 8 — Exports and research outputs
 
 discourseLab is a local lightweight qualitative analysis workspace for discourse analysis, critical discourse analysis, and grounded theory.
 
@@ -24,48 +24,42 @@ http://127.0.0.1:5000
 
 1. Start the app with `python app.py`.
 2. Open `http://127.0.0.1:5000`.
-3. Go to CDA Workspace.
-4. Create a CDA marker, for example:
-   - name: Metaphor
-   - marker_type: metaphor
-5. Create an actor, for example:
-   - name: Refugees
-   - actor_type: vulnerable_group
-6. Open a document with at least one segment.
-7. Assign the CDA marker to a segment.
-8. Assign the actor to a segment with `relation_type = is_spoken_about`.
-9. Add a discourse feature:
-   - feature_type = metaphor
-   - value = "wave"
-   - interpretation = "Frames migration as natural force."
-10. Confirm the segment card shows CDA marker, actor annotation, and feature.
-11. Confirm the document text highlight uses CDA marker color when no open code is assigned.
-12. Go to `/cda/features` and confirm the feature appears.
-13. Go to `/cda/voice-silence` and confirm actor counts appear.
-14. Confirm dashboard CDA counts update.
-15. Confirm audit log shows CDA actions.
-16. Restart the app and confirm CDA data persists.
+3. Go to Exports.
+4. Download Codebook Markdown.
+5. Download Coded Segments CSV.
+6. Download Coded Segments Markdown.
+7. Download Memos Markdown.
+8. Download GT Hierarchy Markdown.
+9. Download CDA Features CSV.
+10. Download Voice/Silence CSV.
+11. Download Project Summary Markdown.
+12. Download Full Project JSON.
+13. Download Complete Research Package ZIP.
+14. Open the ZIP and confirm it contains all expected files.
+15. Confirm exports only include the active project.
+16. Restart the app and confirm data is unchanged.
 
-## Current Phase 7
+## Current Phase 8
 
-Phase 7 adds the first working Critical Discourse Analysis workspace:
+Phase 8 adds robust research exports:
 
-- CDA marker creation and deletion
-- Actor creation and deletion
-- CDA marker assignment to existing segments
-- Actor relation annotations on segments
-- Discourse feature annotations for metaphor, modality, evaluation, presupposition, legitimation, intertextuality, framing, nominalization, passivization, agency, ideology, power relation, and other
-- CDA feature overview with feature type and document filters
-- Voice/silence actor report
-- CDA prompts helper panel
-- CDA counts and preview on the dashboard
-- CDA information shown in document segment cards
-- CDA marker fallback highlighting when a segment has no open code
+- Codebook Markdown
+- Coded segments CSV
+- Coded segments Markdown
+- Memos Markdown
+- GT hierarchy Markdown
+- CDA features CSV
+- Actor voice/silence CSV
+- Project summary Markdown
+- Full active-project JSON
+- Complete research package ZIP generated in memory
 
-This phase does not implement advanced network model building, relation graph editing, PNG/SVG/TikZ export, CDA CSV exports, full project JSON export, inter-coder mode, blind recoding mode, AI helpers, authentication, or cloud functionality.
+Exports are generated on demand, use UTF-8, use active project data only, and do not modify the database.
+
+This phase does not implement advanced network model building, interactive graph editing, PNG/SVG/TikZ graph export, inter-coder mode, blind recoding mode, AI helpers, authentication, cloud sync, or source-document bundling in the ZIP package.
 
 ## Planned Later Phases
 
 - Model building and relation visualization
-- Additional export formats
+- Visual graph exports
 - Inter-coder workflows

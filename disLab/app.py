@@ -1,7 +1,11 @@
+import csv
 from datetime import datetime
+import io
+import json
 from pathlib import Path
 import re
 import sqlite3
+import zipfile
 from uuid import uuid4
 
 from docx import Document as DocxDocument
@@ -22,8 +26,8 @@ from werkzeug.utils import secure_filename
 
 
 APP_NAME = "discourseLab"
-APP_PHASE = "7"
-CURRENT_PHASE_LABEL = "Phase 7 — CDA workspace"
+APP_PHASE = "8"
+CURRENT_PHASE_LABEL = "Phase 8 — Exports and research outputs"
 DEFAULT_PROJECT_NAME = "Demo Project"
 DEFAULT_PROJECT_DESCRIPTION = "Initial local discourseLab project."
 DEFAULT_CODE_COLOR = "#f4c542"
@@ -170,6 +174,7 @@ def create_app() -> Flask:
             gt_preview=gt_preview,
             cda_preview=cda_preview,
             current_phase=CURRENT_PHASE_LABEL,
+            export_links=get_dashboard_export_links(),
             memo_type_labels=MEMO_TYPES,
             memo_status_labels=MEMO_STATUSES,
         )
@@ -1234,23 +1239,204 @@ def create_app() -> Flask:
 
     @app.route("/exports")
     def exports():
+        export_sections = [
+            {
+                "title": "Codebook exports",
+                "cards": [
+                    {
+                        "title": "Codebook Markdown",
+                        "description": "Complete codebook with hierarchy, GT fields, usage counts, and memo counts.",
+                        "format": "Markdown",
+                        "endpoint": "export_codebook_markdown",
+                        "button": "Download codebook",
+                    },
+                ],
+            },
+            {
+                "title": "Segment exports",
+                "cards": [
+                    {
+                        "title": "Coded segments CSV",
+                        "description": "One CSV row per segment-code assignment.",
+                        "format": "CSV",
+                        "endpoint": "export_coded_segments_csv",
+                        "button": "Download CSV",
+                    },
+                    {
+                        "title": "Coded segments Markdown",
+                        "description": "Readable coded segment report grouped by document.",
+                        "format": "Markdown",
+                        "endpoint": "export_coded_segments_markdown",
+                        "button": "Download Markdown",
+                    },
+                ],
+            },
+            {
+                "title": "Memo exports",
+                "cards": [
+                    {
+                        "title": "Memos Markdown",
+                        "description": "All project memos grouped by memo type and status.",
+                        "format": "Markdown",
+                        "endpoint": "export_memos_markdown",
+                        "button": "Download memos",
+                    },
+                ],
+            },
+            {
+                "title": "Grounded Theory exports",
+                "cards": [
+                    {
+                        "title": "GT hierarchy Markdown",
+                        "description": "Categories, axial codes, open codes, and representative segments.",
+                        "format": "Markdown",
+                        "endpoint": "export_gt_hierarchy_markdown",
+                        "button": "Download GT hierarchy",
+                    },
+                ],
+            },
+            {
+                "title": "CDA exports",
+                "cards": [
+                    {
+                        "title": "CDA features CSV",
+                        "description": "All discourse features with document and segment context.",
+                        "format": "CSV",
+                        "endpoint": "export_cda_features_csv",
+                        "button": "Download features",
+                    },
+                    {
+                        "title": "Actor voice/silence CSV",
+                        "description": "Actor-level voice, silence, evaluation, and agency counts.",
+                        "format": "CSV",
+                        "endpoint": "export_voice_silence_csv",
+                        "button": "Download report",
+                    },
+                ],
+            },
+            {
+                "title": "Project exports",
+                "cards": [
+                    {
+                        "title": "Project summary Markdown",
+                        "description": "Readable project overview with counts, top items, and audit summary.",
+                        "format": "Markdown",
+                        "endpoint": "export_project_summary_markdown",
+                        "button": "Download summary",
+                    },
+                    {
+                        "title": "Full project JSON",
+                        "description": "Structured active-project data for archiving and inspection.",
+                        "format": "JSON",
+                        "endpoint": "export_project_json",
+                        "button": "Download JSON",
+                    },
+                    {
+                        "title": "Complete research package ZIP",
+                        "description": "All Phase 8 exports bundled into one ZIP file.",
+                        "format": "ZIP",
+                        "endpoint": "export_project_package",
+                        "button": "Download package",
+                    },
+                ],
+            },
+        ]
         return render_template(
             "exports.html",
             title="Exports",
             active_page="exports",
             active_project=get_active_project(),
+            export_sections=export_sections,
         )
 
     @app.route("/exports/codebook.md")
     def export_codebook_markdown():
         active_project = get_active_project()
-        markdown = build_codebook_markdown(active_project)
-        return Response(
-            markdown,
-            mimetype="text/markdown",
-            headers={
-                "Content-Disposition": "attachment; filename=discourseLab_codebook.md"
-            },
+        return download_text(
+            build_codebook_markdown(active_project),
+            "discourseLab_codebook.md",
+            "text/markdown; charset=utf-8",
+        )
+
+    @app.route("/exports/coded-segments.csv")
+    def export_coded_segments_csv():
+        active_project = get_active_project()
+        return download_text(
+            generate_coded_segments_csv(active_project),
+            "discourseLab_coded_segments.csv",
+            "text/csv; charset=utf-8",
+        )
+
+    @app.route("/exports/coded-segments.md")
+    def export_coded_segments_markdown():
+        active_project = get_active_project()
+        return download_text(
+            generate_coded_segments_markdown(active_project),
+            "discourseLab_coded_segments.md",
+            "text/markdown; charset=utf-8",
+        )
+
+    @app.route("/exports/memos.md")
+    def export_memos_markdown():
+        active_project = get_active_project()
+        return download_text(
+            generate_memos_markdown(active_project),
+            "discourseLab_memos.md",
+            "text/markdown; charset=utf-8",
+        )
+
+    @app.route("/exports/gt-hierarchy.md")
+    def export_gt_hierarchy_markdown():
+        active_project = get_active_project()
+        return download_text(
+            generate_gt_hierarchy_markdown(active_project),
+            "discourseLab_gt_hierarchy.md",
+            "text/markdown; charset=utf-8",
+        )
+
+    @app.route("/exports/cda-features.csv")
+    def export_cda_features_csv():
+        active_project = get_active_project()
+        return download_text(
+            generate_cda_features_csv(active_project),
+            "discourseLab_cda_features.csv",
+            "text/csv; charset=utf-8",
+        )
+
+    @app.route("/exports/voice-silence.csv")
+    def export_voice_silence_csv():
+        active_project = get_active_project()
+        return download_text(
+            generate_voice_silence_csv(active_project),
+            "discourseLab_voice_silence.csv",
+            "text/csv; charset=utf-8",
+        )
+
+    @app.route("/exports/project-summary.md")
+    def export_project_summary_markdown():
+        active_project = get_active_project()
+        return download_text(
+            generate_project_summary_markdown(active_project),
+            "discourseLab_project_summary.md",
+            "text/markdown; charset=utf-8",
+        )
+
+    @app.route("/exports/project.json")
+    def export_project_json():
+        active_project = get_active_project()
+        return download_text(
+            generate_project_json(active_project),
+            "discourseLab_project.json",
+            "application/json; charset=utf-8",
+        )
+
+    @app.route("/exports/package.zip")
+    def export_project_package():
+        active_project = get_active_project()
+        return download_binary(
+            generate_project_package_zip(active_project),
+            "discourseLab_research_package.zip",
+            "application/zip",
         )
 
     @app.route("/health")
@@ -1999,7 +2185,7 @@ def get_voice_silence_report(project_id: int) -> list[dict]:
         (project_id,),
     )
     actors: dict[int, dict] = {}
-    for row in rows:
+    for index, row in enumerate(rows):
         actor = actors.setdefault(
             row["id"],
             {
@@ -2274,7 +2460,7 @@ def get_gt_axial_codes(project_id: int) -> list[dict]:
         (project_id,),
     )
     result = []
-    for row in rows:
+    for index, row in enumerate(rows):
         code = dict(row)
         code["child_open_count"] = len(get_child_codes(row["id"], project_id, "open"))
         code["hierarchy_segment_count"] = len(get_hierarchy_segments_for_code(row, project_id))
@@ -2724,11 +2910,70 @@ def truncate_text(text: str, length: int = 80) -> str:
     return text[: length - 3] + "..."
 
 
+def get_dashboard_export_links() -> list[dict[str, str]]:
+    return [
+        {"label": "Codebook", "endpoint": "export_codebook_markdown"},
+        {"label": "Coded segments", "endpoint": "export_coded_segments_csv"},
+        {"label": "Memos", "endpoint": "export_memos_markdown"},
+        {"label": "Project package", "endpoint": "export_project_package"},
+    ]
+
+
+def export_timestamp() -> str:
+    return datetime.now().isoformat(timespec="seconds")
+
+
+def empty(value) -> str:
+    return "" if value is None else str(value)
+
+
+def row_to_dict(row: sqlite3.Row) -> dict:
+    return {key: row[key] for key in row.keys()}
+
+
+def rows_to_dicts(rows: list[sqlite3.Row]) -> list[dict]:
+    return [row_to_dict(row) for row in rows]
+
+
+def download_text(content: str, filename: str, mimetype: str) -> Response:
+    return Response(
+        content,
+        content_type=mimetype,
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
+    )
+
+
+def download_binary(content: bytes, filename: str, mimetype: str) -> Response:
+    return Response(
+        content,
+        mimetype=mimetype,
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
+    )
+
+
+def make_csv(headers: list[str], rows: list[dict]) -> str:
+    output = io.StringIO()
+    writer = csv.DictWriter(output, fieldnames=headers, extrasaction="ignore")
+    writer.writeheader()
+    for row in rows:
+        writer.writerow({header: empty(row.get(header)) for header in headers})
+    return output.getvalue()
+
+
+def markdown_blockquote(text: str) -> str:
+    text = empty(text).strip()
+    if not text:
+        return "> "
+    return "\n".join(f"> {line}" if line else ">" for line in text.splitlines())
+
+
 def build_codebook_markdown(active_project: sqlite3.Row) -> str:
+    project_id = active_project["id"]
     lines = [
         "# discourseLab Codebook",
         "",
         f"Project: {active_project['name']}",
+        f"Exported: {export_timestamp()}",
         "",
     ]
     codes = query_all(
@@ -2736,15 +2981,19 @@ def build_codebook_markdown(active_project: sqlite3.Row) -> str:
         SELECT
             codes.*,
             parent.name AS parent_name,
-            COUNT(segment_codes.segment_id) AS usage_count
+            COUNT(DISTINCT segment_codes.segment_id) AS usage_count,
+            COUNT(DISTINCT memos.id) AS linked_memo_count
         FROM codes
         LEFT JOIN segment_codes ON segment_codes.code_id = codes.id
         LEFT JOIN codes AS parent ON parent.id = codes.parent_id
+        LEFT JOIN memos ON memos.project_id = codes.project_id
+            AND memos.linked_entity_type = 'code'
+            AND memos.linked_entity_id = codes.id
         WHERE codes.project_id = ?
         GROUP BY codes.id
         ORDER BY codes.code_type COLLATE NOCASE, codes.name COLLATE NOCASE
         """,
-        (active_project["id"],),
+        (project_id,),
     )
     if not codes:
         lines.append("No codes created yet.")
@@ -2758,7 +3007,9 @@ def build_codebook_markdown(active_project: sqlite3.Row) -> str:
                 "",
                 f"- Type: {code['code_type']}",
                 f"- Parent: {code['parent_name'] or 'None'}",
+                f"- Color: {code['color'] or ''}",
                 f"- Usage count: {code['usage_count']}",
+                f"- Linked memo count: {code['linked_memo_count']}",
                 "",
                 f"**Description:** {code['description'] or ''}",
                 "",
@@ -2794,6 +3045,568 @@ def build_codebook_markdown(active_project: sqlite3.Row) -> str:
                 ]
             )
     return "\n".join(lines)
+
+
+def get_coded_segment_export_rows(project_id: int) -> list[sqlite3.Row]:
+    return query_all(
+        """
+        SELECT
+            documents.id AS document_id,
+            documents.title AS document_title,
+            documents.original_filename AS document_original_filename,
+            segments.id AS segment_id,
+            COALESCE(segments.name, '') AS segment_title,
+            segments.selected_text,
+            segments.note AS segment_note,
+            segments.start_offset,
+            segments.end_offset,
+            codes.id AS code_id,
+            codes.name AS code_name,
+            codes.code_type,
+            codes.parent_id AS code_parent_id,
+            CASE
+                WHEN codes.code_type = 'open' THEN axial.name
+                WHEN codes.code_type = 'axial' THEN codes.name
+                ELSE NULL
+            END AS axial_code_name,
+            CASE
+                WHEN codes.code_type = 'open' THEN category.name
+                WHEN codes.code_type = 'category' THEN codes.name
+                ELSE NULL
+            END AS category_name,
+            codes.description AS code_description,
+            codes.definition AS code_definition,
+            segments.created_at
+        FROM segment_codes
+        JOIN segments ON segments.id = segment_codes.segment_id
+        JOIN documents ON documents.id = segments.document_id
+        JOIN codes ON codes.id = segment_codes.code_id
+        LEFT JOIN codes AS axial ON axial.id = codes.parent_id
+            AND axial.code_type = 'axial'
+        LEFT JOIN codes AS category ON category.id = axial.parent_id
+            AND category.code_type = 'category'
+        WHERE documents.project_id = ? AND codes.project_id = ?
+        ORDER BY documents.title COLLATE NOCASE, segments.start_offset, codes.name COLLATE NOCASE
+        """,
+        (project_id, project_id),
+    )
+
+
+def generate_coded_segments_csv(active_project: sqlite3.Row) -> str:
+    headers = [
+        "project_name",
+        "document_id",
+        "document_title",
+        "document_original_filename",
+        "segment_id",
+        "segment_title",
+        "selected_text",
+        "segment_note",
+        "start_offset",
+        "end_offset",
+        "code_id",
+        "code_name",
+        "code_type",
+        "code_parent_id",
+        "axial_code_name",
+        "category_name",
+        "code_description",
+        "code_definition",
+        "created_at",
+    ]
+    rows = []
+    for row in get_coded_segment_export_rows(active_project["id"]):
+        data = row_to_dict(row)
+        data["project_name"] = active_project["name"]
+        rows.append(data)
+    return make_csv(headers, rows)
+
+
+def generate_coded_segments_markdown(active_project: sqlite3.Row) -> str:
+    rows = get_coded_segment_export_rows(active_project["id"])
+    lines = [
+        "# Coded Segments",
+        "",
+        f"Project: {active_project['name']}",
+        f"Exported: {export_timestamp()}",
+        "",
+    ]
+    if not rows:
+        lines.extend(["No coded segments found.", ""])
+        return "\n".join(lines)
+
+    current_document = None
+    current_segment = None
+    for index, row in enumerate(rows):
+        if row["document_id"] != current_document:
+            current_document = row["document_id"]
+            current_segment = None
+            lines.extend([f"## Document: {row['document_title']}", ""])
+        if row["segment_id"] != current_segment:
+            current_segment = row["segment_id"]
+            segment_label = row["segment_title"] or f"Segment {row['segment_id']}"
+            lines.extend(
+                [
+                    f"### Segment: {segment_label}",
+                    "",
+                    "Selected text:",
+                    "",
+                    markdown_blockquote(row["selected_text"]),
+                    "",
+                    "Segment note:",
+                    "",
+                    row["segment_note"] or "",
+                    "",
+                    "Codes:",
+                ]
+            )
+        lines.append(f"- {row['code_name']}")
+        lines.append(f"  - Type: {row['code_type']}")
+        if row["axial_code_name"]:
+            lines.append(f"  - Axial parent: {row['axial_code_name']}")
+        if row["category_name"]:
+            lines.append(f"  - Category parent: {row['category_name']}")
+
+        next_is_new_segment = True
+        next_index = index + 1
+        if next_index < len(rows):
+            next_is_new_segment = rows[next_index]["segment_id"] != current_segment
+        if next_is_new_segment:
+            memos = get_memos_for_entity(active_project["id"], "segment", row["segment_id"])
+            lines.extend(["", "Memos linked to this segment:"])
+            if memos:
+                for memo in memos:
+                    lines.append(
+                        f"- {memo['title']}, {memo['status']}, {memo['memo_type']}"
+                    )
+                    lines.append(f"  - {empty(memo['body']).replace(chr(10), ' ')}")
+            else:
+                lines.append("- None")
+            lines.append("")
+    return "\n".join(lines)
+
+
+def generate_memos_markdown(active_project: sqlite3.Row) -> str:
+    memos = get_memos_for_project(
+        active_project["id"],
+        {"memo_type": "", "status": "", "linked_entity_type": "", "linked_entity_id": ""},
+    )
+    lines = [
+        "# Memos",
+        "",
+        f"Project: {active_project['name']}",
+        f"Exported: {export_timestamp()}",
+        "",
+    ]
+    if not memos:
+        lines.extend(["No memos found.", ""])
+        return "\n".join(lines)
+    current_type = None
+    current_status = None
+    for memo in sorted(memos, key=lambda item: (item["memo_type"], item["status"], item["title"].lower())):
+        if memo["memo_type"] != current_type:
+            current_type = memo["memo_type"]
+            current_status = None
+            lines.extend([f"## {MEMO_TYPES.get(current_type, current_type)}", ""])
+        if memo["status"] != current_status:
+            current_status = memo["status"]
+            lines.extend([f"### {MEMO_STATUSES.get(current_status, current_status)}", ""])
+        lines.extend(
+            [
+                f"#### {memo['title']}",
+                "",
+                f"Status: {MEMO_STATUSES.get(memo['status'], memo['status'])}",
+                f"Linked to: {memo['linked_entity_label']}",
+                f"Created: {memo['created_at']}",
+                f"Updated: {memo['updated_at']}",
+                "",
+                memo["body"] or "",
+                "",
+            ]
+        )
+    return "\n".join(lines)
+
+
+def generate_cda_features_csv(active_project: sqlite3.Row) -> str:
+    headers = [
+        "project_name",
+        "document_id",
+        "document_title",
+        "segment_id",
+        "segment_title",
+        "selected_text",
+        "feature_id",
+        "feature_type",
+        "value",
+        "interpretation",
+        "created_at",
+        "updated_at",
+    ]
+    rows = []
+    feature_rows = query_all(
+        """
+        SELECT documents.id AS document_id, documents.title AS document_title,
+               segments.id AS segment_id, COALESCE(segments.name, '') AS segment_title,
+               segments.selected_text, discourse_features.id AS feature_id,
+               discourse_features.feature_type, discourse_features.value,
+               discourse_features.interpretation, discourse_features.created_at,
+               discourse_features.updated_at
+        FROM discourse_features
+        JOIN segments ON segments.id = discourse_features.segment_id
+        JOIN documents ON documents.id = segments.document_id
+        WHERE documents.project_id = ?
+        ORDER BY documents.title COLLATE NOCASE, segments.start_offset,
+                 discourse_features.feature_type
+        """,
+        (active_project["id"],),
+    )
+    for row in feature_rows:
+        data = row_to_dict(row)
+        data["project_name"] = active_project["name"]
+        rows.append(data)
+    return make_csv(headers, rows)
+
+
+def generate_voice_silence_csv(active_project: sqlite3.Row) -> str:
+    headers = [
+        "project_name",
+        "actor_id",
+        "actor_name",
+        "actor_type",
+        "actor_description",
+        *ACTOR_RELATION_TYPES.keys(),
+        "total_annotations",
+        "segment_count",
+        "document_count",
+    ]
+    actors_by_id = {
+        actor["id"]: actor
+        for actor in query_all(
+            """
+            SELECT id, name, actor_type, description
+            FROM actors
+            WHERE project_id = ?
+            ORDER BY name COLLATE NOCASE
+            """,
+            (active_project["id"],),
+        )
+    }
+    rows = []
+    for report_row in get_voice_silence_report(active_project["id"]):
+        actor = actors_by_id.get(report_row["id"])
+        row = {
+            "project_name": active_project["name"],
+            "actor_id": report_row["id"],
+            "actor_name": report_row["name"],
+            "actor_type": report_row["actor_type"],
+            "actor_description": actor["description"] if actor else "",
+            "total_annotations": report_row["total_annotations"],
+            "segment_count": report_row["segment_count"],
+            "document_count": report_row["document_count"],
+        }
+        for relation in ACTOR_RELATION_TYPES:
+            row[relation] = report_row[relation]
+        rows.append(row)
+    return make_csv(headers, rows)
+
+
+def generate_gt_hierarchy_markdown(active_project: sqlite3.Row) -> str:
+    project_id = active_project["id"]
+    categories = get_gt_categories(project_id)
+    unassigned_axial = [
+        code for code in get_gt_axial_codes(project_id) if code.get("parent_id") is None
+    ]
+    unassigned_open = [
+        code for code in get_gt_open_codes(project_id) if code.get("parent_id") is None
+    ]
+    lines = [
+        "# Grounded Theory Hierarchy",
+        "",
+        f"Project: {active_project['name']}",
+        f"Exported: {export_timestamp()}",
+        "",
+        "## Categories",
+        "",
+    ]
+    if not categories:
+        lines.extend(["No categories found.", ""])
+    for category in categories:
+        axial_children = get_child_codes(category["id"], project_id, "axial")
+        lines.extend(
+            [
+                f"### Category: {category['name']}",
+                "",
+                f"Description: {category.get('description') or ''}",
+                f"Definition: {category.get('definition') or ''}",
+                f"Analytical note: {category.get('analytical_note') or ''}",
+                f"GT theoretical note: {category.get('gt_theoretical_note') or ''}",
+                "",
+                "Child axial codes:",
+                "",
+            ]
+        )
+        if not axial_children:
+            lines.extend(["None.", ""])
+        for axial in axial_children:
+            axial_full = get_code_for_project(axial["id"], project_id)
+            open_children = get_child_codes(axial["id"], project_id, "open")
+            lines.extend(
+                [
+                    f"#### Axial code: {axial_full['name']}",
+                    "",
+                    f"Description: {axial_full['description'] or ''}",
+                    f"Conditions: {axial_full['gt_conditions'] or ''}",
+                    f"Context: {axial_full['gt_context'] or ''}",
+                    f"Actions/interactions: {axial_full['gt_actions_interactions'] or ''}",
+                    f"Consequences: {axial_full['gt_consequences'] or ''}",
+                    f"Properties: {axial_full['gt_properties'] or ''}",
+                    f"Dimensions: {axial_full['gt_dimensions'] or ''}",
+                    "",
+                    "Child open codes:",
+                ]
+            )
+            if open_children:
+                for open_code in open_children:
+                    usage_count = get_code_usage_count(open_code["id"])
+                    lines.append(f"- {open_code['name']}")
+                    lines.append(f"  - Description: {open_code['description'] or ''}")
+                    lines.append(f"  - Assigned segment count: {usage_count}")
+            else:
+                lines.append("- None")
+            lines.extend(["", "Representative segments:"])
+            segments = get_hierarchy_segments_for_code(axial_full, project_id)[:5]
+            if segments:
+                for segment in segments:
+                    lines.extend([markdown_blockquote(segment["selected_text"]), ""])
+            else:
+                lines.extend(["> None", ""])
+
+    lines.extend(["## Unassigned axial codes", ""])
+    if unassigned_axial:
+        for code in unassigned_axial:
+            lines.append(f"- {code['name']}")
+    else:
+        lines.append("None.")
+    lines.extend(["", "## Unassigned open codes", ""])
+    if unassigned_open:
+        for code in unassigned_open:
+            lines.append(f"- {code['name']} ({code['assigned_segment_count']} assigned segments)")
+    else:
+        lines.append("None.")
+    lines.append("")
+    return "\n".join(lines)
+
+
+def generate_project_summary_markdown(active_project: sqlite3.Row) -> str:
+    project_id = active_project["id"]
+    counts = get_dashboard_counts(project_id)
+    documents = get_documents_for_project(project_id)
+    research_questions = query_all(
+        """
+        SELECT question, note, created_at
+        FROM research_questions
+        WHERE project_id = ?
+        ORDER BY datetime(created_at) DESC, id DESC
+        """,
+        (project_id,),
+    )
+    top_codes = query_all(
+        """
+        SELECT codes.name, codes.code_type, COUNT(segment_codes.segment_id) AS count
+        FROM codes
+        LEFT JOIN segment_codes ON segment_codes.code_id = codes.id
+        WHERE codes.project_id = ?
+        GROUP BY codes.id
+        ORDER BY count DESC, codes.name COLLATE NOCASE
+        LIMIT 10
+        """,
+        (project_id,),
+    )
+    top_actors = query_all(
+        """
+        SELECT actors.name, actors.actor_type, COUNT(segment_actors.id) AS count
+        FROM actors
+        LEFT JOIN segment_actors ON segment_actors.actor_id = actors.id
+        WHERE actors.project_id = ?
+        GROUP BY actors.id
+        ORDER BY count DESC, actors.name COLLATE NOCASE
+        LIMIT 10
+        """,
+        (project_id,),
+    )
+    top_features = get_discourse_feature_counts(project_id)[:10]
+    important_memos = query_all(
+        """
+        SELECT title, memo_type, status, created_at
+        FROM memos
+        WHERE project_id = ? AND status IN ('important', 'use_in_article')
+        ORDER BY datetime(created_at) DESC, id DESC
+        LIMIT 10
+        """,
+        (project_id,),
+    )
+    audit_summary = query_all(
+        """
+        SELECT action, COUNT(*) AS count, MAX(created_at) AS latest_at
+        FROM audit_log
+        WHERE project_id = ?
+        GROUP BY action
+        ORDER BY count DESC, action
+        """,
+        (project_id,),
+    )
+    lines = [
+        "# Project Summary",
+        "",
+        f"Project: {active_project['name']}",
+        f"Description: {active_project['description'] or ''}",
+        f"Exported: {export_timestamp()}",
+        "",
+        "## Counts",
+        "",
+    ]
+    for key in [
+        "documents",
+        "segments",
+        "open_codes",
+        "axial_codes",
+        "categories",
+        "coded_segments",
+        "memos",
+        "cda_markers",
+        "actors",
+        "discourse_features",
+        "relations",
+    ]:
+        lines.append(f"- {key.replace('_', ' ').title()}: {counts.get(key, 0)}")
+    lines.extend(["", "## Documents", ""])
+    if documents:
+        for document in documents:
+            lines.append(
+                f"- {document['title']} ({document['file_type']}, {document['segment_count']} segments)"
+            )
+    else:
+        lines.append("No documents imported.")
+    lines.extend(["", "## Research Questions", ""])
+    if research_questions:
+        for question in research_questions:
+            lines.append(f"- {question['question']}")
+            if question["note"]:
+                lines.append(f"  - {question['note']}")
+    else:
+        lines.append("No research questions recorded.")
+    lines.extend(["", "## Top Codes by Segment Count", ""])
+    lines.extend([f"- {row['name']} ({row['code_type']}): {row['count']}" for row in top_codes] or ["None."])
+    lines.extend(["", "## Top Actors by Annotation Count", ""])
+    lines.extend([f"- {row['name']} ({row['actor_type']}): {row['count']}" for row in top_actors] or ["None."])
+    lines.extend(["", "## Top Discourse Feature Types", ""])
+    lines.extend([f"- {row['feature_type']}: {row['count']}" for row in top_features] or ["None."])
+    lines.extend(["", "## Latest Important Memos", ""])
+    lines.extend([f"- {row['title']} ({row['memo_type']}, {row['status']}, {row['created_at']})" for row in important_memos] or ["None."])
+    lines.extend(["", "## Audit Log Summary", ""])
+    lines.extend([f"- {row['action']}: {row['count']} actions, latest {row['latest_at']}" for row in audit_summary] or ["No audit log entries."])
+    lines.append("")
+    return "\n".join(lines)
+
+
+def generate_project_json(active_project: sqlite3.Row) -> str:
+    project_id = active_project["id"]
+    segment_ids = [
+        row["id"]
+        for row in query_all(
+            """
+            SELECT segments.id
+            FROM segments
+            JOIN documents ON documents.id = segments.document_id
+            WHERE documents.project_id = ?
+            """,
+            (project_id,),
+        )
+    ]
+    document_ids = [
+        row["id"]
+        for row in query_all("SELECT id FROM documents WHERE project_id = ?", (project_id,))
+    ]
+    code_ids = [
+        row["id"] for row in query_all("SELECT id FROM codes WHERE project_id = ?", (project_id,))
+    ]
+    actor_ids = [
+        row["id"] for row in query_all("SELECT id FROM actors WHERE project_id = ?", (project_id,))
+    ]
+    marker_ids = [
+        row["id"]
+        for row in query_all("SELECT id FROM discourse_markers WHERE project_id = ?", (project_id,))
+    ]
+
+    def rows_for_ids(sql: str, ids: list[int]) -> list[dict]:
+        if not ids:
+            return []
+        placeholders = ",".join("?" for _ in ids)
+        return rows_to_dicts(query_all(sql.format(placeholders=placeholders), tuple(ids)))
+
+    data = {
+        "project": row_to_dict(active_project),
+        "documents": rows_to_dicts(query_all("SELECT * FROM documents WHERE project_id = ? ORDER BY id", (project_id,))),
+        "tags": rows_to_dicts(query_all("SELECT * FROM tags WHERE project_id = ? ORDER BY id", (project_id,))),
+        "document_tags": rows_for_ids("SELECT * FROM document_tags WHERE document_id IN ({placeholders}) ORDER BY document_id, tag_id", document_ids),
+        "codes": rows_to_dicts(query_all("SELECT * FROM codes WHERE project_id = ? ORDER BY id", (project_id,))),
+        "segments": rows_for_ids("SELECT * FROM segments WHERE id IN ({placeholders}) ORDER BY id", segment_ids),
+        "segment_codes": rows_for_ids("SELECT * FROM segment_codes WHERE segment_id IN ({placeholders}) ORDER BY segment_id, code_id", segment_ids),
+        "memos": rows_to_dicts(query_all("SELECT * FROM memos WHERE project_id = ? ORDER BY id", (project_id,))),
+        "relations": rows_to_dicts(query_all("SELECT * FROM relations WHERE project_id = ? ORDER BY id", (project_id,))),
+        "research_questions": rows_to_dicts(query_all("SELECT * FROM research_questions WHERE project_id = ? ORDER BY id", (project_id,))),
+        "discourse_markers": rows_to_dicts(query_all("SELECT * FROM discourse_markers WHERE project_id = ? ORDER BY id", (project_id,))),
+        "segment_discourse_markers": rows_for_ids("SELECT * FROM segment_discourse_markers WHERE marker_id IN ({placeholders}) ORDER BY segment_id, marker_id", marker_ids),
+        "actors": rows_to_dicts(query_all("SELECT * FROM actors WHERE project_id = ? ORDER BY id", (project_id,))),
+        "segment_actors": rows_for_ids("SELECT * FROM segment_actors WHERE actor_id IN ({placeholders}) ORDER BY id", actor_ids),
+        "discourse_features": rows_for_ids("SELECT * FROM discourse_features WHERE segment_id IN ({placeholders}) ORDER BY id", segment_ids),
+        "audit_log": rows_to_dicts(query_all("SELECT * FROM audit_log WHERE project_id = ? ORDER BY id", (project_id,))),
+    }
+    return json.dumps(data, indent=2, ensure_ascii=False)
+
+
+def generate_project_package_zip(active_project: sqlite3.Row) -> bytes:
+    timestamp = export_timestamp()
+    readme = "\n".join(
+        [
+            "discourseLab research export package",
+            "",
+            f"Generated by: discourseLab",
+            f"Project: {active_project['name']}",
+            f"Exported: {timestamp}",
+            "",
+            "Contents:",
+            "- codebook.md",
+            "- coded_segments.csv",
+            "- coded_segments.md",
+            "- memos.md",
+            "- gt_hierarchy.md",
+            "- cda_features.csv",
+            "- voice_silence.csv",
+            "- project_summary.md",
+            "- project.json",
+            "",
+            "Uploaded source documents are not included in this package in Phase 8.",
+            "",
+        ]
+    )
+    files = {
+        "codebook.md": build_codebook_markdown(active_project),
+        "coded_segments.csv": generate_coded_segments_csv(active_project),
+        "coded_segments.md": generate_coded_segments_markdown(active_project),
+        "memos.md": generate_memos_markdown(active_project),
+        "gt_hierarchy.md": generate_gt_hierarchy_markdown(active_project),
+        "cda_features.csv": generate_cda_features_csv(active_project),
+        "voice_silence.csv": generate_voice_silence_csv(active_project),
+        "project_summary.md": generate_project_summary_markdown(active_project),
+        "project.json": generate_project_json(active_project),
+        "README_EXPORT.txt": readme,
+    }
+    output = io.BytesIO()
+    with zipfile.ZipFile(output, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+        for filename, content in files.items():
+            archive.writestr(filename, content.encode("utf-8"))
+    return output.getvalue()
 
 
 def normalize_code_color(color: str) -> str:
