@@ -133,6 +133,3 @@ CREATE INDEX idx_memos_project_id ON memos (project_id);
 CREATE INDEX idx_relations_project_id ON relations (project_id);
 CREATE INDEX idx_research_questions_project_id ON research_questions (project_id);
 CREATE INDEX idx_audit_log_project_id ON audit_log (project_id);
-
-INSERT INTO projects (name, description)
-VALUES ('Demo Project', 'Initial local discourseLab project.');

@@ -1,10 +1,10 @@
 {% extends "base.html" %}
 
 {% block content %}
-<section class="page-header">
-    <p class="eyebrow">Active project</p>
-    <h1>{{ project.name }}</h1>
-    <p>{{ project.description }}</p>
+<section class="page-header dashboard-title">
+    <p class="eyebrow">Phase 1 — Project foundation</p>
+    <h1>discourseLab</h1>
+    <p>Local qualitative analysis workspace for discourse analysis, CDA, and grounded theory.</p>
 </section>
 
 <section class="metrics-grid" aria-label="Project counts">
@@ -24,14 +24,78 @@
         <span class="metric-value">{{ counts.memos }}</span>
         <span class="metric-label">Memos</span>
     </article>
+    <article class="metric-card">
+        <span class="metric-value">{{ counts.research_questions }}</span>
+        <span class="metric-label">Research Questions</span>
+    </article>
+    <article class="metric-card">
+        <span class="metric-value">{{ counts.relations }}</span>
+        <span class="metric-label">Relations</span>
+    </article>
 </section>
 
-<section class="info-panel">
-    <h2>Prepared Workflow</h2>
-    <p class="workflow-line">Documents -> Segments -> Open Codes -> Axial Codes -> Categories -> Model -> Export</p>
-    <p>
-        Phase 0 establishes the local Flask and SQLite foundation for a later discourse analysis,
-        critical discourse analysis, and grounded theory workspace.
-    </p>
+<section class="dashboard-grid">
+    <article class="info-panel">
+        <h2>Project Metadata</h2>
+        <dl class="metadata-list">
+            <div>
+                <dt>Project name</dt>
+                <dd>{{ active_project.name }}</dd>
+            </div>
+            <div>
+                <dt>Project description</dt>
+                <dd>{{ active_project.description }}</dd>
+            </div>
+            <div>
+                <dt>Created at</dt>
+                <dd>{{ active_project.created_at }}</dd>
+            </div>
+            <div>
+                <dt>Updated at</dt>
+                <dd>{{ active_project.updated_at }}</dd>
+            </div>
+            <div>
+                <dt>Current phase</dt>
+                <dd>Phase 1 — Project foundation</dd>
+            </div>
+        </dl>
+    </article>
+
+    <article class="info-panel">
+        <h2>Prepared Workflow</h2>
+        <p class="workflow-line">Documents -> Segments -> Open Codes -> Axial Codes -> Categories -> Model -> Export</p>
+        <p>
+            Phase 1 strengthens the local Flask and SQLite foundation before document import,
+            document display, segmentation, coding, memos, and exports are added.
+        </p>
+    </article>
+
+    <article class="info-panel">
+        <h2>Next Steps</h2>
+        <ol class="next-steps">
+            <li>Phase 2: Import TXT and DOCX documents.</li>
+            <li>Phase 3: Display documents and create text segments.</li>
+            <li>Phase 4: Add open coding and color highlighting.</li>
+            <li>Phase 5: Add memos and codebook.</li>
+            <li>Phase 6: Add GT and CDA workspaces.</li>
+        </ol>
+    </article>
+
+    <article class="info-panel">
+        <h2>Audit Log Preview</h2>
+        {% if audit_entries %}
+            <ul class="audit-list">
+                {% for entry in audit_entries %}
+                    <li>
+                        <span class="audit-action">{{ entry.action }}</span>
+                        <span class="audit-details">{{ entry.details }}</span>
+                        <span class="audit-time">{{ entry.created_at }}</span>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p>No audit log entries yet.</p>
+        {% endif %}
+    </article>
 </section>
 {% endblock %}
