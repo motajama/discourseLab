@@ -6,9 +6,27 @@
     <p>Active project: {{ active_project.name }}</p>
 </section>
 
-<section class="info-panel">
-    <h2>{{ panel_title }}</h2>
-    <p>{{ panel_body }}</p>
-    <p class="phase-note">Prepared for a later discourseLab phase.</p>
+<section class="export-grid">
+    <article class="info-panel export-card">
+        <h2>Codebook Markdown</h2>
+        <p>Download the current project codebook as a Markdown file.</p>
+        <a class="button-primary" href="{{ url_for('export_codebook_markdown') }}">Download codebook</a>
+    </article>
+    <article class="info-panel export-card inactive">
+        <h2>Coded segments CSV</h2>
+        <p>Prepared for a future phase.</p>
+    </article>
+    <article class="info-panel export-card inactive">
+        <h2>Memos Markdown</h2>
+        <p>Prepared for a future phase.</p>
+    </article>
+    <article class="info-panel export-card inactive">
+        <h2>Model PNG/SVG/TikZ</h2>
+        <p>Prepared for a future phase.</p>
+    </article>
+    <article class="info-panel export-card inactive">
+        <h2>Full project JSON</h2>
+        <p>Prepared for a future phase.</p>
+    </article>
 </section>
 {% endblock %}

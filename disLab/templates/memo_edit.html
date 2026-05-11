@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="page-header">
+    <p class="eyebrow">Memo</p>
+    <h1>Edit Memo</h1>
+    <p>Active project: {{ active_project.name }}</p>
+</section>
+
+<section class="detail-actions">
+    <a class="button-secondary" href="{{ url_for('memos') }}">Back to Memos</a>
+</section>
+
+<section class="info-panel">
+    <h2>{{ memo.title }}</h2>
+    <form class="document-form" action="{{ url_for('update_memo', memo_id=memo.id) }}" method="post">
+        <div class="form-grid">
+            <label>
+                <span>Title</span>
+                <input type="text" name="title" value="{{ memo.title }}" required>
+            </label>
+            <label>
+                <span>Status</span>
+                <select name="status">
+                    {% for value, label in memo_status_labels.items() %}
+                        <option value="{{ value }}" {{ "selected" if memo.status == value else "" }}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+        </div>
+        <div class="form-grid">
+            <label>
+                <span>Memo type</span>
+                <select name="memo_type" required>
+                    {% for value, label in memo_type_labels.items() %}
+                        <option value="{{ value }}" {{ "selected" if memo.memo_type == value else "" }}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <label>
+                <span>Linked entity</span>
+                <select name="linked_target">
+                    <option value="">None</option>
+                    <option value="project:{{ active_project.id }}" {{ "selected" if memo.linked_entity_type == "project" and memo.linked_entity_id == active_project.id else "" }}>Project: {{ active_project.name }}</option>
+                    {% for document in documents %}
+                        <option value="document:{{ document.id }}" {{ "selected" if memo.linked_entity_type == "document" and memo.linked_entity_id == document.id else "" }}>Document: {{ document.title }}</option>
+                    {% endfor %}
+                    {% for segment in segments %}
+                        <option value="segment:{{ segment.id }}" {{ "selected" if memo.linked_entity_type == "segment" and memo.linked_entity_id == segment.id else "" }}>Segment: {{ segment.name or segment.selected_text[:60] }}</option>
+                    {% endfor %}
+                    {% for code in codes %}
+                        <option value="code:{{ code.id }}" {{ "selected" if memo.linked_entity_type == "code" and memo.linked_entity_id == code.id else "" }}>Code: {{ code.name }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+        </div>
+        <label>
+            <span>Body</span>
+            <textarea name="body" rows="9" required>{{ memo.body }}</textarea>
+        </label>
+        <button type="submit" class="button-primary">Save memo</button>
+    </form>
+</section>
+{% endblock %}

@@ -28,6 +28,28 @@
             <span>Description</span>
             <textarea name="description" rows="5">{{ code.description or "" }}</textarea>
         </label>
+        <label>
+            <span>Definition</span>
+            <textarea name="definition" rows="4">{{ code.definition or "" }}</textarea>
+        </label>
+        <div class="form-grid">
+            <label>
+                <span>Include when</span>
+                <textarea name="include_when" rows="4">{{ code.include_when or "" }}</textarea>
+            </label>
+            <label>
+                <span>Exclude when</span>
+                <textarea name="exclude_when" rows="4">{{ code.exclude_when or "" }}</textarea>
+            </label>
+        </div>
+        <label>
+            <span>Example</span>
+            <textarea name="example" rows="4">{{ code.example or "" }}</textarea>
+        </label>
+        <label>
+            <span>Analytical note</span>
+            <textarea name="analytical_note" rows="4">{{ code.analytical_note or "" }}</textarea>
+        </label>
         <button type="submit" class="button-primary">Save code</button>
     </form>
 </section>

@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="page-header">
+    <p class="eyebrow">Open code</p>
+    <h1>{{ code.name }}</h1>
+    <p>Active project: {{ active_project.name }}</p>
+</section>
+
+<section class="detail-actions">
+    <a class="button-secondary" href="{{ url_for('codes') }}">Back to Codes</a>
+    <a class="button-secondary" href="{{ url_for('edit_code', code_id=code.id) }}">Edit code</a>
+</section>
+
+<section class="dashboard-grid">
+    <article class="info-panel">
+        <h2>Code Metadata</h2>
+        <dl class="metadata-list">
+            <div><dt>Name</dt><dd>{{ code.name }}</dd></div>
+            <div><dt>Description</dt><dd>{{ code.description or "No description" }}</dd></div>
+            <div><dt>Type</dt><dd>{{ code.code_type }}</dd></div>
+            <div><dt>Color</dt><dd><span class="color-swatch" style="background: {{ code.color }}"></span></dd></div>
+            <div><dt>Usage count</dt><dd>{{ usage_count }}</dd></div>
+            <div><dt>Created at</dt><dd>{{ code.created_at }}</dd></div>
+            <div><dt>Updated at</dt><dd>{{ code.updated_at }}</dd></div>
+        </dl>
+    </article>
+
+    <article class="info-panel">
+        <h2>Linked Memos</h2>
+        {% if code_memos %}
+            <ul class="compact-list">
+                {% for memo in code_memos %}
+                    <li>
+                        <span>{{ memo.title }}</span>
+                        <span>{{ memo_type_labels[memo.memo_type] }} · {{ memo_status_labels[memo.status] }}</span>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p>No memos linked to this code.</p>
+        {% endif %}
+    </article>
+</section>
+
+<section class="info-panel codebook-section">
+    <h2>Codebook Entry</h2>
+    <dl class="metadata-list">
+        <div><dt>Definition</dt><dd>{{ code.definition or "Missing definition" }}</dd></div>
+        <div><dt>Include when</dt><dd>{{ code.include_when or "Not specified" }}</dd></div>
+        <div><dt>Exclude when</dt><dd>{{ code.exclude_when or "Not specified" }}</dd></div>
+        <div><dt>Example</dt><dd>{{ code.example or "No example" }}</dd></div>
+        <div><dt>Analytical note</dt><dd>{{ code.analytical_note or "No analytical note" }}</dd></div>
+    </dl>
+</section>
+
+<section class="info-panel">
+    <h2>Segments Using This Code</h2>
+    {% if coded_segments %}
+        <div class="segment-list">
+            {% for segment in coded_segments %}
+                <article class="segment-card">
+                    <div class="segment-card-header">
+                        <h3>{{ segment.name or "Segment" }}</h3>
+                        <a class="button-secondary" href="{{ url_for('document_view', document_id=segment.document_id) }}">Open document</a>
+                    </div>
+                    <p class="muted-text">{{ segment.document_title }}</p>
+                    <blockquote>{{ segment.selected_text }}</blockquote>
+                    <p>{{ segment.note or "No segment note" }}</p>
+                </article>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p>No segments use this code yet.</p>
+    {% endif %}
+</section>
+{% endblock %}
