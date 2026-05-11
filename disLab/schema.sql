@@ -84,6 +84,61 @@ CREATE TABLE segment_codes (
     FOREIGN KEY (code_id) REFERENCES codes (id) ON DELETE CASCADE
 );
 
+CREATE TABLE discourse_markers (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id INTEGER NOT NULL,
+    name TEXT NOT NULL,
+    marker_type TEXT NOT NULL,
+    description TEXT,
+    color TEXT NOT NULL DEFAULT '#7c9a45',
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (project_id) REFERENCES projects (id) ON DELETE CASCADE
+);
+
+CREATE TABLE segment_discourse_markers (
+    segment_id INTEGER NOT NULL,
+    marker_id INTEGER NOT NULL,
+    note TEXT,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (segment_id, marker_id),
+    FOREIGN KEY (segment_id) REFERENCES segments (id) ON DELETE CASCADE,
+    FOREIGN KEY (marker_id) REFERENCES discourse_markers (id) ON DELETE CASCADE
+);
+
+CREATE TABLE actors (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id INTEGER NOT NULL,
+    name TEXT NOT NULL,
+    actor_type TEXT NOT NULL,
+    description TEXT,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (project_id) REFERENCES projects (id) ON DELETE CASCADE
+);
+
+CREATE TABLE segment_actors (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    segment_id INTEGER NOT NULL,
+    actor_id INTEGER NOT NULL,
+    relation_type TEXT NOT NULL,
+    note TEXT,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (segment_id) REFERENCES segments (id) ON DELETE CASCADE,
+    FOREIGN KEY (actor_id) REFERENCES actors (id) ON DELETE CASCADE
+);
+
+CREATE TABLE discourse_features (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    segment_id INTEGER NOT NULL,
+    feature_type TEXT NOT NULL,
+    value TEXT NOT NULL,
+    interpretation TEXT,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (segment_id) REFERENCES segments (id) ON DELETE CASCADE
+);
+
 CREATE TABLE memos (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     project_id INTEGER NOT NULL,
@@ -137,6 +192,13 @@ CREATE INDEX idx_tags_project_id ON tags (project_id);
 CREATE INDEX idx_codes_project_id ON codes (project_id);
 CREATE INDEX idx_codes_parent_id ON codes (parent_id);
 CREATE INDEX idx_segments_document_id ON segments (document_id);
+CREATE INDEX idx_discourse_markers_project_id ON discourse_markers (project_id);
+CREATE INDEX idx_segment_discourse_markers_segment_id ON segment_discourse_markers (segment_id);
+CREATE INDEX idx_segment_discourse_markers_marker_id ON segment_discourse_markers (marker_id);
+CREATE INDEX idx_actors_project_id ON actors (project_id);
+CREATE INDEX idx_segment_actors_segment_id ON segment_actors (segment_id);
+CREATE INDEX idx_segment_actors_actor_id ON segment_actors (actor_id);
+CREATE INDEX idx_discourse_features_segment_id ON discourse_features (segment_id);
 CREATE INDEX idx_memos_project_id ON memos (project_id);
 CREATE INDEX idx_relations_project_id ON relations (project_id);
 CREATE INDEX idx_research_questions_project_id ON research_questions (project_id);

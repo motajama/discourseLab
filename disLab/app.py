@@ -22,11 +22,12 @@ from werkzeug.utils import secure_filename
 
 
 APP_NAME = "discourseLab"
-APP_PHASE = "6"
-CURRENT_PHASE_LABEL = "Phase 6 — Grounded Theory workspace"
+APP_PHASE = "7"
+CURRENT_PHASE_LABEL = "Phase 7 — CDA workspace"
 DEFAULT_PROJECT_NAME = "Demo Project"
 DEFAULT_PROJECT_DESCRIPTION = "Initial local discourseLab project."
 DEFAULT_CODE_COLOR = "#f4c542"
+DEFAULT_CDA_MARKER_COLOR = "#7c9a45"
 ALLOWED_EXTENSIONS = {"txt", "docx"}
 MAX_UPLOAD_SIZE = 16 * 1024 * 1024
 MEMO_TYPES = {
@@ -55,6 +56,67 @@ GT_COLUMNS = [
     "gt_dimensions",
     "gt_theoretical_note",
 ]
+CDA_MARKER_TYPES = {
+    "textual": "Textual",
+    "discursive_practice": "Discursive practice",
+    "social_practice": "Social practice",
+    "actor": "Actor",
+    "agency": "Agency",
+    "voice": "Voice",
+    "silence": "Silence",
+    "modality": "Modality",
+    "evaluation": "Evaluation",
+    "metaphor": "Metaphor",
+    "presupposition": "Presupposition",
+    "nominalization": "Nominalization",
+    "passivization": "Passivization",
+    "intertextuality": "Intertextuality",
+    "legitimation": "Legitimation",
+    "framing": "Framing",
+    "ideology": "Ideology",
+    "power_relation": "Power relation",
+    "other": "Other",
+}
+ACTOR_TYPES = {
+    "individual": "Individual",
+    "group": "Group",
+    "institution": "Institution",
+    "state_actor": "State actor",
+    "expert": "Expert",
+    "journalist": "Journalist",
+    "politician": "Politician",
+    "public": "Public",
+    "vulnerable_group": "Vulnerable group",
+    "abstract_actor": "Abstract actor",
+    "other": "Other",
+}
+ACTOR_RELATION_TYPES = {
+    "speaks": "Speaks",
+    "is_quoted": "Is quoted",
+    "is_spoken_about": "Is spoken about",
+    "is_evaluated": "Is evaluated",
+    "acts": "Acts",
+    "is_acted_upon": "Is acted upon",
+    "is_silenced": "Is silenced",
+    "is_backgrounded": "Is backgrounded",
+    "is_aggregated": "Is aggregated",
+    "is_individualized": "Is individualized",
+}
+DISCOURSE_FEATURE_TYPES = {
+    "metaphor": "Metaphor",
+    "modality": "Modality",
+    "evaluation": "Evaluation",
+    "presupposition": "Presupposition",
+    "legitimation": "Legitimation",
+    "intertextuality": "Intertextuality",
+    "framing": "Framing",
+    "nominalization": "Nominalization",
+    "passivization": "Passivization",
+    "agency": "Agency",
+    "ideology": "Ideology",
+    "power_relation": "Power relation",
+    "other": "Other",
+}
 
 BASE_DIR = Path(__file__).resolve().parent
 INSTANCE_DIR = BASE_DIR / "instance"
@@ -91,6 +153,7 @@ def create_app() -> Flask:
         latest_memos = get_latest_memos(active_project["id"])
         codes_missing_definitions = get_codes_missing_definitions(active_project["id"])
         gt_preview = get_gt_structure_preview(active_project["id"])
+        cda_preview = get_cda_dashboard_preview(active_project["id"])
         return render_template(
             "dashboard.html",
             title="Dashboard",
@@ -105,6 +168,7 @@ def create_app() -> Flask:
             latest_memos=latest_memos,
             codes_missing_definitions=codes_missing_definitions,
             gt_preview=gt_preview,
+            cda_preview=cda_preview,
             current_phase=CURRENT_PHASE_LABEL,
             memo_type_labels=MEMO_TYPES,
             memo_status_labels=MEMO_STATUSES,
@@ -188,6 +252,8 @@ def create_app() -> Flask:
 
         segments = get_segments_for_document(document_id, active_project["id"])
         open_codes = get_open_codes_for_project(active_project["id"])
+        discourse_markers = get_discourse_markers_for_project(active_project["id"])
+        actors = get_actors_for_project(active_project["id"])
         document_memos = get_memos_for_entity(active_project["id"], "document", document_id)
         highlighted_text = build_highlighted_document_text(
             document["text_content"] or "", segments
@@ -202,6 +268,12 @@ def create_app() -> Flask:
             segment_count=len(segments),
             segments=segments,
             open_codes=open_codes,
+            discourse_markers=discourse_markers,
+            actors=actors,
+            marker_type_labels=CDA_MARKER_TYPES,
+            actor_type_labels=ACTOR_TYPES,
+            actor_relation_type_labels=ACTOR_RELATION_TYPES,
+            feature_type_labels=DISCOURSE_FEATURE_TYPES,
             document_memos=document_memos,
             memo_type_labels=MEMO_TYPES,
             memo_status_labels=MEMO_STATUSES,
@@ -282,6 +354,9 @@ def create_app() -> Flask:
 
         db = get_db()
         db.execute("DELETE FROM segment_codes WHERE segment_id = ?", (segment_id,))
+        db.execute("DELETE FROM segment_discourse_markers WHERE segment_id = ?", (segment_id,))
+        db.execute("DELETE FROM segment_actors WHERE segment_id = ?", (segment_id,))
+        db.execute("DELETE FROM discourse_features WHERE segment_id = ?", (segment_id,))
         db.execute("DELETE FROM segments WHERE id = ?", (segment_id,))
         db.commit()
         log_action(
@@ -832,16 +907,329 @@ def create_app() -> Flask:
 
     @app.route("/cda")
     def cda_workspace():
-        return render_placeholder(
+        active_project = get_active_project()
+        return render_template(
             "cda_workspace.html",
             title="CDA Workspace",
             active_page="cda",
-            panel_title="CDA Workspace",
-            panel_body=(
-                "This workspace will support textual, discursive-practice, and social-practice "
-                "analysis, including actors, voice, silence, modality, metaphors, "
-                "presuppositions, and legitimation."
-            ),
+            active_project=active_project,
+            counts=get_cda_counts(active_project["id"]),
+            markers=get_discourse_markers_for_project(active_project["id"]),
+            actors=get_actors_for_project(active_project["id"]),
+            marker_type_labels=CDA_MARKER_TYPES,
+            actor_type_labels=ACTOR_TYPES,
+            default_marker_color=DEFAULT_CDA_MARKER_COLOR,
+        )
+
+    @app.route("/cda/markers/create", methods=["POST"])
+    def create_discourse_marker():
+        active_project = get_active_project()
+        name = request.form.get("name", "").strip()
+        marker_type = request.form.get("marker_type", "").strip()
+        description = request.form.get("description", "").strip()
+        color = normalize_cda_color(request.form.get("color", ""))
+        if not name:
+            flash("CDA marker name is required.", "error")
+            return redirect(url_for("cda_workspace"))
+        if marker_type not in CDA_MARKER_TYPES:
+            flash("Invalid marker.", "error")
+            return redirect(url_for("cda_workspace"))
+        marker_id = execute_write(
+            """
+            INSERT INTO discourse_markers (project_id, name, marker_type, description, color)
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            (active_project["id"], name, marker_type, description, color),
+        )
+        log_action(
+            active_project["id"],
+            "discourse_marker",
+            marker_id,
+            "create_discourse_marker",
+            f"Created CDA marker: {name}",
+        )
+        flash(f"CDA marker created: {name}", "success")
+        return redirect(url_for("cda_workspace"))
+
+    @app.route("/cda/markers/<int:marker_id>/delete", methods=["POST"])
+    def delete_discourse_marker(marker_id: int):
+        active_project = get_active_project()
+        marker = get_discourse_marker_for_project(marker_id, active_project["id"])
+        if marker is None:
+            flash("Invalid marker.", "error")
+            return redirect(url_for("cda_workspace"))
+        db = get_db()
+        db.execute("DELETE FROM segment_discourse_markers WHERE marker_id = ?", (marker_id,))
+        db.execute(
+            "DELETE FROM discourse_markers WHERE id = ? AND project_id = ?",
+            (marker_id, active_project["id"]),
+        )
+        db.commit()
+        log_action(
+            active_project["id"],
+            "discourse_marker",
+            marker_id,
+            "delete_discourse_marker",
+            f"Deleted CDA marker: {marker['name']}",
+        )
+        flash(f"CDA marker deleted: {marker['name']}", "success")
+        return redirect(url_for("cda_workspace"))
+
+    @app.route("/cda/actors/create", methods=["POST"])
+    def create_actor():
+        active_project = get_active_project()
+        name = request.form.get("name", "").strip()
+        actor_type = request.form.get("actor_type", "").strip()
+        description = request.form.get("description", "").strip()
+        if not name:
+            flash("Actor name is required.", "error")
+            return redirect(url_for("cda_workspace"))
+        if actor_type not in ACTOR_TYPES:
+            flash("Invalid actor.", "error")
+            return redirect(url_for("cda_workspace"))
+        actor_id = execute_write(
+            """
+            INSERT INTO actors (project_id, name, actor_type, description)
+            VALUES (?, ?, ?, ?)
+            """,
+            (active_project["id"], name, actor_type, description),
+        )
+        log_action(
+            active_project["id"],
+            "actor",
+            actor_id,
+            "create_actor",
+            f"Created actor: {name}",
+        )
+        flash(f"Actor created: {name}", "success")
+        return redirect(url_for("cda_workspace"))
+
+    @app.route("/cda/actors/<int:actor_id>/delete", methods=["POST"])
+    def delete_actor(actor_id: int):
+        active_project = get_active_project()
+        actor = get_actor_for_project(actor_id, active_project["id"])
+        if actor is None:
+            flash("Invalid actor.", "error")
+            return redirect(url_for("cda_workspace"))
+        db = get_db()
+        db.execute("DELETE FROM segment_actors WHERE actor_id = ?", (actor_id,))
+        db.execute(
+            "DELETE FROM actors WHERE id = ? AND project_id = ?",
+            (actor_id, active_project["id"]),
+        )
+        db.commit()
+        log_action(
+            active_project["id"],
+            "actor",
+            actor_id,
+            "delete_actor",
+            f"Deleted actor: {actor['name']}",
+        )
+        flash(f"Actor deleted: {actor['name']}", "success")
+        return redirect(url_for("cda_workspace"))
+
+    @app.route("/segments/<int:segment_id>/discourse-markers", methods=["POST"])
+    def assign_discourse_marker_to_segment(segment_id: int):
+        active_project = get_active_project()
+        segment = get_segment_for_project(segment_id, active_project["id"])
+        if segment is None:
+            flash("Invalid segment.", "error")
+            abort(404)
+        try:
+            marker_id = int(request.form.get("marker_id", ""))
+        except ValueError:
+            flash("Invalid marker.", "error")
+            return redirect(url_for("document_view", document_id=segment["document_id"]))
+        marker = get_discourse_marker_for_project(marker_id, active_project["id"])
+        if marker is None:
+            flash("Invalid marker.", "error")
+            return redirect(url_for("document_view", document_id=segment["document_id"]))
+        if segment_has_discourse_marker(segment_id, marker_id):
+            flash("CDA marker already assigned to this segment.", "error")
+            return redirect(url_for("document_view", document_id=segment["document_id"]))
+        execute_write(
+            """
+            INSERT INTO segment_discourse_markers (segment_id, marker_id, note)
+            VALUES (?, ?, ?)
+            """,
+            (segment_id, marker_id, request.form.get("note", "").strip()),
+        )
+        segment_label = segment["name"] or f"segment {segment_id}"
+        log_action(
+            active_project["id"],
+            "segment",
+            segment_id,
+            "assign_discourse_marker",
+            f"Assigned CDA marker {marker['name']} to {segment_label}",
+        )
+        flash(f"Marker assigned to segment: {marker['name']}", "success")
+        return redirect(url_for("document_view", document_id=segment["document_id"]))
+
+    @app.route("/segments/<int:segment_id>/discourse-markers/<int:marker_id>/remove", methods=["POST"])
+    def remove_discourse_marker_from_segment(segment_id: int, marker_id: int):
+        active_project = get_active_project()
+        segment = get_segment_for_project(segment_id, active_project["id"])
+        marker = get_discourse_marker_for_project(marker_id, active_project["id"])
+        if segment is None:
+            flash("Invalid segment.", "error")
+            abort(404)
+        if marker is None:
+            flash("Invalid marker.", "error")
+            return redirect(url_for("document_view", document_id=segment["document_id"]))
+        execute_write(
+            "DELETE FROM segment_discourse_markers WHERE segment_id = ? AND marker_id = ?",
+            (segment_id, marker_id),
+        )
+        segment_label = segment["name"] or f"segment {segment_id}"
+        log_action(
+            active_project["id"],
+            "segment",
+            segment_id,
+            "remove_discourse_marker",
+            f"Removed CDA marker {marker['name']} from {segment_label}",
+        )
+        flash(f"Marker removed from segment: {marker['name']}", "success")
+        return redirect(url_for("document_view", document_id=segment["document_id"]))
+
+    @app.route("/segments/<int:segment_id>/actors", methods=["POST"])
+    def assign_actor_to_segment(segment_id: int):
+        active_project = get_active_project()
+        segment = get_segment_for_project(segment_id, active_project["id"])
+        if segment is None:
+            flash("Invalid segment.", "error")
+            abort(404)
+        try:
+            actor_id = int(request.form.get("actor_id", ""))
+        except ValueError:
+            flash("Invalid actor.", "error")
+            return redirect(url_for("document_view", document_id=segment["document_id"]))
+        relation_type = request.form.get("relation_type", "").strip()
+        actor = get_actor_for_project(actor_id, active_project["id"])
+        if actor is None:
+            flash("Invalid actor.", "error")
+            return redirect(url_for("document_view", document_id=segment["document_id"]))
+        if relation_type not in ACTOR_RELATION_TYPES:
+            flash("Invalid actor relation.", "error")
+            return redirect(url_for("document_view", document_id=segment["document_id"]))
+        execute_write(
+            """
+            INSERT INTO segment_actors (segment_id, actor_id, relation_type, note)
+            VALUES (?, ?, ?, ?)
+            """,
+            (segment_id, actor_id, relation_type, request.form.get("note", "").strip()),
+        )
+        segment_label = segment["name"] or f"segment {segment_id}"
+        log_action(
+            active_project["id"],
+            "segment",
+            segment_id,
+            "assign_actor_to_segment",
+            f"Assigned actor {actor['name']} as {relation_type} to {segment_label}",
+        )
+        flash(f"Actor assigned to segment: {actor['name']}", "success")
+        return redirect(url_for("document_view", document_id=segment["document_id"]))
+
+    @app.route("/segments/<int:segment_id>/actors/<int:segment_actor_id>/remove", methods=["POST"])
+    def remove_actor_from_segment(segment_id: int, segment_actor_id: int):
+        active_project = get_active_project()
+        segment_actor = get_segment_actor_for_project(segment_actor_id, segment_id, active_project["id"])
+        if segment_actor is None:
+            flash("Invalid actor.", "error")
+            abort(404)
+        segment_label = segment_actor["segment_name"] or f"segment {segment_id}"
+        execute_write("DELETE FROM segment_actors WHERE id = ?", (segment_actor_id,))
+        log_action(
+            active_project["id"],
+            "segment",
+            segment_id,
+            "remove_actor_from_segment",
+            f"Removed actor annotation from {segment_label}",
+        )
+        flash("Actor annotation removed from segment.", "success")
+        return redirect(url_for("document_view", document_id=segment_actor["document_id"]))
+
+    @app.route("/segments/<int:segment_id>/features", methods=["POST"])
+    def create_discourse_feature(segment_id: int):
+        active_project = get_active_project()
+        segment = get_segment_for_project(segment_id, active_project["id"])
+        if segment is None:
+            flash("Invalid segment.", "error")
+            abort(404)
+        feature_type = request.form.get("feature_type", "").strip()
+        value = request.form.get("value", "").strip()
+        interpretation = request.form.get("interpretation", "").strip()
+        if feature_type not in DISCOURSE_FEATURE_TYPES:
+            flash("Invalid feature.", "error")
+            return redirect(url_for("document_view", document_id=segment["document_id"]))
+        if not value:
+            flash("Invalid feature.", "error")
+            return redirect(url_for("document_view", document_id=segment["document_id"]))
+        feature_id = execute_write(
+            """
+            INSERT INTO discourse_features (segment_id, feature_type, value, interpretation)
+            VALUES (?, ?, ?, ?)
+            """,
+            (segment_id, feature_type, value, interpretation),
+        )
+        segment_label = segment["name"] or f"segment {segment_id}"
+        log_action(
+            active_project["id"],
+            "segment",
+            segment_id,
+            "create_discourse_feature",
+            f"Created discourse feature {feature_type} for {segment_label}",
+        )
+        flash(f"Discourse feature created: {feature_type}", "success")
+        return redirect(url_for("document_view", document_id=segment["document_id"]))
+
+    @app.route("/segments/<int:segment_id>/features/<int:feature_id>/delete", methods=["POST"])
+    def delete_discourse_feature(segment_id: int, feature_id: int):
+        active_project = get_active_project()
+        feature = get_discourse_feature_for_project(feature_id, segment_id, active_project["id"])
+        if feature is None:
+            flash("Invalid feature.", "error")
+            abort(404)
+        segment_label = feature["segment_name"] or f"segment {segment_id}"
+        execute_write("DELETE FROM discourse_features WHERE id = ?", (feature_id,))
+        log_action(
+            active_project["id"],
+            "segment",
+            segment_id,
+            "delete_discourse_feature",
+            f"Deleted discourse feature {feature['feature_type']} from {segment_label}",
+        )
+        flash(f"Discourse feature deleted: {feature['feature_type']}", "success")
+        return redirect(url_for("document_view", document_id=feature["document_id"]))
+
+    @app.route("/cda/features")
+    def cda_features():
+        active_project = get_active_project()
+        filters = {
+            "feature_type": request.args.get("feature_type", "").strip(),
+            "document_id": request.args.get("document_id", "").strip(),
+        }
+        return render_template(
+            "cda_features.html",
+            title="CDA Feature Overview",
+            active_page="cda",
+            active_project=active_project,
+            features=get_discourse_features_for_project(active_project["id"], filters),
+            counts=get_discourse_feature_counts(active_project["id"]),
+            documents=get_documents_for_memo_links(active_project["id"]),
+            filters=filters,
+            feature_type_labels=DISCOURSE_FEATURE_TYPES,
+        )
+
+    @app.route("/cda/voice-silence")
+    def cda_voice_silence():
+        active_project = get_active_project()
+        return render_template(
+            "cda_voice_silence.html",
+            title="Voice and Silence Report",
+            active_page="cda",
+            active_project=active_project,
+            rows=get_voice_silence_report(active_project["id"]),
+            relation_type_labels=ACTOR_RELATION_TYPES,
         )
 
     @app.route("/exports")
@@ -923,6 +1311,78 @@ def run_migrations() -> None:
     for column in GT_COLUMNS:
         if column not in code_columns:
             db.execute(f"ALTER TABLE codes ADD COLUMN {column} TEXT")
+    db.executescript(
+        """
+        CREATE TABLE IF NOT EXISTS discourse_markers (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            project_id INTEGER NOT NULL,
+            name TEXT NOT NULL,
+            marker_type TEXT NOT NULL,
+            description TEXT,
+            color TEXT NOT NULL DEFAULT '#7c9a45',
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (project_id) REFERENCES projects (id) ON DELETE CASCADE
+        );
+
+        CREATE TABLE IF NOT EXISTS segment_discourse_markers (
+            segment_id INTEGER NOT NULL,
+            marker_id INTEGER NOT NULL,
+            note TEXT,
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (segment_id, marker_id),
+            FOREIGN KEY (segment_id) REFERENCES segments (id) ON DELETE CASCADE,
+            FOREIGN KEY (marker_id) REFERENCES discourse_markers (id) ON DELETE CASCADE
+        );
+
+        CREATE TABLE IF NOT EXISTS actors (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            project_id INTEGER NOT NULL,
+            name TEXT NOT NULL,
+            actor_type TEXT NOT NULL,
+            description TEXT,
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (project_id) REFERENCES projects (id) ON DELETE CASCADE
+        );
+
+        CREATE TABLE IF NOT EXISTS segment_actors (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            segment_id INTEGER NOT NULL,
+            actor_id INTEGER NOT NULL,
+            relation_type TEXT NOT NULL,
+            note TEXT,
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (segment_id) REFERENCES segments (id) ON DELETE CASCADE,
+            FOREIGN KEY (actor_id) REFERENCES actors (id) ON DELETE CASCADE
+        );
+
+        CREATE TABLE IF NOT EXISTS discourse_features (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            segment_id INTEGER NOT NULL,
+            feature_type TEXT NOT NULL,
+            value TEXT NOT NULL,
+            interpretation TEXT,
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (segment_id) REFERENCES segments (id) ON DELETE CASCADE
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_discourse_markers_project_id
+            ON discourse_markers (project_id);
+        CREATE INDEX IF NOT EXISTS idx_segment_discourse_markers_segment_id
+            ON segment_discourse_markers (segment_id);
+        CREATE INDEX IF NOT EXISTS idx_segment_discourse_markers_marker_id
+            ON segment_discourse_markers (marker_id);
+        CREATE INDEX IF NOT EXISTS idx_actors_project_id ON actors (project_id);
+        CREATE INDEX IF NOT EXISTS idx_segment_actors_segment_id
+            ON segment_actors (segment_id);
+        CREATE INDEX IF NOT EXISTS idx_segment_actors_actor_id
+            ON segment_actors (actor_id);
+        CREATE INDEX IF NOT EXISTS idx_discourse_features_segment_id
+            ON discourse_features (segment_id);
+        """
+    )
     db.commit()
 
 
@@ -994,6 +1454,23 @@ def get_dashboard_counts(project_id: int) -> dict[str, int]:
             "SELECT COUNT(*) AS count FROM codes WHERE project_id = ? AND code_type = 'category'",
             (project_id,),
         )["count"],
+        "cda_markers": query_one(
+            "SELECT COUNT(*) AS count FROM discourse_markers WHERE project_id = ?",
+            (project_id,),
+        )["count"],
+        "actors": query_one(
+            "SELECT COUNT(*) AS count FROM actors WHERE project_id = ?", (project_id,)
+        )["count"],
+        "discourse_features": query_one(
+            """
+            SELECT COUNT(*) AS count
+            FROM discourse_features
+            JOIN segments ON segments.id = discourse_features.segment_id
+            JOIN documents ON documents.id = segments.document_id
+            WHERE documents.project_id = ?
+            """,
+            (project_id,),
+        )["count"],
         "segments": query_one(
             """
             SELECT COUNT(*) AS count
@@ -1023,6 +1500,59 @@ def get_dashboard_counts(project_id: int) -> dict[str, int]:
         "relations": query_one(
             "SELECT COUNT(*) AS count FROM relations WHERE project_id = ?", (project_id,)
         )["count"],
+    }
+
+
+def get_cda_dashboard_preview(project_id: int) -> dict[str, str | int]:
+    relation = query_one(
+        """
+        SELECT segment_actors.relation_type, COUNT(*) AS count
+        FROM segment_actors
+        JOIN segments ON segments.id = segment_actors.segment_id
+        JOIN documents ON documents.id = segments.document_id
+        WHERE documents.project_id = ?
+        GROUP BY segment_actors.relation_type
+        ORDER BY count DESC, segment_actors.relation_type
+        LIMIT 1
+        """,
+        (project_id,),
+    )
+    feature = query_one(
+        """
+        SELECT discourse_features.feature_type, COUNT(*) AS count
+        FROM discourse_features
+        JOIN segments ON segments.id = discourse_features.segment_id
+        JOIN documents ON documents.id = segments.document_id
+        WHERE documents.project_id = ?
+        GROUP BY discourse_features.feature_type
+        ORDER BY count DESC, discourse_features.feature_type
+        LIMIT 1
+        """,
+        (project_id,),
+    )
+    return {
+        "segments_with_markers": query_one(
+            """
+            SELECT COUNT(DISTINCT segments.id) AS count
+            FROM segments
+            JOIN documents ON documents.id = segments.document_id
+            JOIN segment_discourse_markers
+                ON segment_discourse_markers.segment_id = segments.id
+            WHERE documents.project_id = ?
+            """,
+            (project_id,),
+        )["count"],
+        "actors_annotated": query_one(
+            """
+            SELECT COUNT(DISTINCT actors.id) AS count
+            FROM actors
+            JOIN segment_actors ON segment_actors.actor_id = actors.id
+            WHERE actors.project_id = ?
+            """,
+            (project_id,),
+        )["count"],
+        "top_relation_type": relation["relation_type"] if relation else "None yet",
+        "top_feature_type": feature["feature_type"] if feature else "None yet",
     }
 
 
@@ -1187,6 +1717,9 @@ def get_segments_for_document(document_id: int, project_id: int | None = None) -
     for row in segment_rows:
         segment = dict(row)
         segment["codes"] = get_codes_for_segment(row["id"])
+        segment["discourse_markers"] = get_discourse_markers_for_segment(row["id"])
+        segment["actors"] = get_segment_actors_for_segment(row["id"])
+        segment["features"] = get_discourse_features_for_segment(row["id"])
         segment["memos"] = get_memos_for_entity(project_id, "segment", row["id"])
         segments.append(segment)
     return segments
@@ -1203,6 +1736,304 @@ def get_codes_for_segment(segment_id: int) -> list[sqlite3.Row]:
         """,
         (segment_id,),
     )
+
+
+def get_discourse_markers_for_segment(segment_id: int) -> list[sqlite3.Row]:
+    return query_all(
+        """
+        SELECT discourse_markers.id, discourse_markers.name,
+               discourse_markers.marker_type, discourse_markers.color,
+               segment_discourse_markers.note,
+               segment_discourse_markers.created_at AS assigned_at
+        FROM discourse_markers
+        JOIN segment_discourse_markers
+            ON segment_discourse_markers.marker_id = discourse_markers.id
+        WHERE segment_discourse_markers.segment_id = ?
+        ORDER BY discourse_markers.name COLLATE NOCASE
+        """,
+        (segment_id,),
+    )
+
+
+def get_segment_actors_for_segment(segment_id: int) -> list[sqlite3.Row]:
+    return query_all(
+        """
+        SELECT segment_actors.id, segment_actors.relation_type, segment_actors.note,
+               segment_actors.created_at, actors.name, actors.actor_type
+        FROM segment_actors
+        JOIN actors ON actors.id = segment_actors.actor_id
+        WHERE segment_actors.segment_id = ?
+        ORDER BY actors.name COLLATE NOCASE, segment_actors.relation_type
+        """,
+        (segment_id,),
+    )
+
+
+def get_discourse_features_for_segment(segment_id: int) -> list[sqlite3.Row]:
+    return query_all(
+        """
+        SELECT id, feature_type, value, interpretation, created_at, updated_at
+        FROM discourse_features
+        WHERE segment_id = ?
+        ORDER BY datetime(created_at) DESC, id DESC
+        """,
+        (segment_id,),
+    )
+
+
+def get_discourse_markers_for_project(project_id: int) -> list[sqlite3.Row]:
+    return query_all(
+        """
+        SELECT discourse_markers.id, discourse_markers.name,
+               discourse_markers.marker_type, discourse_markers.description,
+               discourse_markers.color, discourse_markers.created_at,
+               discourse_markers.updated_at,
+               COUNT(segment_discourse_markers.segment_id) AS assigned_segment_count
+        FROM discourse_markers
+        LEFT JOIN segment_discourse_markers
+            ON segment_discourse_markers.marker_id = discourse_markers.id
+        WHERE discourse_markers.project_id = ?
+        GROUP BY discourse_markers.id
+        ORDER BY discourse_markers.name COLLATE NOCASE
+        """,
+        (project_id,),
+    )
+
+
+def get_discourse_marker_for_project(
+    marker_id: int, project_id: int
+) -> sqlite3.Row | None:
+    return query_one(
+        """
+        SELECT id, project_id, name, marker_type, description, color,
+               created_at, updated_at
+        FROM discourse_markers
+        WHERE id = ? AND project_id = ?
+        """,
+        (marker_id, project_id),
+    )
+
+
+def get_actors_for_project(project_id: int) -> list[sqlite3.Row]:
+    return query_all(
+        """
+        SELECT actors.id, actors.name, actors.actor_type, actors.description,
+               actors.created_at, actors.updated_at,
+               COUNT(segment_actors.id) AS annotation_count
+        FROM actors
+        LEFT JOIN segment_actors ON segment_actors.actor_id = actors.id
+        WHERE actors.project_id = ?
+        GROUP BY actors.id
+        ORDER BY actors.name COLLATE NOCASE
+        """,
+        (project_id,),
+    )
+
+
+def get_actor_for_project(actor_id: int, project_id: int) -> sqlite3.Row | None:
+    return query_one(
+        """
+        SELECT id, project_id, name, actor_type, description, created_at, updated_at
+        FROM actors
+        WHERE id = ? AND project_id = ?
+        """,
+        (actor_id, project_id),
+    )
+
+
+def segment_has_discourse_marker(segment_id: int, marker_id: int) -> bool:
+    return (
+        query_one(
+            """
+            SELECT 1
+            FROM segment_discourse_markers
+            WHERE segment_id = ? AND marker_id = ?
+            """,
+            (segment_id, marker_id),
+        )
+        is not None
+    )
+
+
+def get_segment_actor_for_project(
+    segment_actor_id: int, segment_id: int, project_id: int
+) -> sqlite3.Row | None:
+    return query_one(
+        """
+        SELECT segment_actors.id, segment_actors.segment_id, segment_actors.actor_id,
+               segment_actors.relation_type, actors.name AS actor_name,
+               segments.document_id, COALESCE(segments.name, '') AS segment_name
+        FROM segment_actors
+        JOIN actors ON actors.id = segment_actors.actor_id
+        JOIN segments ON segments.id = segment_actors.segment_id
+        JOIN documents ON documents.id = segments.document_id
+        WHERE segment_actors.id = ? AND segment_actors.segment_id = ?
+          AND documents.project_id = ?
+        """,
+        (segment_actor_id, segment_id, project_id),
+    )
+
+
+def get_discourse_feature_for_project(
+    feature_id: int, segment_id: int, project_id: int
+) -> sqlite3.Row | None:
+    return query_one(
+        """
+        SELECT discourse_features.id, discourse_features.segment_id,
+               discourse_features.feature_type, discourse_features.value,
+               segments.document_id, COALESCE(segments.name, '') AS segment_name
+        FROM discourse_features
+        JOIN segments ON segments.id = discourse_features.segment_id
+        JOIN documents ON documents.id = segments.document_id
+        WHERE discourse_features.id = ? AND discourse_features.segment_id = ?
+          AND documents.project_id = ?
+        """,
+        (feature_id, segment_id, project_id),
+    )
+
+
+def get_cda_counts(project_id: int) -> dict[str, int]:
+    return {
+        "markers": query_one(
+            "SELECT COUNT(*) AS count FROM discourse_markers WHERE project_id = ?",
+            (project_id,),
+        )["count"],
+        "actors": query_one(
+            "SELECT COUNT(*) AS count FROM actors WHERE project_id = ?", (project_id,)
+        )["count"],
+        "segments_with_markers": query_one(
+            """
+            SELECT COUNT(DISTINCT segments.id) AS count
+            FROM segments
+            JOIN documents ON documents.id = segments.document_id
+            JOIN segment_discourse_markers
+                ON segment_discourse_markers.segment_id = segments.id
+            WHERE documents.project_id = ?
+            """,
+            (project_id,),
+        )["count"],
+        "segments_with_actor_annotations": query_one(
+            """
+            SELECT COUNT(DISTINCT segments.id) AS count
+            FROM segments
+            JOIN documents ON documents.id = segments.document_id
+            JOIN segment_actors ON segment_actors.segment_id = segments.id
+            WHERE documents.project_id = ?
+            """,
+            (project_id,),
+        )["count"],
+        "metaphor_features": get_feature_type_count(project_id, "metaphor"),
+        "presupposition_features": get_feature_type_count(project_id, "presupposition"),
+        "legitimation_features": get_feature_type_count(project_id, "legitimation"),
+    }
+
+
+def get_feature_type_count(project_id: int, feature_type: str) -> int:
+    return query_one(
+        """
+        SELECT COUNT(*) AS count
+        FROM discourse_features
+        JOIN segments ON segments.id = discourse_features.segment_id
+        JOIN documents ON documents.id = segments.document_id
+        WHERE documents.project_id = ? AND discourse_features.feature_type = ?
+        """,
+        (project_id, feature_type),
+    )["count"]
+
+
+def get_discourse_features_for_project(project_id: int, filters: dict) -> list[sqlite3.Row]:
+    sql = """
+        SELECT discourse_features.id, discourse_features.feature_type,
+               discourse_features.value, discourse_features.interpretation,
+               discourse_features.created_at,
+               COALESCE(segments.name, '') AS segment_name,
+               segments.selected_text, documents.id AS document_id,
+               documents.title AS document_title
+        FROM discourse_features
+        JOIN segments ON segments.id = discourse_features.segment_id
+        JOIN documents ON documents.id = segments.document_id
+        WHERE documents.project_id = ?
+    """
+    params = [project_id]
+    if filters.get("feature_type") in DISCOURSE_FEATURE_TYPES:
+        sql += " AND discourse_features.feature_type = ?"
+        params.append(filters["feature_type"])
+    if filters.get("document_id", "").isdigit():
+        sql += " AND documents.id = ?"
+        params.append(int(filters["document_id"]))
+    sql += " ORDER BY datetime(discourse_features.created_at) DESC, discourse_features.id DESC"
+    return query_all(sql, tuple(params))
+
+
+def get_discourse_feature_counts(project_id: int) -> list[sqlite3.Row]:
+    return query_all(
+        """
+        SELECT discourse_features.feature_type, COUNT(*) AS count
+        FROM discourse_features
+        JOIN segments ON segments.id = discourse_features.segment_id
+        JOIN documents ON documents.id = segments.document_id
+        WHERE documents.project_id = ?
+        GROUP BY discourse_features.feature_type
+        ORDER BY count DESC, discourse_features.feature_type
+        """,
+        (project_id,),
+    )
+
+
+def get_voice_silence_report(project_id: int) -> list[dict]:
+    rows = query_all(
+        """
+        SELECT actors.id, actors.name, actors.actor_type,
+               segment_actors.relation_type,
+               COUNT(segment_actors.id) AS relation_count,
+               COUNT(DISTINCT segment_actors.segment_id) AS segment_count,
+               COUNT(DISTINCT documents.id) AS document_count
+        FROM actors
+        LEFT JOIN segment_actors ON segment_actors.actor_id = actors.id
+        LEFT JOIN segments ON segments.id = segment_actors.segment_id
+        LEFT JOIN documents ON documents.id = segments.document_id
+        WHERE actors.project_id = ?
+        GROUP BY actors.id, segment_actors.relation_type
+        ORDER BY actors.name COLLATE NOCASE
+        """,
+        (project_id,),
+    )
+    actors: dict[int, dict] = {}
+    for row in rows:
+        actor = actors.setdefault(
+            row["id"],
+            {
+                "id": row["id"],
+                "name": row["name"],
+                "actor_type": row["actor_type"],
+                "total_annotations": 0,
+                "document_count": 0,
+                "segment_count": 0,
+                **{relation: 0 for relation in ACTOR_RELATION_TYPES},
+            },
+        )
+        if row["relation_type"] in ACTOR_RELATION_TYPES:
+            actor[row["relation_type"]] = row["relation_count"]
+            actor["total_annotations"] += row["relation_count"]
+            actor["document_count"] += row["document_count"]
+            actor["segment_count"] += row["segment_count"]
+
+    for actor in actors.values():
+        totals = query_one(
+            """
+            SELECT COUNT(DISTINCT documents.id) AS document_count,
+                   COUNT(DISTINCT segments.id) AS segment_count
+            FROM actors
+            LEFT JOIN segment_actors ON segment_actors.actor_id = actors.id
+            LEFT JOIN segments ON segments.id = segment_actors.segment_id
+            LEFT JOIN documents ON documents.id = segments.document_id
+            WHERE actors.id = ? AND actors.project_id = ?
+            """,
+            (actor["id"], project_id),
+        )
+        actor["document_count"] = totals["document_count"]
+        actor["segment_count"] = totals["segment_count"]
+    return list(actors.values())
 
 
 def get_segment_for_project(segment_id: int, project_id: int) -> sqlite3.Row | None:
@@ -1772,7 +2603,12 @@ def build_highlighted_document_text(
         if start < cursor or start < 0 or end > len(document_text) or end <= start:
             continue
 
-        color = segment["codes"][0]["color"] if segment["codes"] else "#fff0a8"
+        if segment["codes"]:
+            color = segment["codes"][0]["color"]
+        elif segment["discourse_markers"]:
+            color = segment["discourse_markers"][0]["color"]
+        else:
+            color = "#fff0a8"
         style = f"--segment-color: {normalize_code_color(color)};"
         pieces.append(escape(document_text[cursor:start]))
         pieces.append(
@@ -1800,6 +2636,18 @@ def delete_document_data(document_id: int) -> None:
         placeholders = ",".join("?" for _ in segment_ids)
         db.execute(
             f"DELETE FROM segment_codes WHERE segment_id IN ({placeholders})",
+            tuple(segment_ids),
+        )
+        db.execute(
+            f"DELETE FROM segment_discourse_markers WHERE segment_id IN ({placeholders})",
+            tuple(segment_ids),
+        )
+        db.execute(
+            f"DELETE FROM segment_actors WHERE segment_id IN ({placeholders})",
+            tuple(segment_ids),
+        )
+        db.execute(
+            f"DELETE FROM discourse_features WHERE segment_id IN ({placeholders})",
             tuple(segment_ids),
         )
     db.execute("DELETE FROM segments WHERE document_id = ?", (document_id,))
@@ -1953,6 +2801,13 @@ def normalize_code_color(color: str) -> str:
     if re.fullmatch(r"#[0-9a-fA-F]{6}", color):
         return color.lower()
     return DEFAULT_CODE_COLOR
+
+
+def normalize_cda_color(color: str) -> str:
+    color = color.strip()
+    if re.fullmatch(r"#[0-9a-fA-F]{6}", color):
+        return color.lower()
+    return DEFAULT_CDA_MARKER_COLOR
 
 
 def get_file_extension(filename: str) -> str:

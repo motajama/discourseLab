@@ -29,20 +29,20 @@
         <span class="metric-label">Categories</span>
     </article>
     <article class="metric-card">
-        <span class="metric-value">{{ counts.coded_segments }}</span>
-        <span class="metric-label">Coded Segments</span>
+        <span class="metric-value">{{ counts.cda_markers }}</span>
+        <span class="metric-label">CDA Markers</span>
+    </article>
+    <article class="metric-card">
+        <span class="metric-value">{{ counts.actors }}</span>
+        <span class="metric-label">Actors</span>
+    </article>
+    <article class="metric-card">
+        <span class="metric-value">{{ counts.discourse_features }}</span>
+        <span class="metric-label">Discourse Features</span>
     </article>
     <article class="metric-card">
         <span class="metric-value">{{ counts.memos }}</span>
         <span class="metric-label">Memos</span>
-    </article>
-    <article class="metric-card">
-        <span class="metric-value">{{ counts.research_questions }}</span>
-        <span class="metric-label">Research Questions</span>
-    </article>
-    <article class="metric-card">
-        <span class="metric-value">{{ counts.relations }}</span>
-        <span class="metric-label">Relations</span>
     </article>
 </section>
 
@@ -75,19 +75,29 @@
 
     <article class="info-panel">
         <h2>Prepared Workflow</h2>
-        <p class="workflow-line">Documents -> Segments -> Open Codes -> Axial Codes -> Categories -> Model -> Export</p>
+        <p class="workflow-line">Documents -> Segments -> Open Codes / CDA Markers -> Actors -> Features -> Reports</p>
         <p>
-            Phase 6 adds the Grounded Theory hierarchy from open codes to axial codes
-            and categories, plus GT fields and constant comparison support.
+            Phase 7 adds a working CDA workspace for markers, actor voice and silence
+            annotations, discourse features, and basic CDA reports.
         </p>
     </article>
 
     <article class="info-panel">
         <h2>Next Steps</h2>
         <ol class="next-steps">
-            <li>Later: Add CDA workspace behavior.</li>
             <li>Later: Add model building and visual exports.</li>
+            <li>Later: Add additional export formats.</li>
         </ol>
+    </article>
+
+    <article class="info-panel">
+        <h2>CDA Preview</h2>
+        <ul class="compact-list">
+            <li><span>Segments with CDA markers</span><span>{{ cda_preview.segments_with_markers }}</span></li>
+            <li><span>Actors annotated</span><span>{{ cda_preview.actors_annotated }}</span></li>
+            <li><span>Most frequent actor relation type</span><span>{{ cda_preview.top_relation_type }}</span></li>
+            <li><span>Most frequent discourse feature type</span><span>{{ cda_preview.top_feature_type }}</span></li>
+        </ul>
     </article>
 
     <article class="info-panel">

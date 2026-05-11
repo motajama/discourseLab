@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="page-header">
+    <p class="eyebrow">CDA feature overview</p>
+    <h1>Discourse Features</h1>
+    <p>Active project: {{ active_project.name }}</p>
+</section>
+
+<section class="info-panel">
+    <h2>Filters</h2>
+    <form class="filter-form" method="get" action="{{ url_for('cda_features') }}">
+        <label>
+            <span>Feature type</span>
+            <select name="feature_type">
+                <option value="">All feature types</option>
+                {% for value, label in feature_type_labels.items() %}
+                    <option value="{{ value }}" {{ "selected" if filters.feature_type == value else "" }}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label>
+            <span>Document</span>
+            <select name="document_id">
+                <option value="">All documents</option>
+                {% for document in documents %}
+                    <option value="{{ document.id }}" {{ "selected" if filters.document_id == document.id|string else "" }}>{{ document.title }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <button type="submit" class="button-primary">Apply filters</button>
+        <a class="button-secondary" href="{{ url_for('cda_features') }}">Clear</a>
+    </form>
+</section>
+
+<section class="dashboard-grid">
+    <article class="info-panel">
+        <h2>Counts by Feature Type</h2>
+        {% if counts %}
+            <ul class="compact-list">
+                {% for row in counts %}
+                    <li><span>{{ feature_type_labels[row.feature_type] }}</span><span>{{ row.count }}</span></li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p>No discourse features created yet.</p>
+        {% endif %}
+    </article>
+    <article class="info-panel">
+        <h2>Reports</h2>
+        <div class="link-row">
+            <a class="button-secondary" href="{{ url_for('cda_workspace') }}">CDA Workspace</a>
+            <a class="button-secondary" href="{{ url_for('cda_voice_silence') }}">Voice/Silence report</a>
+        </div>
+    </article>
+</section>
+
+<section class="info-panel">
+    <h2>Feature Table</h2>
+    {% if features %}
+        <div class="table-wrap">
+            <table class="data-table report-table">
+                <thead>
+                    <tr>
+                        <th>Feature type</th>
+                        <th>Value</th>
+                        <th>Interpretation</th>
+                        <th>Document</th>
+                        <th>Segment</th>
+                        <th>Selected text preview</th>
+                        <th>Created at</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for feature in features %}
+                        <tr>
+                            <td>{{ feature_type_labels[feature.feature_type] }}</td>
+                            <td>{{ feature.value }}</td>
+                            <td>{{ feature.interpretation or "" }}</td>
+                            <td><a href="{{ url_for('document_view', document_id=feature.document_id) }}">{{ feature.document_title }}</a></td>
+                            <td>{{ feature.segment_name or "Segment" }}</td>
+                            <td>{{ feature.selected_text[:140] }}{% if feature.selected_text|length > 140 %}...{% endif %}</td>
+                            <td>{{ feature.created_at }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <p>No discourse features match the current filters.</p>
+    {% endif %}
+</section>
+
+{% include "_cda_helper.html" %}
+{% endblock %}

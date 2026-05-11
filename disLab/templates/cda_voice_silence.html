@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="page-header">
+    <p class="eyebrow">Voice and silence</p>
+    <h1>Actor Report</h1>
+    <p>Active project: {{ active_project.name }}</p>
+</section>
+
+<section class="detail-actions">
+    <a class="button-secondary" href="{{ url_for('cda_workspace') }}">Back to CDA Workspace</a>
+    <a class="button-secondary" href="{{ url_for('cda_features') }}">CDA feature overview</a>
+</section>
+
+<section class="info-panel interpretation-panel">
+    <h2>Interpretation Prompts</h2>
+    <ul>
+        <li>Who speaks?</li>
+        <li>Who is spoken about but does not speak?</li>
+        <li>Which actors are individualized?</li>
+        <li>Which actors are aggregated?</li>
+        <li>Which actors are evaluated?</li>
+        <li>Which actors are silenced or backgrounded?</li>
+        <li>Which institutions define the situation?</li>
+    </ul>
+</section>
+
+<section class="info-panel">
+    <h2>Actor Voice/Silence Counts</h2>
+    {% if rows %}
+        <div class="table-wrap">
+            <table class="data-table report-table">
+                <thead>
+                    <tr>
+                        <th>Actor</th>
+                        <th>Type</th>
+                        {% for relation, label in relation_type_labels.items() %}
+                            <th>{{ label }}</th>
+                        {% endfor %}
+                        <th>Total</th>
+                        <th>Documents</th>
+                        <th>Segments</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in rows %}
+                        <tr>
+                            <td>{{ row.name }}</td>
+                            <td>{{ row.actor_type }}</td>
+                            {% for relation, label in relation_type_labels.items() %}
+                                <td>{{ row[relation] }}</td>
+                            {% endfor %}
+                            <td>{{ row.total_annotations }}</td>
+                            <td>{{ row.document_count }}</td>
+                            <td>{{ row.segment_count }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <p>No actors created yet.</p>
+    {% endif %}
+</section>
+
+{% include "_cda_helper.html" %}
+{% endblock %}

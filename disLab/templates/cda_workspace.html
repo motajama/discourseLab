@@ -2,13 +2,134 @@
 
 {% block content %}
 <section class="page-header">
+    <p class="eyebrow">Phase 7 — CDA workspace</p>
     <h1>CDA Workspace</h1>
     <p>Active project: {{ active_project.name }}</p>
 </section>
 
 <section class="info-panel">
-    <h2>{{ panel_title }}</h2>
-    <p>{{ panel_body }}</p>
-    <p class="phase-note">Prepared for a later discourseLab phase.</p>
+    <p>
+        CDA Workspace supports textual, discursive-practice, and social-practice analysis,
+        with attention to actors, voice, silence, modality, metaphors, presuppositions,
+        legitimation, ideology, and power.
+    </p>
+    <div class="link-row">
+        <a class="button-secondary" href="{{ url_for('cda_voice_silence') }}">Voice/Silence report</a>
+        <a class="button-secondary" href="{{ url_for('cda_features') }}">CDA feature overview</a>
+    </div>
 </section>
+
+<section class="metrics-grid" aria-label="CDA counts">
+    <article class="metric-card"><span class="metric-value">{{ counts.markers }}</span><span class="metric-label">CDA Markers</span></article>
+    <article class="metric-card"><span class="metric-value">{{ counts.actors }}</span><span class="metric-label">Actors</span></article>
+    <article class="metric-card"><span class="metric-value">{{ counts.segments_with_markers }}</span><span class="metric-label">Segments with CDA markers</span></article>
+    <article class="metric-card"><span class="metric-value">{{ counts.segments_with_actor_annotations }}</span><span class="metric-label">Segments with actor annotations</span></article>
+    <article class="metric-card"><span class="metric-value">{{ counts.metaphor_features }}</span><span class="metric-label">Metaphor features</span></article>
+    <article class="metric-card"><span class="metric-value">{{ counts.presupposition_features }}</span><span class="metric-label">Presupposition features</span></article>
+    <article class="metric-card"><span class="metric-value">{{ counts.legitimation_features }}</span><span class="metric-label">Legitimation features</span></article>
+</section>
+
+<section class="dashboard-grid">
+    <article class="info-panel">
+        <h2>Create CDA Marker</h2>
+        <form class="document-form" action="{{ url_for('create_discourse_marker') }}" method="post">
+            <div class="form-grid">
+                <label>
+                    <span>Name</span>
+                    <input type="text" name="name" required>
+                </label>
+                <label>
+                    <span>Marker type</span>
+                    <select name="marker_type" required>
+                        <option value="">Choose type</option>
+                        {% for value, label in marker_type_labels.items() %}
+                            <option value="{{ value }}">{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+            </div>
+            <div class="form-grid">
+                <label>
+                    <span>Color</span>
+                    <input type="color" name="color" value="{{ default_marker_color }}">
+                </label>
+                <label>
+                    <span>Description</span>
+                    <textarea name="description" rows="3"></textarea>
+                </label>
+            </div>
+            <button type="submit" class="button-primary">Create CDA marker</button>
+        </form>
+    </article>
+
+    <article class="info-panel">
+        <h2>Create Actor</h2>
+        <form class="document-form" action="{{ url_for('create_actor') }}" method="post">
+            <div class="form-grid">
+                <label>
+                    <span>Name</span>
+                    <input type="text" name="name" required>
+                </label>
+                <label>
+                    <span>Actor type</span>
+                    <select name="actor_type" required>
+                        <option value="">Choose type</option>
+                        {% for value, label in actor_type_labels.items() %}
+                            <option value="{{ value }}">{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+            </div>
+            <label>
+                <span>Description</span>
+                <textarea name="description" rows="3"></textarea>
+            </label>
+            <button type="submit" class="button-primary">Create actor</button>
+        </form>
+    </article>
+</section>
+
+<section class="dashboard-grid">
+    <article class="info-panel">
+        <h2>CDA Markers</h2>
+        {% if markers %}
+            <ul class="compact-list">
+                {% for marker in markers %}
+                    <li>
+                        <span><span class="color-swatch small" style="background: {{ marker.color }}"></span>{{ marker.name }}</span>
+                        <span>{{ marker_type_labels[marker.marker_type] }} · {{ marker.assigned_segment_count }} assigned segments</span>
+                        {% if marker.description %}<span>{{ marker.description }}</span>{% endif %}
+                        <form action="{{ url_for('delete_discourse_marker', marker_id=marker.id) }}" method="post">
+                            <button type="submit" class="button-danger compact-button">Delete</button>
+                        </form>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p>No CDA markers created yet.</p>
+        {% endif %}
+    </article>
+
+    <article class="info-panel">
+        <h2>Actors</h2>
+        {% if actors %}
+            <ul class="compact-list">
+                {% for actor in actors %}
+                    <li>
+                        <span>{{ actor.name }}</span>
+                        <span>{{ actor_type_labels[actor.actor_type] }} · {{ actor.annotation_count }} annotations</span>
+                        {% if actor.description %}<span>{{ actor.description }}</span>{% endif %}
+                        <form action="{{ url_for('delete_actor', actor_id=actor.id) }}" method="post">
+                            <button type="submit" class="button-danger compact-button">Delete</button>
+                        </form>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p>No actors created yet.</p>
+        {% endif %}
+    </article>
+</section>
+
+{% include "_cda_helper.html" %}
 {% endblock %}
