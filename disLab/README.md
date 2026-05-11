@@ -1,6 +1,6 @@
 # discourseLab
 
-Phase: 2 — Document import
+Phase: 3 — Segment creation
 
 discourseLab is a local lightweight qualitative analysis workspace for discourse analysis, critical discourse analysis, and grounded theory.
 
@@ -27,17 +27,21 @@ http://127.0.0.1:5000
 
 ## Verification
 
-1. Open `http://127.0.0.1:5000`.
-2. Confirm the header says `discourseLab`.
-3. Go to Documents.
-4. Upload a `.txt` file.
-5. Upload a `.docx` file.
-6. Confirm both appear in the document list.
-7. Open each document and confirm extracted text is visible.
-8. Confirm the dashboard document count increased.
-9. Confirm the audit log shows import actions.
-10. Delete a document and confirm it disappears.
-11. Restart the app and confirm remaining documents are still present.
+1. Start the app with `python app.py`.
+2. Open `http://127.0.0.1:5000`.
+3. Import a TXT or DOCX document if none exists.
+4. Open a document.
+5. Select a passage inside the document text panel.
+6. Confirm the floating segment helper appears.
+7. Add an optional segment name and note.
+8. Click `Create segment`.
+9. Confirm the segment appears in the segment list.
+10. Confirm the segment is highlighted in the document text.
+11. Delete the segment.
+12. Confirm it disappears from the list and highlight.
+13. Confirm dashboard segment count updates.
+14. Confirm audit log shows `create_segment` and `delete_segment` actions.
+15. Restart the app and confirm saved segments persist.
 
 ## Project Structure
 
@@ -68,28 +72,26 @@ discourseLab/
     exports/
 ```
 
-## Current Phase 2
+## Current Phase 3
 
-Phase 2 adds document import and document management:
+Phase 3 adds segment creation and segment management:
 
-- TXT import with UTF-8 and latin-1 fallback
-- DOCX import with paragraph text extraction through `python-docx`
-- Safe local upload filenames
-- 16 MB upload size limit
-- Document list with text length and segment count
-- Document detail view with escaped extracted plain text
-- Document deletion through POST
-- Audit log entries for document import and deletion
-- Dashboard document count and latest documents panel
+- Document reading view for close analysis
+- Text selection capture inside the document text panel
+- Offset calculation relative to extracted plain text
+- Segment creation with optional names and notes
+- Floating segment helper so segments can be saved without scrolling
+- Segment list on the document detail page
+- Segment deletion through POST
+- Neutral visual highlighting for saved segments
+- Audit log entries for segment creation and deletion
+- Dashboard segment count and latest segments panel
 - `/health` route for a simple local health check
 
-Document deletion removes database rows for the document and any associated future segments or segment-code links. The original uploaded source file is intentionally left in `uploads/` for now.
-
-This phase does not implement segment selection, text coding, color highlighting, memo authoring, CDA tools, GT tools, model building, exports, AI features, authentication, or cloud functionality.
+This phase does not implement open code creation, code assignment, code colors, axial coding, category coding, codebook management, memo editing, CDA markers, actor maps, voice/silence reports, model building, export packages, AI features, authentication, or cloud functionality.
 
 ## Planned Later Phases
 
-- Phase 3: Display documents and create text segments
 - Phase 4: Add open coding and color highlighting
 - Phase 5: Add memos and codebook
 - Phase 6: Add grounded theory and CDA workspaces

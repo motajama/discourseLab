@@ -15,12 +15,13 @@ from flask import (
     request,
     url_for,
 )
+from markupsafe import Markup, escape
 from werkzeug.utils import secure_filename
 
 
 APP_NAME = "discourseLab"
-APP_PHASE = "2"
-CURRENT_PHASE_LABEL = "Phase 2 — Document import"
+APP_PHASE = "3"
+CURRENT_PHASE_LABEL = "Phase 3 — Segment creation"
 DEFAULT_PROJECT_NAME = "Demo Project"
 DEFAULT_PROJECT_DESCRIPTION = "Initial local discourseLab project."
 ALLOWED_EXTENSIONS = {"txt", "docx"}
@@ -55,6 +56,7 @@ def create_app() -> Flask:
         counts = get_dashboard_counts(active_project["id"])
         audit_entries = get_latest_audit_entries(active_project["id"])
         latest_documents = get_latest_documents(active_project["id"])
+        latest_segments = get_latest_segments(active_project["id"])
         return render_template(
             "dashboard.html",
             title="Dashboard",
@@ -63,6 +65,7 @@ def create_app() -> Flask:
             counts=counts,
             audit_entries=audit_entries,
             latest_documents=latest_documents,
+            latest_segments=latest_segments,
             current_phase=CURRENT_PHASE_LABEL,
         )
 
@@ -142,7 +145,10 @@ def create_app() -> Flask:
             flash("Document not found.", "error")
             abort(404)
 
-        segment_count = get_document_segment_count(document_id)
+        segments = get_segments_for_document(document_id)
+        highlighted_text = build_highlighted_document_text(
+            document["text_content"] or "", segments
+        )
         return render_template(
             "document_view.html",
             title=document["title"],
@@ -150,8 +156,55 @@ def create_app() -> Flask:
             active_project=active_project,
             document=document,
             text_length=len(document["text_content"] or ""),
-            segment_count=segment_count,
+            segment_count=len(segments),
+            segments=segments,
+            highlighted_text=highlighted_text,
         )
+
+    @app.route("/documents/<int:document_id>/segments", methods=["POST"])
+    def create_segment(document_id: int):
+        active_project = get_active_project()
+        document = get_document_for_project(document_id, active_project["id"])
+        if document is None:
+            flash("Document not found.", "error")
+            abort(404)
+
+        segment_name = request.form.get("name", "").strip()
+        selected_text = request.form.get("selected_text", "")
+        note = request.form.get("note", "").strip()
+        try:
+            start_offset = int(request.form.get("start_offset", ""))
+            end_offset = int(request.form.get("end_offset", ""))
+        except ValueError:
+            flash("Invalid selection. Select text inside the document panel.", "error")
+            return redirect(url_for("document_view", document_id=document_id))
+
+        document_text = document["text_content"] or ""
+        if not is_valid_segment_selection(
+            document_text, selected_text, start_offset, end_offset
+        ):
+            flash("Invalid selection. Select a passage inside the document text.", "error")
+            return redirect(url_for("document_view", document_id=document_id))
+
+        selected_text = document_text[start_offset:end_offset]
+        segment_id = execute_write(
+            """
+            INSERT INTO segments (
+                document_id, name, selected_text, start_offset, end_offset, note
+            )
+            VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            (document_id, segment_name, selected_text, start_offset, end_offset, note),
+        )
+        log_action(
+            project_id=active_project["id"],
+            entity_type="segment",
+            entity_id=segment_id,
+            action="create_segment",
+            details=f"Created segment in document: {document['title']}",
+        )
+        flash("Segment created.", "success")
+        return redirect(url_for("document_view", document_id=document_id))
 
     @app.route("/documents/<int:document_id>/delete", methods=["POST"])
     def delete_document(document_id: int):
@@ -171,6 +224,28 @@ def create_app() -> Flask:
         )
         flash(f"Deleted document: {document['title']}", "success")
         return redirect(url_for("documents"))
+
+    @app.route("/segments/<int:segment_id>/delete", methods=["POST"])
+    def delete_segment(segment_id: int):
+        active_project = get_active_project()
+        segment = get_segment_for_project(segment_id, active_project["id"])
+        if segment is None:
+            flash("Segment not found.", "error")
+            abort(404)
+
+        db = get_db()
+        db.execute("DELETE FROM segment_codes WHERE segment_id = ?", (segment_id,))
+        db.execute("DELETE FROM segments WHERE id = ?", (segment_id,))
+        db.commit()
+        log_action(
+            project_id=active_project["id"],
+            entity_type="segment",
+            entity_id=segment_id,
+            action="delete_segment",
+            details=f"Deleted segment from document: {segment['document_title']}",
+        )
+        flash("Segment deleted.", "success")
+        return redirect(url_for("document_view", document_id=segment["document_id"]))
 
     @app.route("/codes")
     def codes():
@@ -269,13 +344,24 @@ def close_db(error=None) -> None:
 
 
 def init_db_if_needed() -> None:
-    if DATABASE.exists():
-        return
-
+    is_new_database = not DATABASE.exists()
     db = get_db()
-    schema_sql = SCHEMA.read_text(encoding="utf-8")
-    db.executescript(schema_sql)
-    db.commit()
+    if is_new_database:
+        schema_sql = SCHEMA.read_text(encoding="utf-8")
+        db.executescript(schema_sql)
+        db.commit()
+
+    run_migrations()
+
+
+def run_migrations() -> None:
+    db = get_db()
+    segment_columns = {
+        row["name"] for row in db.execute("PRAGMA table_info(segments)").fetchall()
+    }
+    if "name" not in segment_columns:
+        db.execute("ALTER TABLE segments ADD COLUMN name TEXT")
+        db.commit()
 
 
 def query_one(sql: str, params: tuple = ()) -> sqlite3.Row | None:
@@ -389,6 +475,24 @@ def get_latest_documents(project_id: int) -> list[sqlite3.Row]:
     )
 
 
+def get_latest_segments(project_id: int) -> list[sqlite3.Row]:
+    return query_all(
+        """
+        SELECT
+            COALESCE(segments.name, '') AS name,
+            segments.selected_text,
+            segments.created_at,
+            documents.title AS document_title
+        FROM segments
+        JOIN documents ON documents.id = segments.document_id
+        WHERE documents.project_id = ?
+        ORDER BY datetime(segments.created_at) DESC, segments.id DESC
+        LIMIT 5
+        """,
+        (project_id,),
+    )
+
+
 def get_document_for_project(document_id: int, project_id: int) -> sqlite3.Row | None:
     return query_one(
         """
@@ -405,6 +509,72 @@ def get_document_segment_count(document_id: int) -> int:
     return query_one(
         "SELECT COUNT(*) AS count FROM segments WHERE document_id = ?", (document_id,)
     )["count"]
+
+
+def get_segments_for_document(document_id: int) -> list[sqlite3.Row]:
+    return query_all(
+        """
+        SELECT id, document_id, COALESCE(name, '') AS name, selected_text, start_offset, end_offset,
+               note, created_at, updated_at
+        FROM segments
+        WHERE document_id = ?
+        ORDER BY start_offset ASC, end_offset ASC, id ASC
+        """,
+        (document_id,),
+    )
+
+
+def get_segment_for_project(segment_id: int, project_id: int) -> sqlite3.Row | None:
+    return query_one(
+        """
+        SELECT
+            segments.id,
+            segments.document_id,
+            COALESCE(segments.name, '') AS name,
+            segments.selected_text,
+            documents.title AS document_title
+        FROM segments
+        JOIN documents ON documents.id = segments.document_id
+        WHERE segments.id = ? AND documents.project_id = ?
+        """,
+        (segment_id, project_id),
+    )
+
+
+def is_valid_segment_selection(
+    document_text: str, selected_text: str, start_offset: int, end_offset: int
+) -> bool:
+    if not selected_text.strip():
+        return False
+    if start_offset < 0 or end_offset <= start_offset:
+        return False
+    if end_offset > len(document_text):
+        return False
+    return bool(document_text[start_offset:end_offset].strip())
+
+
+def build_highlighted_document_text(
+    document_text: str, segments: list[sqlite3.Row]
+) -> Markup:
+    pieces = []
+    cursor = 0
+
+    for segment in segments:
+        start = segment["start_offset"]
+        end = segment["end_offset"]
+        if start < cursor or start < 0 or end > len(document_text) or end <= start:
+            continue
+
+        pieces.append(escape(document_text[cursor:start]))
+        pieces.append(
+            Markup('<mark class="segment-highlight" data-segment-id="{}">{}</mark>').format(
+                segment["id"], escape(document_text[start:end])
+            )
+        )
+        cursor = end
+
+    pieces.append(escape(document_text[cursor:]))
+    return Markup("").join(pieces)
 
 
 def delete_document_data(document_id: int) -> None:

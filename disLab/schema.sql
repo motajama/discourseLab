@@ -59,6 +59,7 @@ CREATE TABLE codes (
 CREATE TABLE segments (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     document_id INTEGER NOT NULL,
+    name TEXT,
     selected_text TEXT NOT NULL,
     start_offset INTEGER NOT NULL,
     end_offset INTEGER NOT NULL,

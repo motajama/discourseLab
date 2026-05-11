@@ -2,7 +2,7 @@
 
 {% block content %}
 <section class="page-header">
-    <p class="eyebrow">Document detail</p>
+    <p class="eyebrow">Analytical reading view</p>
     <h1>{{ document.title }}</h1>
     <p>Active project: {{ active_project.name }}</p>
 </section>
@@ -51,16 +51,88 @@
     </article>
 
     <article class="info-panel">
-        <h2>Phase 2 Scope</h2>
+        <h2>Create Segment</h2>
         <p>
-            This view displays extracted plain text only. Segment selection, coding,
-            highlighting, and memo links are prepared for later phases.
+            Select a passage inside the document text panel. A floating helper will appear
+            so you can name the segment, add a note, and save it without scrolling.
         </p>
     </article>
 </section>
 
 <section class="info-panel text-panel-section">
-    <h2>Extracted Plain Text</h2>
-    <pre class="document-text">{{ document.text_content }}</pre>
+    <h2>Document Text</h2>
+    <div class="document-text" id="document-text-panel">{{ highlighted_text }}</div>
 </section>
+
+<section class="info-panel">
+    <h2>Existing Segments</h2>
+    {% if segments %}
+        <div class="segment-list">
+            {% for segment in segments %}
+                <article class="segment-card">
+                    <div class="segment-card-header">
+                        <h3>Segment {{ loop.index }}</h3>
+                        <form action="{{ url_for('delete_segment', segment_id=segment.id) }}" method="post">
+                            <button type="submit" class="button-danger">Delete</button>
+                        </form>
+                    </div>
+                    {% if segment.name %}
+                        <p class="segment-name">{{ segment.name }}</p>
+                    {% endif %}
+                    <blockquote>{{ segment.selected_text }}</blockquote>
+                    <dl class="segment-meta">
+                        <div>
+                            <dt>Note</dt>
+                            <dd>{{ segment.note or "No note" }}</dd>
+                        </div>
+                        <div>
+                            <dt>Start offset</dt>
+                            <dd>{{ segment.start_offset }}</dd>
+                        </div>
+                        <div>
+                            <dt>End offset</dt>
+                            <dd>{{ segment.end_offset }}</dd>
+                        </div>
+                        <div>
+                            <dt>Created at</dt>
+                            <dd>{{ segment.created_at }}</dd>
+                        </div>
+                    </dl>
+                </article>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p>No segments created for this document yet.</p>
+    {% endif %}
+</section>
+
+<aside class="selection-helper hidden" id="selection-helper" aria-live="polite">
+    <form class="document-form" action="{{ url_for('create_segment', document_id=document.id) }}" method="post">
+        <input type="hidden" name="selected_text" id="selected-text-input">
+        <input type="hidden" name="start_offset" id="start-offset-input">
+        <input type="hidden" name="end_offset" id="end-offset-input">
+
+        <div class="selection-helper-header">
+            <h2>Create Segment</h2>
+            <button type="button" class="button-secondary compact-button" id="clear-selection-button">Close</button>
+        </div>
+
+        <div>
+            <span class="form-label">Selected text</span>
+            <div class="selection-preview empty" id="selection-preview">No text selected.</div>
+        </div>
+
+        <label>
+            <span>Segment name</span>
+            <input type="text" name="name" placeholder="Optional short name">
+        </label>
+
+        <label>
+            <span>Segment note</span>
+            <textarea name="note" rows="3" placeholder="Optional segment note"></textarea>
+        </label>
+
+        <button type="submit" class="button-primary" id="create-segment-button" disabled>Create segment</button>
+    </form>
+</aside>
 {% endblock %}

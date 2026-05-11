@@ -65,8 +65,9 @@
         <h2>Prepared Workflow</h2>
         <p class="workflow-line">Documents -> Segments -> Open Codes -> Axial Codes -> Categories -> Model -> Export</p>
         <p>
-            Phase 2 adds TXT and DOCX document import and document management before
-            segmentation, coding, memos, CDA tools, GT tools, and exports are added.
+            Phase 3 adds document text selection, segment creation, segment deletion,
+            and neutral segment highlighting before coding, memos, CDA tools, GT tools,
+            and exports are added.
         </p>
     </article>
 
@@ -110,6 +111,23 @@
             </ul>
         {% else %}
             <p>No documents imported yet.</p>
+        {% endif %}
+    </article>
+
+    <article class="info-panel">
+        <h2>Latest Segments</h2>
+        {% if latest_segments %}
+            <ul class="compact-list">
+                {% for segment in latest_segments %}
+                    <li>
+                        <span>{{ segment.name or segment.document_title }}</span>
+                        <span>{{ segment.selected_text[:120] }}{% if segment.selected_text|length > 120 %}...{% endif %}</span>
+                        <span>{{ segment.created_at }}</span>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p>No segments created yet.</p>
         {% endif %}
     </article>
 </section>
