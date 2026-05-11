@@ -6,9 +6,70 @@
     <p>Active project: {{ active_project.name }}</p>
 </section>
 
+<section class="info-panel import-panel">
+    <h2>Import Document</h2>
+    <p>Import TXT and DOCX research documents. Extracted plain text will be stored for later segmentation and coding phases.</p>
+
+    <form class="document-form" action="{{ url_for('import_document') }}" method="post" enctype="multipart/form-data">
+        <div class="form-grid">
+            <label>
+                <span>Document title</span>
+                <input type="text" name="title" placeholder="Optional; defaults to filename">
+            </label>
+
+            <label>
+                <span>File</span>
+                <input type="file" name="document_file" accept=".txt,.docx" required>
+            </label>
+        </div>
+
+        <label>
+            <span>Note</span>
+            <textarea name="note" rows="4" placeholder="Optional document note"></textarea>
+        </label>
+
+        <button type="submit" class="button-primary">Import Document</button>
+    </form>
+</section>
+
 <section class="info-panel">
-    <h2>{{ panel_title }}</h2>
-    <p>{{ panel_body }}</p>
-    <p class="phase-note">Prepared for a later discourseLab phase.</p>
+    <h2>Imported Documents</h2>
+    {% if documents %}
+        <div class="table-wrap">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Title</th>
+                        <th>Original filename</th>
+                        <th>File type</th>
+                        <th>Created at</th>
+                        <th>Text length</th>
+                        <th>Segments</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for document in documents %}
+                        <tr>
+                            <td>{{ document.title }}</td>
+                            <td>{{ document.original_filename }}</td>
+                            <td>{{ document.file_type }}</td>
+                            <td>{{ document.created_at }}</td>
+                            <td>{{ document.text_length }}</td>
+                            <td>{{ document.segment_count }}</td>
+                            <td class="actions-cell">
+                                <a class="button-secondary" href="{{ url_for('document_view', document_id=document.id) }}">View</a>
+                                <form action="{{ url_for('delete_document', document_id=document.id) }}" method="post">
+                                    <button type="submit" class="button-danger">Delete</button>
+                                </form>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <p>No documents imported yet.</p>
+    {% endif %}
 </section>
 {% endblock %}

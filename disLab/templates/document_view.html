@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="page-header">
+    <p class="eyebrow">Document detail</p>
+    <h1>{{ document.title }}</h1>
+    <p>Active project: {{ active_project.name }}</p>
+</section>
+
+<section class="detail-actions">
+    <a class="button-secondary" href="{{ url_for('documents') }}">Back to Documents</a>
+</section>
+
+<section class="dashboard-grid">
+    <article class="info-panel">
+        <h2>Document Metadata</h2>
+        <dl class="metadata-list">
+            <div>
+                <dt>Title</dt>
+                <dd>{{ document.title }}</dd>
+            </div>
+            <div>
+                <dt>Original filename</dt>
+                <dd>{{ document.original_filename }}</dd>
+            </div>
+            <div>
+                <dt>File type</dt>
+                <dd>{{ document.file_type }}</dd>
+            </div>
+            <div>
+                <dt>Note</dt>
+                <dd>{{ document.note or "No note" }}</dd>
+            </div>
+            <div>
+                <dt>Created at</dt>
+                <dd>{{ document.created_at }}</dd>
+            </div>
+            <div>
+                <dt>Updated at</dt>
+                <dd>{{ document.updated_at }}</dd>
+            </div>
+            <div>
+                <dt>Text length</dt>
+                <dd>{{ text_length }}</dd>
+            </div>
+            <div>
+                <dt>Segments</dt>
+                <dd>{{ segment_count }}</dd>
+            </div>
+        </dl>
+    </article>
+
+    <article class="info-panel">
+        <h2>Phase 2 Scope</h2>
+        <p>
+            This view displays extracted plain text only. Segment selection, coding,
+            highlighting, and memo links are prepared for later phases.
+        </p>
+    </article>
+</section>
+
+<section class="info-panel text-panel-section">
+    <h2>Extracted Plain Text</h2>
+    <pre class="document-text">{{ document.text_content }}</pre>
+</section>
+{% endblock %}

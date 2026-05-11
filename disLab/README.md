@@ -1,6 +1,6 @@
 # discourseLab
 
-Phase: 1 — Project foundation
+Phase: 2 — Document import
 
 discourseLab is a local lightweight qualitative analysis workspace for discourse analysis, critical discourse analysis, and grounded theory.
 
@@ -20,14 +20,24 @@ The application runs at:
 http://127.0.0.1:5000
 ```
 
+## Dependencies
+
+- Flask
+- python-docx
+
 ## Verification
 
 1. Open `http://127.0.0.1:5000`.
 2. Confirm the header says `discourseLab`.
-3. Confirm the dashboard shows `Demo Project`.
-4. Confirm count cards appear for documents, codes, segments, memos, research questions, and relations.
-5. Open `/health` and confirm the JSON response.
-6. Restart the app and confirm existing database data is not deleted.
+3. Go to Documents.
+4. Upload a `.txt` file.
+5. Upload a `.docx` file.
+6. Confirm both appear in the document list.
+7. Open each document and confirm extracted text is visible.
+8. Confirm the dashboard document count increased.
+9. Confirm the audit log shows import actions.
+10. Delete a document and confirm it disappears.
+11. Restart the app and confirm remaining documents are still present.
 
 ## Project Structure
 
@@ -43,12 +53,14 @@ discourseLab/
     templates/
       base.html
       dashboard.html
+      document_view.html
       documents.html
       codes.html
       memos.html
       gt_workspace.html
       cda_workspace.html
       exports.html
+      error.html
     static/
       style.css
       app.js
@@ -56,25 +68,27 @@ discourseLab/
     exports/
 ```
 
-## Current Phase 1
+## Current Phase 2
 
-Phase 1 strengthens the application foundation before document import:
+Phase 2 adds document import and document management:
 
-- Consistent `discourseLab` identity in the UI and documentation
-- Reusable SQLite helper functions
-- Safe first-start database initialization
-- Active project loading with default project creation if needed
-- Dashboard count cards for core analysis entities
-- Project metadata panel
-- Next steps panel
-- Audit log helper and dashboard preview
+- TXT import with UTF-8 and latin-1 fallback
+- DOCX import with paragraph text extraction through `python-docx`
+- Safe local upload filenames
+- 16 MB upload size limit
+- Document list with text length and segment count
+- Document detail view with escaped extracted plain text
+- Document deletion through POST
+- Audit log entries for document import and deletion
+- Dashboard document count and latest documents panel
 - `/health` route for a simple local health check
 
-This phase does not implement document upload, document parsing, segment creation, coding UI, AI features, authentication, or cloud functionality.
+Document deletion removes database rows for the document and any associated future segments or segment-code links. The original uploaded source file is intentionally left in `uploads/` for now.
+
+This phase does not implement segment selection, text coding, color highlighting, memo authoring, CDA tools, GT tools, model building, exports, AI features, authentication, or cloud functionality.
 
 ## Planned Later Phases
 
-- Phase 2: Import TXT and DOCX documents
 - Phase 3: Display documents and create text segments
 - Phase 4: Add open coding and color highlighting
 - Phase 5: Add memos and codebook

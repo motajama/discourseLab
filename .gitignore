@@ -1,0 +1,6 @@
+disLab/.venv/
+**/__pycache__/
+*.py[cod]
+
+disLab/uploads/*
+disLab/exports/*

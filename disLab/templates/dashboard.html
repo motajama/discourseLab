@@ -2,7 +2,7 @@
 
 {% block content %}
 <section class="page-header dashboard-title">
-    <p class="eyebrow">Phase 1 — Project foundation</p>
+    <p class="eyebrow">{{ current_phase }}</p>
     <h1>discourseLab</h1>
     <p>Local qualitative analysis workspace for discourse analysis, CDA, and grounded theory.</p>
 </section>
@@ -56,7 +56,7 @@
             </div>
             <div>
                 <dt>Current phase</dt>
-                <dd>Phase 1 — Project foundation</dd>
+                <dd>{{ current_phase }}</dd>
             </div>
         </dl>
     </article>
@@ -65,15 +65,14 @@
         <h2>Prepared Workflow</h2>
         <p class="workflow-line">Documents -> Segments -> Open Codes -> Axial Codes -> Categories -> Model -> Export</p>
         <p>
-            Phase 1 strengthens the local Flask and SQLite foundation before document import,
-            document display, segmentation, coding, memos, and exports are added.
+            Phase 2 adds TXT and DOCX document import and document management before
+            segmentation, coding, memos, CDA tools, GT tools, and exports are added.
         </p>
     </article>
 
     <article class="info-panel">
         <h2>Next Steps</h2>
         <ol class="next-steps">
-            <li>Phase 2: Import TXT and DOCX documents.</li>
             <li>Phase 3: Display documents and create text segments.</li>
             <li>Phase 4: Add open coding and color highlighting.</li>
             <li>Phase 5: Add memos and codebook.</li>
@@ -95,6 +94,22 @@
             </ul>
         {% else %}
             <p>No audit log entries yet.</p>
+        {% endif %}
+    </article>
+
+    <article class="info-panel">
+        <h2>Latest Documents</h2>
+        {% if latest_documents %}
+            <ul class="compact-list">
+                {% for document in latest_documents %}
+                    <li>
+                        <span>{{ document.title }}</span>
+                        <span>{{ document.file_type }} · {{ document.created_at }}</span>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p>No documents imported yet.</p>
         {% endif %}
     </article>
 </section>
