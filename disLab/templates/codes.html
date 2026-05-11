@@ -6,9 +6,65 @@
     <p>Active project: {{ active_project.name }}</p>
 </section>
 
+<section class="info-panel import-panel">
+    <h2>Create Open Code</h2>
+    <form class="document-form" action="{{ url_for('create_code') }}" method="post">
+        <div class="form-grid">
+            <label>
+                <span>Name</span>
+                <input type="text" name="name" required>
+            </label>
+            <label>
+                <span>Color</span>
+                <input type="color" name="color" value="{{ default_code_color }}">
+            </label>
+        </div>
+        <label>
+            <span>Description</span>
+            <textarea name="description" rows="4" placeholder="Optional working definition or analytical note"></textarea>
+        </label>
+        <button type="submit" class="button-primary">Create open code</button>
+    </form>
+</section>
+
 <section class="info-panel">
-    <h2>{{ panel_title }}</h2>
-    <p>{{ panel_body }}</p>
-    <p class="phase-note">Prepared for a later discourseLab phase.</p>
+    <h2>Open Codes</h2>
+    {% if open_codes %}
+        <div class="table-wrap">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Color</th>
+                        <th>Name</th>
+                        <th>Description</th>
+                        <th>Type</th>
+                        <th>Assigned segments</th>
+                        <th>Created at</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for code in open_codes %}
+                        <tr>
+                            <td><span class="color-swatch" style="background: {{ code.color }}"></span></td>
+                            <td>{{ code.name }}</td>
+                            <td>{{ code.description or "" }}</td>
+                            <td>{{ code.code_type }}</td>
+                            <td>{{ code.assigned_segment_count }}</td>
+                            <td>{{ code.created_at }}</td>
+                            <td class="actions-cell">
+                                <a class="button-secondary" href="{{ url_for('edit_code', code_id=code.id) }}">Edit</a>
+                                <form action="{{ url_for('delete_code', code_id=code.id) }}" method="post">
+                                    <button type="submit" class="button-danger">Delete</button>
+                                </form>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <p>No open codes created yet.</p>
+    {% endif %}
 </section>
 {% endblock %}

@@ -1,5 +1,6 @@
 from datetime import datetime
 from pathlib import Path
+import re
 import sqlite3
 from uuid import uuid4
 
@@ -20,10 +21,11 @@ from werkzeug.utils import secure_filename
 
 
 APP_NAME = "discourseLab"
-APP_PHASE = "3"
-CURRENT_PHASE_LABEL = "Phase 3 — Segment creation"
+APP_PHASE = "4"
+CURRENT_PHASE_LABEL = "Phase 4 — Open coding"
 DEFAULT_PROJECT_NAME = "Demo Project"
 DEFAULT_PROJECT_DESCRIPTION = "Initial local discourseLab project."
+DEFAULT_CODE_COLOR = "#f4c542"
 ALLOWED_EXTENSIONS = {"txt", "docx"}
 MAX_UPLOAD_SIZE = 16 * 1024 * 1024
 
@@ -57,6 +59,8 @@ def create_app() -> Flask:
         audit_entries = get_latest_audit_entries(active_project["id"])
         latest_documents = get_latest_documents(active_project["id"])
         latest_segments = get_latest_segments(active_project["id"])
+        latest_open_codes = get_latest_open_codes(active_project["id"])
+        latest_coded_segments = get_latest_coded_segments(active_project["id"])
         return render_template(
             "dashboard.html",
             title="Dashboard",
@@ -66,6 +70,8 @@ def create_app() -> Flask:
             audit_entries=audit_entries,
             latest_documents=latest_documents,
             latest_segments=latest_segments,
+            latest_open_codes=latest_open_codes,
+            latest_coded_segments=latest_coded_segments,
             current_phase=CURRENT_PHASE_LABEL,
         )
 
@@ -146,6 +152,7 @@ def create_app() -> Flask:
             abort(404)
 
         segments = get_segments_for_document(document_id)
+        open_codes = get_open_codes_for_project(active_project["id"])
         highlighted_text = build_highlighted_document_text(
             document["text_content"] or "", segments
         )
@@ -158,6 +165,7 @@ def create_app() -> Flask:
             text_length=len(document["text_content"] or ""),
             segment_count=len(segments),
             segments=segments,
+            open_codes=open_codes,
             highlighted_text=highlighted_text,
         )
 
@@ -249,13 +257,185 @@ def create_app() -> Flask:
 
     @app.route("/codes")
     def codes():
-        return render_placeholder(
+        active_project = get_active_project()
+        open_codes = get_open_codes_for_project(active_project["id"])
+        return render_template(
             "codes.html",
             title="Codes",
             active_page="codes",
-            panel_title="Codes",
-            panel_body="This section will manage open, axial, category, and CDA codes in later phases.",
+            active_project=active_project,
+            open_codes=open_codes,
+            default_code_color=DEFAULT_CODE_COLOR,
         )
+
+    @app.route("/codes/create", methods=["POST"])
+    def create_code():
+        active_project = get_active_project()
+        name = request.form.get("name", "").strip()
+        description = request.form.get("description", "").strip()
+        color = normalize_code_color(request.form.get("color", ""))
+        document_id = request.form.get("document_id", "").strip()
+
+        if not name:
+            flash("Code name is required.", "error")
+            return redirect_after_code_change(document_id)
+
+        code_id = execute_write(
+            """
+            INSERT INTO codes (project_id, name, description, code_type, color)
+            VALUES (?, ?, ?, 'open', ?)
+            """,
+            (active_project["id"], name, description, color),
+        )
+        log_action(
+            project_id=active_project["id"],
+            entity_type="code",
+            entity_id=code_id,
+            action="create_open_code",
+            details=f"Created open code: {name}",
+        )
+        flash(f"Created open code: {name}", "success")
+        return redirect_after_code_change(document_id)
+
+    @app.route("/codes/<int:code_id>/edit")
+    def edit_code(code_id: int):
+        active_project = get_active_project()
+        code = get_code_for_project(code_id, active_project["id"])
+        if code is None:
+            flash("Invalid code.", "error")
+            abort(404)
+
+        return render_template(
+            "code_edit.html",
+            title=f"Edit Code: {code['name']}",
+            active_page="codes",
+            active_project=active_project,
+            code=code,
+        )
+
+    @app.route("/codes/<int:code_id>/edit", methods=["POST"])
+    def update_code(code_id: int):
+        active_project = get_active_project()
+        code = get_code_for_project(code_id, active_project["id"])
+        if code is None:
+            flash("Invalid code.", "error")
+            abort(404)
+
+        name = request.form.get("name", "").strip()
+        description = request.form.get("description", "").strip()
+        color = normalize_code_color(request.form.get("color", ""))
+        if not name:
+            flash("Code name is required.", "error")
+            return redirect(url_for("edit_code", code_id=code_id))
+
+        execute_write(
+            """
+            UPDATE codes
+            SET name = ?, description = ?, color = ?, updated_at = CURRENT_TIMESTAMP
+            WHERE id = ? AND project_id = ? AND code_type = 'open'
+            """,
+            (name, description, color, code_id, active_project["id"]),
+        )
+        log_action(
+            project_id=active_project["id"],
+            entity_type="code",
+            entity_id=code_id,
+            action="update_open_code",
+            details=f"Updated open code: {name}",
+        )
+        flash(f"Updated open code: {name}", "success")
+        return redirect(url_for("codes"))
+
+    @app.route("/codes/<int:code_id>/delete", methods=["POST"])
+    def delete_code(code_id: int):
+        active_project = get_active_project()
+        code = get_code_for_project(code_id, active_project["id"])
+        if code is None:
+            flash("Invalid code.", "error")
+            abort(404)
+
+        db = get_db()
+        db.execute("DELETE FROM segment_codes WHERE code_id = ?", (code_id,))
+        db.execute(
+            "DELETE FROM codes WHERE id = ? AND project_id = ? AND code_type = 'open'",
+            (code_id, active_project["id"]),
+        )
+        db.commit()
+        log_action(
+            project_id=active_project["id"],
+            entity_type="code",
+            entity_id=code_id,
+            action="delete_open_code",
+            details=f"Deleted open code: {code['name']}",
+        )
+        flash(f"Deleted open code: {code['name']}", "success")
+        return redirect(url_for("codes"))
+
+    @app.route("/segments/<int:segment_id>/codes", methods=["POST"])
+    def assign_code_to_segment(segment_id: int):
+        active_project = get_active_project()
+        segment = get_segment_for_project(segment_id, active_project["id"])
+        if segment is None:
+            flash("Invalid segment.", "error")
+            abort(404)
+
+        try:
+            code_id = int(request.form.get("code_id", ""))
+        except ValueError:
+            flash("Invalid code.", "error")
+            return redirect(url_for("document_view", document_id=segment["document_id"]))
+
+        code = get_code_for_project(code_id, active_project["id"])
+        if code is None:
+            flash("Invalid code.", "error")
+            return redirect(url_for("document_view", document_id=segment["document_id"]))
+
+        if segment_has_code(segment_id, code_id):
+            flash("Code already assigned to this segment.", "error")
+            return redirect(url_for("document_view", document_id=segment["document_id"]))
+
+        execute_write(
+            "INSERT INTO segment_codes (segment_id, code_id) VALUES (?, ?)",
+            (segment_id, code_id),
+        )
+        segment_label = segment["name"] or f"segment {segment_id}"
+        log_action(
+            project_id=active_project["id"],
+            entity_type="segment",
+            entity_id=segment_id,
+            action="assign_open_code",
+            details=f"Assigned code {code['name']} to {segment_label}",
+        )
+        flash(f"Assigned code: {code['name']}", "success")
+        return redirect(url_for("document_view", document_id=segment["document_id"]))
+
+    @app.route("/segments/<int:segment_id>/codes/<int:code_id>/remove", methods=["POST"])
+    def remove_code_from_segment(segment_id: int, code_id: int):
+        active_project = get_active_project()
+        segment = get_segment_for_project(segment_id, active_project["id"])
+        if segment is None:
+            flash("Invalid segment.", "error")
+            abort(404)
+
+        code = get_code_for_project(code_id, active_project["id"])
+        if code is None:
+            flash("Invalid code.", "error")
+            return redirect(url_for("document_view", document_id=segment["document_id"]))
+
+        execute_write(
+            "DELETE FROM segment_codes WHERE segment_id = ? AND code_id = ?",
+            (segment_id, code_id),
+        )
+        segment_label = segment["name"] or f"segment {segment_id}"
+        log_action(
+            project_id=active_project["id"],
+            entity_type="segment",
+            entity_id=segment_id,
+            action="remove_open_code",
+            details=f"Removed code {code['name']} from {segment_label}",
+        )
+        flash(f"Removed code: {code['name']}", "success")
+        return redirect(url_for("document_view", document_id=segment["document_id"]))
 
     @app.route("/memos")
     def memos():
@@ -416,8 +596,13 @@ def get_dashboard_counts(project_id: int) -> dict[str, int]:
         "documents": query_one(
             "SELECT COUNT(*) AS count FROM documents WHERE project_id = ?", (project_id,)
         )["count"],
-        "codes": query_one(
-            "SELECT COUNT(*) AS count FROM codes WHERE project_id = ?", (project_id,)
+        "open_codes": query_one(
+            """
+            SELECT COUNT(*) AS count
+            FROM codes
+            WHERE project_id = ? AND code_type = 'open'
+            """,
+            (project_id,),
         )["count"],
         "segments": query_one(
             """
@@ -428,12 +613,18 @@ def get_dashboard_counts(project_id: int) -> dict[str, int]:
             """,
             (project_id,),
         )["count"],
+        "coded_segments": query_one(
+            """
+            SELECT COUNT(DISTINCT segments.id) AS count
+            FROM segments
+            JOIN documents ON documents.id = segments.document_id
+            JOIN segment_codes ON segment_codes.segment_id = segments.id
+            WHERE documents.project_id = ?
+            """,
+            (project_id,),
+        )["count"],
         "memos": query_one(
             "SELECT COUNT(*) AS count FROM memos WHERE project_id = ?", (project_id,)
-        )["count"],
-        "research_questions": query_one(
-            "SELECT COUNT(*) AS count FROM research_questions WHERE project_id = ?",
-            (project_id,),
         )["count"],
         "relations": query_one(
             "SELECT COUNT(*) AS count FROM relations WHERE project_id = ?", (project_id,)
@@ -451,9 +642,15 @@ def get_documents_for_project(project_id: int) -> list[sqlite3.Row]:
             documents.file_type,
             documents.created_at,
             LENGTH(COALESCE(documents.text_content, '')) AS text_length,
-            COUNT(segments.id) AS segment_count
+            COUNT(DISTINCT segments.id) AS segment_count,
+            COUNT(DISTINCT coded_segments.id) AS coded_segment_count
         FROM documents
         LEFT JOIN segments ON segments.document_id = documents.id
+        LEFT JOIN (
+            SELECT DISTINCT segments.id, segments.document_id
+            FROM segments
+            JOIN segment_codes ON segment_codes.segment_id = segments.id
+        ) AS coded_segments ON coded_segments.document_id = documents.id
         WHERE documents.project_id = ?
         GROUP BY documents.id
         ORDER BY datetime(documents.created_at) DESC, documents.id DESC
@@ -493,6 +690,49 @@ def get_latest_segments(project_id: int) -> list[sqlite3.Row]:
     )
 
 
+def get_latest_open_codes(project_id: int) -> list[sqlite3.Row]:
+    return query_all(
+        """
+        SELECT
+            codes.id,
+            codes.name,
+            codes.color,
+            codes.created_at,
+            COUNT(segment_codes.segment_id) AS assigned_segment_count
+        FROM codes
+        LEFT JOIN segment_codes ON segment_codes.code_id = codes.id
+        WHERE codes.project_id = ? AND codes.code_type = 'open'
+        GROUP BY codes.id
+        ORDER BY datetime(codes.created_at) DESC, codes.id DESC
+        LIMIT 5
+        """,
+        (project_id,),
+    )
+
+
+def get_latest_coded_segments(project_id: int) -> list[sqlite3.Row]:
+    return query_all(
+        """
+        SELECT
+            segments.id,
+            COALESCE(segments.name, '') AS name,
+            segments.selected_text,
+            documents.title AS document_title,
+            GROUP_CONCAT(codes.name, ', ') AS code_names,
+            segments.created_at
+        FROM segments
+        JOIN documents ON documents.id = segments.document_id
+        JOIN segment_codes ON segment_codes.segment_id = segments.id
+        JOIN codes ON codes.id = segment_codes.code_id
+        WHERE documents.project_id = ? AND codes.code_type = 'open'
+        GROUP BY segments.id
+        ORDER BY datetime(segments.created_at) DESC, segments.id DESC
+        LIMIT 5
+        """,
+        (project_id,),
+    )
+
+
 def get_document_for_project(document_id: int, project_id: int) -> sqlite3.Row | None:
     return query_one(
         """
@@ -511,8 +751,8 @@ def get_document_segment_count(document_id: int) -> int:
     )["count"]
 
 
-def get_segments_for_document(document_id: int) -> list[sqlite3.Row]:
-    return query_all(
+def get_segments_for_document(document_id: int) -> list[dict]:
+    segment_rows = query_all(
         """
         SELECT id, document_id, COALESCE(name, '') AS name, selected_text, start_offset, end_offset,
                note, created_at, updated_at
@@ -521,6 +761,25 @@ def get_segments_for_document(document_id: int) -> list[sqlite3.Row]:
         ORDER BY start_offset ASC, end_offset ASC, id ASC
         """,
         (document_id,),
+    )
+    segments = []
+    for row in segment_rows:
+        segment = dict(row)
+        segment["codes"] = get_codes_for_segment(row["id"])
+        segments.append(segment)
+    return segments
+
+
+def get_codes_for_segment(segment_id: int) -> list[sqlite3.Row]:
+    return query_all(
+        """
+        SELECT codes.id, codes.name, codes.color
+        FROM codes
+        JOIN segment_codes ON segment_codes.code_id = codes.id
+        WHERE segment_codes.segment_id = ? AND codes.code_type = 'open'
+        ORDER BY codes.name COLLATE NOCASE
+        """,
+        (segment_id,),
     )
 
 
@@ -541,6 +800,54 @@ def get_segment_for_project(segment_id: int, project_id: int) -> sqlite3.Row | N
     )
 
 
+def get_open_codes_for_project(project_id: int) -> list[sqlite3.Row]:
+    return query_all(
+        """
+        SELECT
+            codes.id,
+            codes.name,
+            codes.description,
+            codes.code_type,
+            codes.color,
+            codes.created_at,
+            codes.updated_at,
+            COUNT(segment_codes.segment_id) AS assigned_segment_count
+        FROM codes
+        LEFT JOIN segment_codes ON segment_codes.code_id = codes.id
+        WHERE codes.project_id = ? AND codes.code_type = 'open'
+        GROUP BY codes.id
+        ORDER BY codes.name COLLATE NOCASE
+        """,
+        (project_id,),
+    )
+
+
+def get_code_for_project(code_id: int, project_id: int) -> sqlite3.Row | None:
+    return query_one(
+        """
+        SELECT id, project_id, name, description, code_type, color,
+               created_at, updated_at
+        FROM codes
+        WHERE id = ? AND project_id = ? AND code_type = 'open'
+        """,
+        (code_id, project_id),
+    )
+
+
+def segment_has_code(segment_id: int, code_id: int) -> bool:
+    return (
+        query_one(
+            """
+            SELECT 1
+            FROM segment_codes
+            WHERE segment_id = ? AND code_id = ?
+            """,
+            (segment_id, code_id),
+        )
+        is not None
+    )
+
+
 def is_valid_segment_selection(
     document_text: str, selected_text: str, start_offset: int, end_offset: int
 ) -> bool:
@@ -554,7 +861,7 @@ def is_valid_segment_selection(
 
 
 def build_highlighted_document_text(
-    document_text: str, segments: list[sqlite3.Row]
+    document_text: str, segments: list[dict]
 ) -> Markup:
     pieces = []
     cursor = 0
@@ -565,10 +872,14 @@ def build_highlighted_document_text(
         if start < cursor or start < 0 or end > len(document_text) or end <= start:
             continue
 
+        color = segment["codes"][0]["color"] if segment["codes"] else "#fff0a8"
+        style = f"--segment-color: {normalize_code_color(color)};"
         pieces.append(escape(document_text[cursor:start]))
         pieces.append(
-            Markup('<mark class="segment-highlight" data-segment-id="{}">{}</mark>').format(
-                segment["id"], escape(document_text[start:end])
+            Markup(
+                '<mark class="segment-highlight" data-segment-id="{}" style="{}">{}</mark>'
+            ).format(
+                segment["id"], style, escape(document_text[start:end])
             )
         )
         cursor = end
@@ -641,6 +952,22 @@ def render_placeholder(
         panel_title=panel_title,
         panel_body=panel_body,
     )
+
+
+def redirect_after_code_change(document_id: str):
+    if document_id.isdigit():
+        active_project = get_active_project()
+        document = get_document_for_project(int(document_id), active_project["id"])
+        if document is not None:
+            return redirect(url_for("document_view", document_id=document["id"]))
+    return redirect(url_for("codes"))
+
+
+def normalize_code_color(color: str) -> str:
+    color = color.strip()
+    if re.fullmatch(r"#[0-9a-fA-F]{6}", color):
+        return color.lower()
+    return DEFAULT_CODE_COLOR
 
 
 def get_file_extension(filename: str) -> str:

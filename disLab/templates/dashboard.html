@@ -13,20 +13,20 @@
         <span class="metric-label">Documents</span>
     </article>
     <article class="metric-card">
-        <span class="metric-value">{{ counts.codes }}</span>
-        <span class="metric-label">Codes</span>
-    </article>
-    <article class="metric-card">
         <span class="metric-value">{{ counts.segments }}</span>
         <span class="metric-label">Segments</span>
     </article>
     <article class="metric-card">
-        <span class="metric-value">{{ counts.memos }}</span>
-        <span class="metric-label">Memos</span>
+        <span class="metric-value">{{ counts.open_codes }}</span>
+        <span class="metric-label">Open Codes</span>
     </article>
     <article class="metric-card">
-        <span class="metric-value">{{ counts.research_questions }}</span>
-        <span class="metric-label">Research Questions</span>
+        <span class="metric-value">{{ counts.coded_segments }}</span>
+        <span class="metric-label">Coded Segments</span>
+    </article>
+    <article class="metric-card">
+        <span class="metric-value">{{ counts.memos }}</span>
+        <span class="metric-label">Memos</span>
     </article>
     <article class="metric-card">
         <span class="metric-value">{{ counts.relations }}</span>
@@ -65,19 +65,18 @@
         <h2>Prepared Workflow</h2>
         <p class="workflow-line">Documents -> Segments -> Open Codes -> Axial Codes -> Categories -> Model -> Export</p>
         <p>
-            Phase 3 adds document text selection, segment creation, segment deletion,
-            and neutral segment highlighting before coding, memos, CDA tools, GT tools,
-            and exports are added.
+            Phase 4 adds open code creation, code assignment to segments, usage counts,
+            and color-coded segment highlights before axial coding, category coding,
+            memos, CDA tools, GT tools, and exports are added.
         </p>
     </article>
 
     <article class="info-panel">
         <h2>Next Steps</h2>
         <ol class="next-steps">
-            <li>Phase 3: Display documents and create text segments.</li>
-            <li>Phase 4: Add open coding and color highlighting.</li>
             <li>Phase 5: Add memos and codebook.</li>
             <li>Phase 6: Add GT and CDA workspaces.</li>
+            <li>Later: Add axial coding, categories, model building, and exports.</li>
         </ol>
     </article>
 
@@ -128,6 +127,39 @@
             </ul>
         {% else %}
             <p>No segments created yet.</p>
+        {% endif %}
+    </article>
+
+    <article class="info-panel">
+        <h2>Latest Open Codes</h2>
+        {% if latest_open_codes %}
+            <ul class="compact-list">
+                {% for code in latest_open_codes %}
+                    <li>
+                        <span><span class="color-swatch small" style="background: {{ code.color }}"></span>{{ code.name }}</span>
+                        <span>{{ code.assigned_segment_count }} assigned segments</span>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p>No open codes created yet.</p>
+        {% endif %}
+    </article>
+
+    <article class="info-panel">
+        <h2>Latest Coded Segments</h2>
+        {% if latest_coded_segments %}
+            <ul class="compact-list">
+                {% for segment in latest_coded_segments %}
+                    <li>
+                        <span>{{ segment.name or segment.document_title }}</span>
+                        <span>{{ segment.code_names }}</span>
+                        <span>{{ segment.created_at }}</span>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p>No coded segments yet.</p>
         {% endif %}
     </article>
 </section>

@@ -57,6 +57,29 @@
             so you can name the segment, add a note, and save it without scrolling.
         </p>
     </article>
+
+    <article class="info-panel">
+        <h2>Create New Open Code</h2>
+        <p>Create a code here, then assign it to one or more segments below.</p>
+        <form class="document-form" action="{{ url_for('create_code') }}" method="post">
+            <input type="hidden" name="document_id" value="{{ document.id }}">
+            <div class="form-grid">
+                <label>
+                    <span>Name</span>
+                    <input type="text" name="name" required>
+                </label>
+                <label>
+                    <span>Color</span>
+                    <input type="color" name="color" value="#f4c542">
+                </label>
+            </div>
+            <label>
+                <span>Description</span>
+                <textarea name="description" rows="3" placeholder="Optional code description"></textarea>
+            </label>
+            <button type="submit" class="button-primary">Create open code</button>
+        </form>
+    </article>
 </section>
 
 <section class="info-panel text-panel-section">
@@ -80,6 +103,31 @@
                         <p class="segment-name">{{ segment.name }}</p>
                     {% endif %}
                     <blockquote>{{ segment.selected_text }}</blockquote>
+                    <div class="code-badge-row">
+                        {% if segment.codes %}
+                            {% for code in segment.codes %}
+                                <form class="inline-form" action="{{ url_for('remove_code_from_segment', segment_id=segment.id, code_id=code.id) }}" method="post">
+                                    <button type="submit" class="code-badge removable" style="--code-color: {{ code.color }}">
+                                        {{ code.name }} ×
+                                    </button>
+                                </form>
+                            {% endfor %}
+                        {% else %}
+                            <span class="empty-code-note">No codes assigned.</span>
+                        {% endif %}
+                    </div>
+                    <form class="inline-code-form" action="{{ url_for('assign_code_to_segment', segment_id=segment.id) }}" method="post">
+                        <label>
+                            <span>Assign open code</span>
+                            <select name="code_id" required>
+                                <option value="">Choose code</option>
+                                {% for code in open_codes %}
+                                    <option value="{{ code.id }}">{{ code.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </label>
+                        <button type="submit" class="button-secondary">Assign</button>
+                    </form>
                     <dl class="segment-meta">
                         <div>
                             <dt>Note</dt>

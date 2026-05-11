@@ -45,6 +45,7 @@
                         <th>Created at</th>
                         <th>Text length</th>
                         <th>Segments</th>
+                        <th>Coded segments</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
@@ -57,6 +58,7 @@
                             <td>{{ document.created_at }}</td>
                             <td>{{ document.text_length }}</td>
                             <td>{{ document.segment_count }}</td>
+                            <td>{{ document.coded_segment_count }}</td>
                             <td class="actions-cell">
                                 <a class="button-secondary" href="{{ url_for('document_view', document_id=document.id) }}">View</a>
                                 <form action="{{ url_for('delete_document', document_id=document.id) }}" method="post">
