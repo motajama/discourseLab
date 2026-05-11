@@ -4,6 +4,11 @@ CREATE TABLE projects (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
     description TEXT,
+    methodology_mode TEXT NOT NULL DEFAULT 'mixed',
+    status TEXT NOT NULL DEFAULT 'active',
+    last_opened_at TEXT,
+    research_goal TEXT,
+    principal_investigator TEXT,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );

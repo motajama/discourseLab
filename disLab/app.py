@@ -15,10 +15,12 @@ from flask import (
     abort,
     flash,
     g,
+    has_request_context,
     jsonify,
     redirect,
     render_template,
     request,
+    session,
     url_for,
 )
 from markupsafe import Markup, escape
@@ -26,12 +28,18 @@ from werkzeug.utils import secure_filename
 
 
 APP_NAME = "discourseLab"
-APP_PHASE = "8"
-CURRENT_PHASE_LABEL = "Phase 8 — Exports and research outputs"
+APP_PHASE = "9"
+CURRENT_PHASE_LABEL = "Phase 9 — Project modes and project management"
 DEFAULT_PROJECT_NAME = "Demo Project"
 DEFAULT_PROJECT_DESCRIPTION = "Initial local discourseLab project."
 DEFAULT_CODE_COLOR = "#f4c542"
 DEFAULT_CDA_MARKER_COLOR = "#7c9a45"
+METHODOLOGY_MODES = {
+    "generic": "Generic",
+    "gt": "Grounded Theory",
+    "cda": "Critical Discourse Analysis",
+    "mixed": "Mixed",
+}
 ALLOWED_EXTENSIONS = {"txt", "docx"}
 MAX_UPLOAD_SIZE = 16 * 1024 * 1024
 MEMO_TYPES = {
@@ -145,6 +153,16 @@ def create_app() -> Flask:
 
     app.teardown_appcontext(close_db)
 
+    @app.context_processor
+    def inject_project_context():
+        active_project = get_active_project()
+        return {
+            "active_project": active_project,
+            "methodology_mode_labels": METHODOLOGY_MODES,
+            "supports_gt": project_supports_gt(active_project),
+            "supports_cda": project_supports_cda(active_project),
+        }
+
     @app.route("/")
     def dashboard():
         active_project = get_active_project()
@@ -178,6 +196,150 @@ def create_app() -> Flask:
             memo_type_labels=MEMO_TYPES,
             memo_status_labels=MEMO_STATUSES,
         )
+
+    @app.route("/projects")
+    def projects():
+        active_project = get_active_project()
+        return render_template(
+            "projects.html",
+            title="Projects",
+            active_page="projects",
+            active_project=active_project,
+            projects=get_projects(),
+            methodology_mode_labels=METHODOLOGY_MODES,
+        )
+
+    @app.route("/projects/new")
+    def new_project():
+        return render_template(
+            "project_form.html",
+            title="New Project",
+            active_page="projects",
+            active_project=get_active_project(),
+            project=None,
+            methodology_mode_labels=METHODOLOGY_MODES,
+            form_action=url_for("create_project"),
+        )
+
+    @app.route("/projects/new", methods=["POST"])
+    def create_project():
+        name = request.form.get("name", "").strip()
+        description = request.form.get("description", "").strip()
+        methodology_mode = request.form.get("methodology_mode", "mixed").strip()
+        research_goal = request.form.get("research_goal", "").strip()
+        principal_investigator = request.form.get("principal_investigator", "").strip()
+        if not name:
+            flash("Project name is required.", "error")
+            return redirect(url_for("new_project"))
+        if methodology_mode not in METHODOLOGY_MODES:
+            flash("Invalid methodology mode.", "error")
+            return redirect(url_for("new_project"))
+        project_id = execute_write(
+            """
+            INSERT INTO projects (
+                name, description, methodology_mode, status, last_opened_at,
+                research_goal, principal_investigator
+            )
+            VALUES (?, ?, ?, 'active', CURRENT_TIMESTAMP, ?, ?)
+            """,
+            (name, description, methodology_mode, research_goal, principal_investigator),
+        )
+        set_active_project(project_id)
+        log_action(project_id, "project", project_id, "create_project", f"Created project: {name}")
+        flash(f"Created project: {name}", "success")
+        return redirect(url_for("dashboard"))
+
+    @app.route("/projects/<int:project_id>/open", methods=["POST"])
+    def open_project(project_id: int):
+        project = get_project(project_id)
+        if project is None:
+            flash("Project not found.", "error")
+            return redirect(url_for("projects"))
+        set_active_project(project_id)
+        log_action(project_id, "project", project_id, "open_project", f"Opened project: {project['name']}")
+        flash(f"Opened project: {project['name']}", "success")
+        return redirect(url_for("dashboard"))
+
+    @app.route("/projects/<int:project_id>/edit")
+    def edit_project(project_id: int):
+        project = get_project(project_id)
+        if project is None:
+            flash("Project not found.", "error")
+            abort(404)
+        return render_template(
+            "project_form.html",
+            title=f"Edit Project: {project['name']}",
+            active_page="projects",
+            active_project=get_active_project(),
+            project=project,
+            methodology_mode_labels=METHODOLOGY_MODES,
+            form_action=url_for("update_project", project_id=project_id),
+        )
+
+    @app.route("/projects/<int:project_id>/edit", methods=["POST"])
+    def update_project(project_id: int):
+        project = get_project(project_id)
+        if project is None:
+            flash("Project not found.", "error")
+            abort(404)
+        name = request.form.get("name", "").strip()
+        description = request.form.get("description", "").strip()
+        methodology_mode = request.form.get("methodology_mode", "mixed").strip()
+        research_goal = request.form.get("research_goal", "").strip()
+        principal_investigator = request.form.get("principal_investigator", "").strip()
+        if not name:
+            flash("Project name is required.", "error")
+            return redirect(url_for("edit_project", project_id=project_id))
+        if methodology_mode not in METHODOLOGY_MODES:
+            flash("Invalid methodology mode.", "error")
+            return redirect(url_for("edit_project", project_id=project_id))
+        execute_write(
+            """
+            UPDATE projects
+            SET name = ?, description = ?, methodology_mode = ?,
+                research_goal = ?, principal_investigator = ?,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = ? AND status != 'deleted'
+            """,
+            (
+                name,
+                description,
+                methodology_mode,
+                research_goal,
+                principal_investigator,
+                project_id,
+            ),
+        )
+        log_action(project_id, "project", project_id, "update_project", f"Updated project: {name}")
+        flash(f"Updated project: {name}", "success")
+        return redirect(url_for("projects"))
+
+    @app.route("/projects/<int:project_id>/delete", methods=["POST"])
+    def soft_delete_project(project_id: int):
+        project = get_project(project_id)
+        if project is None:
+            flash("Project not found.", "error")
+            return redirect(url_for("projects"))
+        execute_write(
+            """
+            UPDATE projects
+            SET status = 'deleted', updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+            """,
+            (project_id,),
+        )
+        log_action(
+            project_id,
+            "project",
+            project_id,
+            "soft_delete_project",
+            f"Soft-deleted project: {project['name']}",
+        )
+        if session.get("active_project_id") == project_id:
+            session.pop("active_project_id", None)
+            get_active_project()
+        flash(f"Deleted project: {project['name']}", "success")
+        return redirect(url_for("projects"))
 
     @app.route("/documents")
     def documents():
@@ -261,7 +423,7 @@ def create_app() -> Flask:
         actors = get_actors_for_project(active_project["id"])
         document_memos = get_memos_for_entity(active_project["id"], "document", document_id)
         highlighted_text = build_highlighted_document_text(
-            document["text_content"] or "", segments
+            document["text_content"] or "", segments, project_supports_cda(active_project)
         )
         return render_template(
             "document_view.html",
@@ -279,6 +441,8 @@ def create_app() -> Flask:
             actor_type_labels=ACTOR_TYPES,
             actor_relation_type_labels=ACTOR_RELATION_TYPES,
             feature_type_labels=DISCOURSE_FEATURE_TYPES,
+            supports_gt=project_supports_gt(active_project),
+            supports_cda=project_supports_cda(active_project),
             document_memos=document_memos,
             memo_type_labels=MEMO_TYPES,
             memo_status_labels=MEMO_STATUSES,
@@ -378,6 +542,8 @@ def create_app() -> Flask:
     def codes():
         active_project = get_active_project()
         code_type_filter = request.args.get("code_type", "all").strip()
+        if not project_supports_gt(active_project):
+            code_type_filter = "open"
         codes_rows = get_codes_for_project(active_project["id"], code_type_filter)
         return render_template(
             "codes.html",
@@ -387,6 +553,7 @@ def create_app() -> Flask:
             codes=codes_rows,
             code_type_filter=code_type_filter,
             default_code_color=DEFAULT_CODE_COLOR,
+            supports_gt=project_supports_gt(active_project),
         )
 
     @app.route("/codes/create", methods=["POST"])
@@ -460,6 +627,7 @@ def create_app() -> Flask:
             code=code,
             axial_codes=get_gt_axial_codes(active_project["id"]),
             categories=get_gt_categories(active_project["id"]),
+            supports_gt=project_supports_gt(active_project),
         )
 
     @app.route("/codes/<int:code_id>/edit", methods=["POST"])
@@ -482,8 +650,10 @@ def create_app() -> Flask:
         if not name:
             flash("Code name is required.", "error")
             return redirect(url_for("edit_code", code_id=code_id))
-        parent_id = None
-        if parent_id_raw:
+        parent_id = code["parent_id"]
+        if project_supports_gt(active_project):
+            parent_id = None
+        if project_supports_gt(active_project) and parent_id_raw:
             if not parent_id_raw.isdigit():
                 flash("Invalid GT hierarchy operation.", "error")
                 return redirect(url_for("edit_code", code_id=code_id))
@@ -777,6 +947,8 @@ def create_app() -> Flask:
     @app.route("/gt")
     def gt_workspace():
         active_project = get_active_project()
+        if not project_supports_gt(active_project):
+            return mode_notice("GT Workspace", active_project)
         return render_template(
             "gt_workspace.html",
             title="Grounded Theory Workspace",
@@ -790,14 +962,23 @@ def create_app() -> Flask:
 
     @app.route("/gt/axial/create", methods=["POST"])
     def create_axial_code():
+        if not project_supports_gt(get_active_project()):
+            flash("GT Workspace is disabled for this project's methodology mode.", "error")
+            return redirect(url_for("dashboard"))
         return create_gt_code("axial", "create_axial_code", "Created axial code")
 
     @app.route("/gt/category/create", methods=["POST"])
     def create_category_code():
+        if not project_supports_gt(get_active_project()):
+            flash("GT Workspace is disabled for this project's methodology mode.", "error")
+            return redirect(url_for("dashboard"))
         return create_gt_code("category", "create_category", "Created category")
 
     @app.route("/gt/open/<int:open_code_id>/assign-axial", methods=["POST"])
     def assign_open_to_axial(open_code_id: int):
+        if not project_supports_gt(get_active_project()):
+            flash("GT Workspace is disabled for this project's methodology mode.", "error")
+            return redirect(url_for("dashboard"))
         return assign_code_parent(
             child_id=open_code_id,
             child_type="open",
@@ -809,10 +990,16 @@ def create_app() -> Flask:
 
     @app.route("/gt/open/<int:open_code_id>/unassign", methods=["POST"])
     def unassign_open_from_axial(open_code_id: int):
+        if not project_supports_gt(get_active_project()):
+            flash("GT Workspace is disabled for this project's methodology mode.", "error")
+            return redirect(url_for("dashboard"))
         return unassign_code_parent(open_code_id, "open", "unassign_open_from_axial")
 
     @app.route("/gt/axial/<int:axial_code_id>/assign-category", methods=["POST"])
     def assign_axial_to_category(axial_code_id: int):
+        if not project_supports_gt(get_active_project()):
+            flash("GT Workspace is disabled for this project's methodology mode.", "error")
+            return redirect(url_for("dashboard"))
         return assign_code_parent(
             child_id=axial_code_id,
             child_type="axial",
@@ -824,11 +1011,16 @@ def create_app() -> Flask:
 
     @app.route("/gt/axial/<int:axial_code_id>/unassign", methods=["POST"])
     def unassign_axial_from_category(axial_code_id: int):
+        if not project_supports_gt(get_active_project()):
+            flash("GT Workspace is disabled for this project's methodology mode.", "error")
+            return redirect(url_for("dashboard"))
         return unassign_code_parent(axial_code_id, "axial", "unassign_axial_from_category")
 
     @app.route("/gt/codes/<int:code_id>/edit")
     def edit_gt_code(code_id: int):
         active_project = get_active_project()
+        if not project_supports_gt(active_project):
+            return mode_notice("GT Workspace", active_project)
         code = get_code_for_project(code_id, active_project["id"])
         if code is None:
             flash("Code not found.", "error")
@@ -846,6 +1038,9 @@ def create_app() -> Flask:
     @app.route("/gt/codes/<int:code_id>/edit", methods=["POST"])
     def update_gt_code(code_id: int):
         active_project = get_active_project()
+        if not project_supports_gt(active_project):
+            flash("GT Workspace is disabled for this project's methodology mode.", "error")
+            return redirect(url_for("dashboard"))
         code = get_code_for_project(code_id, active_project["id"])
         if code is None or code["code_type"] not in {"axial", "category"}:
             flash("Code not found.", "error")
@@ -896,6 +1091,8 @@ def create_app() -> Flask:
     @app.route("/gt/compare")
     def gt_compare():
         active_project = get_active_project()
+        if not project_supports_gt(active_project):
+            return mode_notice("GT Workspace", active_project)
         open_codes = get_open_codes_for_project(active_project["id"])
         code_a = get_compare_code(request.args.get("code_a"), active_project["id"])
         code_b = get_compare_code(request.args.get("code_b"), active_project["id"])
@@ -913,6 +1110,8 @@ def create_app() -> Flask:
     @app.route("/cda")
     def cda_workspace():
         active_project = get_active_project()
+        if not project_supports_cda(active_project):
+            return mode_notice("CDA Workspace", active_project)
         return render_template(
             "cda_workspace.html",
             title="CDA Workspace",
@@ -929,6 +1128,9 @@ def create_app() -> Flask:
     @app.route("/cda/markers/create", methods=["POST"])
     def create_discourse_marker():
         active_project = get_active_project()
+        if not project_supports_cda(active_project):
+            flash("CDA Workspace is disabled for this project's methodology mode.", "error")
+            return redirect(url_for("dashboard"))
         name = request.form.get("name", "").strip()
         marker_type = request.form.get("marker_type", "").strip()
         description = request.form.get("description", "").strip()
@@ -959,6 +1161,9 @@ def create_app() -> Flask:
     @app.route("/cda/markers/<int:marker_id>/delete", methods=["POST"])
     def delete_discourse_marker(marker_id: int):
         active_project = get_active_project()
+        if not project_supports_cda(active_project):
+            flash("CDA Workspace is disabled for this project's methodology mode.", "error")
+            return redirect(url_for("dashboard"))
         marker = get_discourse_marker_for_project(marker_id, active_project["id"])
         if marker is None:
             flash("Invalid marker.", "error")
@@ -983,6 +1188,9 @@ def create_app() -> Flask:
     @app.route("/cda/actors/create", methods=["POST"])
     def create_actor():
         active_project = get_active_project()
+        if not project_supports_cda(active_project):
+            flash("CDA Workspace is disabled for this project's methodology mode.", "error")
+            return redirect(url_for("dashboard"))
         name = request.form.get("name", "").strip()
         actor_type = request.form.get("actor_type", "").strip()
         description = request.form.get("description", "").strip()
@@ -1012,6 +1220,9 @@ def create_app() -> Flask:
     @app.route("/cda/actors/<int:actor_id>/delete", methods=["POST"])
     def delete_actor(actor_id: int):
         active_project = get_active_project()
+        if not project_supports_cda(active_project):
+            flash("CDA Workspace is disabled for this project's methodology mode.", "error")
+            return redirect(url_for("dashboard"))
         actor = get_actor_for_project(actor_id, active_project["id"])
         if actor is None:
             flash("Invalid actor.", "error")
@@ -1036,6 +1247,9 @@ def create_app() -> Flask:
     @app.route("/segments/<int:segment_id>/discourse-markers", methods=["POST"])
     def assign_discourse_marker_to_segment(segment_id: int):
         active_project = get_active_project()
+        if not project_supports_cda(active_project):
+            flash("CDA Workspace is disabled for this project's methodology mode.", "error")
+            return redirect(url_for("dashboard"))
         segment = get_segment_for_project(segment_id, active_project["id"])
         if segment is None:
             flash("Invalid segment.", "error")
@@ -1073,6 +1287,9 @@ def create_app() -> Flask:
     @app.route("/segments/<int:segment_id>/discourse-markers/<int:marker_id>/remove", methods=["POST"])
     def remove_discourse_marker_from_segment(segment_id: int, marker_id: int):
         active_project = get_active_project()
+        if not project_supports_cda(active_project):
+            flash("CDA Workspace is disabled for this project's methodology mode.", "error")
+            return redirect(url_for("dashboard"))
         segment = get_segment_for_project(segment_id, active_project["id"])
         marker = get_discourse_marker_for_project(marker_id, active_project["id"])
         if segment is None:
@@ -1099,6 +1316,9 @@ def create_app() -> Flask:
     @app.route("/segments/<int:segment_id>/actors", methods=["POST"])
     def assign_actor_to_segment(segment_id: int):
         active_project = get_active_project()
+        if not project_supports_cda(active_project):
+            flash("CDA Workspace is disabled for this project's methodology mode.", "error")
+            return redirect(url_for("dashboard"))
         segment = get_segment_for_project(segment_id, active_project["id"])
         if segment is None:
             flash("Invalid segment.", "error")
@@ -1137,6 +1357,9 @@ def create_app() -> Flask:
     @app.route("/segments/<int:segment_id>/actors/<int:segment_actor_id>/remove", methods=["POST"])
     def remove_actor_from_segment(segment_id: int, segment_actor_id: int):
         active_project = get_active_project()
+        if not project_supports_cda(active_project):
+            flash("CDA Workspace is disabled for this project's methodology mode.", "error")
+            return redirect(url_for("dashboard"))
         segment_actor = get_segment_actor_for_project(segment_actor_id, segment_id, active_project["id"])
         if segment_actor is None:
             flash("Invalid actor.", "error")
@@ -1156,6 +1379,9 @@ def create_app() -> Flask:
     @app.route("/segments/<int:segment_id>/features", methods=["POST"])
     def create_discourse_feature(segment_id: int):
         active_project = get_active_project()
+        if not project_supports_cda(active_project):
+            flash("CDA Workspace is disabled for this project's methodology mode.", "error")
+            return redirect(url_for("dashboard"))
         segment = get_segment_for_project(segment_id, active_project["id"])
         if segment is None:
             flash("Invalid segment.", "error")
@@ -1190,6 +1416,9 @@ def create_app() -> Flask:
     @app.route("/segments/<int:segment_id>/features/<int:feature_id>/delete", methods=["POST"])
     def delete_discourse_feature(segment_id: int, feature_id: int):
         active_project = get_active_project()
+        if not project_supports_cda(active_project):
+            flash("CDA Workspace is disabled for this project's methodology mode.", "error")
+            return redirect(url_for("dashboard"))
         feature = get_discourse_feature_for_project(feature_id, segment_id, active_project["id"])
         if feature is None:
             flash("Invalid feature.", "error")
@@ -1209,6 +1438,8 @@ def create_app() -> Flask:
     @app.route("/cda/features")
     def cda_features():
         active_project = get_active_project()
+        if not project_supports_cda(active_project):
+            return mode_notice("CDA Workspace", active_project)
         filters = {
             "feature_type": request.args.get("feature_type", "").strip(),
             "document_id": request.args.get("document_id", "").strip(),
@@ -1228,6 +1459,8 @@ def create_app() -> Flask:
     @app.route("/cda/voice-silence")
     def cda_voice_silence():
         active_project = get_active_project()
+        if not project_supports_cda(active_project):
+            return mode_notice("CDA Workspace", active_project)
         return render_template(
             "cda_voice_silence.html",
             title="Voice and Silence Report",
@@ -1239,6 +1472,7 @@ def create_app() -> Flask:
 
     @app.route("/exports")
     def exports():
+        active_project = get_active_project()
         export_sections = [
             {
                 "title": "Codebook exports",
@@ -1333,7 +1567,7 @@ def create_app() -> Flask:
                     },
                     {
                         "title": "Complete research package ZIP",
-                        "description": "All Phase 8 exports bundled into one ZIP file.",
+                        "description": "Methodology-aware research exports bundled into one ZIP file.",
                         "format": "ZIP",
                         "endpoint": "export_project_package",
                         "button": "Download package",
@@ -1341,11 +1575,21 @@ def create_app() -> Flask:
                 ],
             },
         ]
+        if not project_supports_gt(active_project):
+            export_sections = [
+                section
+                for section in export_sections
+                if section["title"] != "Grounded Theory exports"
+            ]
+        if not project_supports_cda(active_project):
+            export_sections = [
+                section for section in export_sections if section["title"] != "CDA exports"
+            ]
         return render_template(
             "exports.html",
             title="Exports",
             active_page="exports",
-            active_project=get_active_project(),
+            active_project=active_project,
             export_sections=export_sections,
         )
 
@@ -1441,7 +1685,16 @@ def create_app() -> Flask:
 
     @app.route("/health")
     def health():
-        return jsonify({"status": "ok", "app": APP_NAME, "phase": APP_PHASE})
+        active_project = get_active_project()
+        return jsonify(
+            {
+                "status": "ok",
+                "app": APP_NAME,
+                "phase": APP_PHASE,
+                "active_project_id": active_project["id"],
+                "methodology_mode": active_project["methodology_mode"],
+            }
+        )
 
     @app.errorhandler(404)
     def not_found(error):
@@ -1485,6 +1738,35 @@ def init_db_if_needed() -> None:
 
 def run_migrations() -> None:
     db = get_db()
+    project_columns = {
+        row["name"] for row in db.execute("PRAGMA table_info(projects)").fetchall()
+    }
+    project_migrations = {
+        "methodology_mode": "ALTER TABLE projects ADD COLUMN methodology_mode TEXT NOT NULL DEFAULT 'mixed'",
+        "status": "ALTER TABLE projects ADD COLUMN status TEXT NOT NULL DEFAULT 'active'",
+        "last_opened_at": "ALTER TABLE projects ADD COLUMN last_opened_at TEXT",
+        "research_goal": "ALTER TABLE projects ADD COLUMN research_goal TEXT",
+        "principal_investigator": "ALTER TABLE projects ADD COLUMN principal_investigator TEXT",
+    }
+    for column, sql in project_migrations.items():
+        if column not in project_columns:
+            db.execute(sql)
+    db.execute(
+        """
+        UPDATE projects
+        SET methodology_mode = 'mixed'
+        WHERE methodology_mode IS NULL
+           OR TRIM(methodology_mode) = ''
+           OR methodology_mode NOT IN ('generic', 'gt', 'cda', 'mixed')
+        """
+    )
+    db.execute(
+        """
+        UPDATE projects
+        SET status = 'active'
+        WHERE status IS NULL OR TRIM(status) = '' OR status NOT IN ('active', 'deleted')
+        """
+    )
     segment_columns = {
         row["name"] for row in db.execute("PRAGMA table_info(segments)").fetchall()
     }
@@ -1587,19 +1869,40 @@ def execute_write(sql: str, params: tuple = ()) -> int:
 
 
 def get_active_project() -> sqlite3.Row:
+    if has_request_context():
+        active_project_id = session.get("active_project_id")
+        if isinstance(active_project_id, int):
+            project = get_project(active_project_id)
+            if project is not None:
+                return project
+        elif isinstance(active_project_id, str) and active_project_id.isdigit():
+            project = get_project(int(active_project_id))
+            if project is not None:
+                session["active_project_id"] = int(active_project_id)
+                return project
+
     project = query_one(
         """
-        SELECT id, name, description, created_at, updated_at
+        SELECT id, name, description, methodology_mode, status, last_opened_at,
+               research_goal, principal_investigator, created_at, updated_at
         FROM projects
-        ORDER BY id
+        WHERE status != 'deleted'
+        ORDER BY datetime(COALESCE(last_opened_at, created_at)) DESC, id DESC
         LIMIT 1
         """
     )
     if project is not None:
+        if has_request_context():
+            session["active_project_id"] = project["id"]
         return project
 
     project_id = execute_write(
-        "INSERT INTO projects (name, description) VALUES (?, ?)",
+        """
+        INSERT INTO projects (
+            name, description, methodology_mode, status, last_opened_at
+        )
+        VALUES (?, ?, 'mixed', 'active', CURRENT_TIMESTAMP)
+        """,
         (DEFAULT_PROJECT_NAME, DEFAULT_PROJECT_DESCRIPTION),
     )
     log_action(
@@ -1609,13 +1912,71 @@ def get_active_project() -> sqlite3.Row:
         action="create_default_project",
         details="Created default discourseLab project.",
     )
-    return query_one(
+    project = query_one(
         """
-        SELECT id, name, description, created_at, updated_at
+        SELECT id, name, description, methodology_mode, status, last_opened_at,
+               research_goal, principal_investigator, created_at, updated_at
         FROM projects
         WHERE id = ?
         """,
         (project_id,),
+    )
+    if has_request_context():
+        session["active_project_id"] = project_id
+    return project
+
+
+def get_project(project_id: int) -> sqlite3.Row | None:
+    return query_one(
+        """
+        SELECT id, name, description, methodology_mode, status, last_opened_at,
+               research_goal, principal_investigator, created_at, updated_at
+        FROM projects
+        WHERE id = ? AND status != 'deleted'
+        """,
+        (project_id,),
+    )
+
+
+def get_projects() -> list[sqlite3.Row]:
+    return query_all(
+        """
+        SELECT id, name, description, methodology_mode, status, last_opened_at,
+               research_goal, principal_investigator, created_at, updated_at
+        FROM projects
+        WHERE status != 'deleted'
+        ORDER BY datetime(COALESCE(last_opened_at, created_at)) DESC, name COLLATE NOCASE
+        """
+    )
+
+
+def set_active_project(project_id: int) -> None:
+    execute_write(
+        "UPDATE projects SET last_opened_at = CURRENT_TIMESTAMP WHERE id = ?",
+        (project_id,),
+    )
+    if has_request_context():
+        session["active_project_id"] = project_id
+
+
+def project_supports_gt(project: sqlite3.Row | dict) -> bool:
+    return project["methodology_mode"] in {"gt", "mixed"}
+
+
+def project_supports_cda(project: sqlite3.Row | dict) -> bool:
+    return project["methodology_mode"] in {"cda", "mixed"}
+
+
+def mode_notice(feature_name: str, active_project: sqlite3.Row):
+    return render_template(
+        "disabled_workspace.html",
+        title=f"{feature_name} Disabled",
+        active_page="",
+        active_project=active_project,
+        feature_name=feature_name,
+        mode_label=METHODOLOGY_MODES.get(
+            active_project["methodology_mode"], active_project["methodology_mode"]
+        ),
     )
 
 
@@ -2778,7 +3139,7 @@ def is_valid_segment_selection(
 
 
 def build_highlighted_document_text(
-    document_text: str, segments: list[dict]
+    document_text: str, segments: list[dict], use_cda_markers: bool = True
 ) -> Markup:
     pieces = []
     cursor = 0
@@ -2791,7 +3152,7 @@ def build_highlighted_document_text(
 
         if segment["codes"]:
             color = segment["codes"][0]["color"]
-        elif segment["discourse_markers"]:
+        elif use_cda_markers and segment["discourse_markers"]:
             color = segment["discourse_markers"][0]["color"]
         else:
             color = "#fff0a8"
@@ -3460,6 +3821,9 @@ def generate_project_summary_markdown(active_project: sqlite3.Row) -> str:
         "",
         f"Project: {active_project['name']}",
         f"Description: {active_project['description'] or ''}",
+        f"Methodology mode: {METHODOLOGY_MODES.get(active_project['methodology_mode'], active_project['methodology_mode'])}",
+        f"Research goal: {active_project['research_goal'] or ''}",
+        f"Principal investigator: {active_project['principal_investigator'] or ''}",
         f"Exported: {export_timestamp()}",
         "",
         "## Counts",
@@ -3573,6 +3937,7 @@ def generate_project_package_zip(active_project: sqlite3.Row) -> bytes:
             "",
             f"Generated by: discourseLab",
             f"Project: {active_project['name']}",
+            f"Methodology mode: {METHODOLOGY_MODES.get(active_project['methodology_mode'], active_project['methodology_mode'])}",
             f"Exported: {timestamp}",
             "",
             "Contents:",
@@ -3580,13 +3945,20 @@ def generate_project_package_zip(active_project: sqlite3.Row) -> bytes:
             "- coded_segments.csv",
             "- coded_segments.md",
             "- memos.md",
-            "- gt_hierarchy.md",
-            "- cda_features.csv",
-            "- voice_silence.csv",
             "- project_summary.md",
             "- project.json",
+            *(
+                ["- gt_hierarchy.md"]
+                if project_supports_gt(active_project)
+                else []
+            ),
+            *(
+                ["- cda_features.csv", "- voice_silence.csv"]
+                if project_supports_cda(active_project)
+                else []
+            ),
             "",
-            "Uploaded source documents are not included in this package in Phase 8.",
+            "Uploaded source documents are not included in this package in Phase 9.",
             "",
         ]
     )
@@ -3595,13 +3967,15 @@ def generate_project_package_zip(active_project: sqlite3.Row) -> bytes:
         "coded_segments.csv": generate_coded_segments_csv(active_project),
         "coded_segments.md": generate_coded_segments_markdown(active_project),
         "memos.md": generate_memos_markdown(active_project),
-        "gt_hierarchy.md": generate_gt_hierarchy_markdown(active_project),
-        "cda_features.csv": generate_cda_features_csv(active_project),
-        "voice_silence.csv": generate_voice_silence_csv(active_project),
         "project_summary.md": generate_project_summary_markdown(active_project),
         "project.json": generate_project_json(active_project),
         "README_EXPORT.txt": readme,
     }
+    if project_supports_gt(active_project):
+        files["gt_hierarchy.md"] = generate_gt_hierarchy_markdown(active_project)
+    if project_supports_cda(active_project):
+        files["cda_features.csv"] = generate_cda_features_csv(active_project)
+        files["voice_silence.csv"] = generate_voice_silence_csv(active_project)
     output = io.BytesIO()
     with zipfile.ZipFile(output, "w", compression=zipfile.ZIP_DEFLATED) as archive:
         for filename, content in files.items():

@@ -79,6 +79,14 @@ a {
     font-size: 0.96rem;
 }
 
+.nav-disabled {
+    display: block;
+    padding: 11px 14px;
+    border-radius: 6px;
+    color: rgba(231, 237, 242, 0.48);
+    font-size: 0.96rem;
+}
+
 .sidebar-nav a:hover,
 .sidebar-nav a:focus {
     background: rgba(255, 255, 255, 0.08);
@@ -851,6 +859,15 @@ button:disabled {
 .report-table td,
 .report-table th {
     font-size: 0.9rem;
+}
+
+.disabled-panel {
+    border-left: 4px solid var(--border);
+}
+
+.disabled-inline {
+    color: var(--muted);
+    background: var(--surface-muted);
 }
 
 .codebook-section {

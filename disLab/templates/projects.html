@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="page-header">
+    <p class="eyebrow">Project management</p>
+    <h1>Projects</h1>
+    <p>Open, create, edit, or soft-delete local discourseLab projects.</p>
+</section>
+
+<section class="detail-actions">
+    <a class="button-primary" href="{{ url_for('new_project') }}">New project</a>
+</section>
+
+<section class="info-panel">
+    <h2>Project List</h2>
+    {% if projects %}
+        <div class="table-wrap">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Methodology</th>
+                        <th>Status</th>
+                        <th>Research goal</th>
+                        <th>Last opened</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for project in projects %}
+                        <tr>
+                            <td>
+                                <strong>{{ project.name }}</strong>
+                                {% if project.id == active_project.id %}
+                                    <span class="status-badge">Active</span>
+                                {% endif %}
+                                <div class="muted-text">{{ project.description or "No description" }}</div>
+                            </td>
+                            <td>{{ methodology_mode_labels[project.methodology_mode] }}</td>
+                            <td>{{ project.status }}</td>
+                            <td>{{ project.research_goal or "" }}</td>
+                            <td>{{ project.last_opened_at or "Never" }}</td>
+                            <td class="actions-cell">
+                                {% if project.id != active_project.id %}
+                                    <form action="{{ url_for('open_project', project_id=project.id) }}" method="post">
+                                        <button type="submit" class="button-secondary">Open</button>
+                                    </form>
+                                {% endif %}
+                                <a class="button-secondary" href="{{ url_for('edit_project', project_id=project.id) }}">Edit</a>
+                                <form action="{{ url_for('soft_delete_project', project_id=project.id) }}" method="post">
+                                    <button type="submit" class="button-danger">Delete</button>
+                                </form>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <p>No active projects found.</p>
+    {% endif %}
+</section>
+{% endblock %}

@@ -24,7 +24,7 @@
                 <input type="color" name="color" value="{{ code.color }}">
             </label>
         </div>
-        {% if code.code_type == "open" %}
+        {% if supports_gt and code.code_type == "open" %}
             <label>
                 <span>Axial parent</span>
                 <select name="parent_id">
@@ -34,7 +34,7 @@
                     {% endfor %}
                 </select>
             </label>
-        {% elif code.code_type == "axial" %}
+        {% elif supports_gt and code.code_type == "axial" %}
             <label>
                 <span>Category parent</span>
                 <select name="parent_id">

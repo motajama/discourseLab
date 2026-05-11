@@ -1,6 +1,6 @@
 # discourseLab
 
-Phase: 8 — Exports and research outputs
+Phase: 9 — Project modes and project management
 
 discourseLab is a local lightweight qualitative analysis workspace for discourse analysis, critical discourse analysis, and grounded theory.
 
@@ -24,39 +24,42 @@ http://127.0.0.1:5000
 
 1. Start the app with `python app.py`.
 2. Open `http://127.0.0.1:5000`.
-3. Go to Exports.
-4. Download Codebook Markdown.
-5. Download Coded Segments CSV.
-6. Download Coded Segments Markdown.
-7. Download Memos Markdown.
-8. Download GT Hierarchy Markdown.
-9. Download CDA Features CSV.
-10. Download Voice/Silence CSV.
-11. Download Project Summary Markdown.
-12. Download Full Project JSON.
-13. Download Complete Research Package ZIP.
-14. Open the ZIP and confirm it contains all expected files.
-15. Confirm exports only include the active project.
-16. Restart the app and confirm data is unchanged.
+3. Confirm `/health` returns JSON with `app = discourseLab`, `phase = 9`, `active_project_id`, and `methodology_mode`.
+4. Go to Projects.
+5. Create a new project and choose a methodology mode.
+6. Confirm the new project becomes active.
+7. Switch between projects with Open.
+8. Confirm document, code, memo, GT, CDA, and export data is scoped to the active project.
+9. Edit project metadata, research goal, principal investigator, and methodology mode.
+10. Confirm changing methodology mode hides or shows GT/CDA workspaces without deleting GT or CDA data.
+11. In Generic mode, confirm Documents, Codes, Memos, and Exports work while GT/CDA are disabled.
+12. In GT mode, confirm GT works and CDA is disabled.
+13. In CDA mode, confirm CDA works and GT is disabled.
+14. In Mixed mode, confirm both GT and CDA work.
+15. Soft-delete a project and confirm it disappears from Projects without being physically destroyed.
+16. If the active project is deleted, confirm another project becomes active or a default project is created.
+17. Confirm Phase 8 exports still download and the ZIP package follows the active methodology mode.
+18. Restart the app and confirm existing SQLite data remains.
 
-## Current Phase 8
+## Current Phase 9
 
-Phase 8 adds robust research exports:
+Phase 9 adds project management and methodology modes:
 
-- Codebook Markdown
-- Coded segments CSV
-- Coded segments Markdown
-- Memos Markdown
-- GT hierarchy Markdown
-- CDA features CSV
-- Actor voice/silence CSV
-- Project summary Markdown
-- Full active-project JSON
-- Complete research package ZIP generated in memory
+- Project list, create, edit, open, and soft-delete routes
+- Session-backed active project selection
+- Safe project table migration for:
+  - methodology_mode
+  - status
+  - last_opened_at
+  - research_goal
+  - principal_investigator
+- Existing projects default to `methodology_mode = mixed`
+- Dashboard project metadata and methodology mode
+- Mode-aware sidebar, document view, codes page, exports page, and research package ZIP
+- Disabled notices for GT/CDA workspaces when unsupported by the active project mode
+- Health JSON includes active project and methodology mode
 
-Exports are generated on demand, use UTF-8, use active project data only, and do not modify the database.
-
-This phase does not implement advanced network model building, interactive graph editing, PNG/SVG/TikZ graph export, inter-coder mode, blind recoding mode, AI helpers, authentication, cloud sync, or source-document bundling in the ZIP package.
+This phase does not implement advanced network model building, interactive graph editing, PNG/SVG/TikZ graph export, inter-coder mode, blind recoding mode, AI helpers, authentication, or cloud sync.
 
 ## Planned Later Phases
 

@@ -59,6 +59,22 @@
                 <dd>{{ active_project.description }}</dd>
             </div>
             <div>
+                <dt>Methodology mode</dt>
+                <dd>{{ methodology_mode_labels[active_project.methodology_mode] }}</dd>
+            </div>
+            <div>
+                <dt>Research goal</dt>
+                <dd>{{ active_project.research_goal or "No research goal" }}</dd>
+            </div>
+            <div>
+                <dt>Principal investigator</dt>
+                <dd>{{ active_project.principal_investigator or "Not specified" }}</dd>
+            </div>
+            <div>
+                <dt>Last opened</dt>
+                <dd>{{ active_project.last_opened_at or "Not recorded" }}</dd>
+            </div>
+            <div>
                 <dt>Created at</dt>
                 <dd>{{ active_project.created_at }}</dd>
             </div>
@@ -75,10 +91,10 @@
 
     <article class="info-panel">
         <h2>Prepared Workflow</h2>
-        <p class="workflow-line">Documents -> Segments -> Open Codes / CDA Markers -> Actors -> Features -> Reports</p>
+        <p class="workflow-line">Projects -> Documents -> Segments -> Analysis Mode -> Exports</p>
         <p>
-            Phase 8 adds robust research outputs for codebooks, coded segments,
-            memos, GT hierarchy, CDA reports, project summaries, JSON, and ZIP packages.
+            Phase 9 adds project management and methodology modes so each project can
+            use Generic, Grounded Theory, CDA, or Mixed workflows.
         </p>
     </article>
 

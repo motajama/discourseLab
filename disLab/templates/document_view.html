@@ -207,127 +207,133 @@
                         {% endif %}
                     </details>
 
-                    <details class="segment-section" open>
-                        <summary>CDA markers</summary>
-                        <div class="code-badge-row">
-                            {% if segment.discourse_markers %}
-                                {% for marker in segment.discourse_markers %}
-                                    <form class="inline-form" action="{{ url_for('remove_discourse_marker_from_segment', segment_id=segment.id, marker_id=marker.id) }}" method="post">
-                                        <button type="submit" class="cda-marker-badge removable" style="--marker-color: {{ marker.color }}">
-                                            {{ marker.name }} ×
-                                        </button>
-                                    </form>
-                                {% endfor %}
+                    {% if supports_cda %}
+                        <details class="segment-section" open>
+                            <summary>CDA markers</summary>
+                            <div class="code-badge-row">
+                                {% if segment.discourse_markers %}
+                                    {% for marker in segment.discourse_markers %}
+                                        <form class="inline-form" action="{{ url_for('remove_discourse_marker_from_segment', segment_id=segment.id, marker_id=marker.id) }}" method="post">
+                                            <button type="submit" class="cda-marker-badge removable" style="--marker-color: {{ marker.color }}">
+                                                {{ marker.name }} ×
+                                            </button>
+                                        </form>
+                                    {% endfor %}
+                                {% else %}
+                                    <span class="empty-code-note">No CDA markers assigned.</span>
+                                {% endif %}
+                            </div>
+                            <form class="annotation-form" action="{{ url_for('assign_discourse_marker_to_segment', segment_id=segment.id) }}" method="post">
+                                <label>
+                                    <span>Assign CDA marker</span>
+                                    <select name="marker_id" required>
+                                        <option value="">Choose marker</option>
+                                        {% for marker in discourse_markers %}
+                                            <option value="{{ marker.id }}">{{ marker.name }} ({{ marker_type_labels[marker.marker_type] }})</option>
+                                        {% endfor %}
+                                    </select>
+                                </label>
+                                <label>
+                                    <span>Note</span>
+                                    <input type="text" name="note" placeholder="Optional CDA note">
+                                </label>
+                                <button type="submit" class="button-secondary">Assign marker</button>
+                            </form>
+                        </details>
+
+                        <details class="segment-section" open>
+                            <summary>Actors</summary>
+                            {% if segment.actors %}
+                                <div class="actor-card-list">
+                                    {% for actor in segment.actors %}
+                                        <article class="actor-relation-card">
+                                            <div>
+                                                <strong>{{ actor.name }}</strong>
+                                                <span class="actor-badge">{{ actor_relation_type_labels[actor.relation_type] }}</span>
+                                                <p>{{ actor.note or "No actor note" }}</p>
+                                            </div>
+                                            <form action="{{ url_for('remove_actor_from_segment', segment_id=segment.id, segment_actor_id=actor.id) }}" method="post">
+                                                <button type="submit" class="button-danger compact-button">Remove</button>
+                                            </form>
+                                        </article>
+                                    {% endfor %}
+                                </div>
                             {% else %}
-                                <span class="empty-code-note">No CDA markers assigned.</span>
+                                <p class="muted-text">No actors annotated for this segment.</p>
                             {% endif %}
+                            <form class="annotation-form" action="{{ url_for('assign_actor_to_segment', segment_id=segment.id) }}" method="post">
+                                <label>
+                                    <span>Actor</span>
+                                    <select name="actor_id" required>
+                                        <option value="">Choose actor</option>
+                                        {% for actor in actors %}
+                                            <option value="{{ actor.id }}">{{ actor.name }} ({{ actor_type_labels[actor.actor_type] }})</option>
+                                        {% endfor %}
+                                    </select>
+                                </label>
+                                <label>
+                                    <span>Relation</span>
+                                    <select name="relation_type" required>
+                                        <option value="">Choose relation</option>
+                                        {% for value, label in actor_relation_type_labels.items() %}
+                                            <option value="{{ value }}">{{ label }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </label>
+                                <label>
+                                    <span>Note</span>
+                                    <input type="text" name="note" placeholder="Optional actor note">
+                                </label>
+                                <button type="submit" class="button-secondary">Assign actor</button>
+                            </form>
+                        </details>
+
+                        <details class="segment-section" open>
+                            <summary>Discourse features</summary>
+                            {% if segment.features %}
+                                <div class="feature-card-list">
+                                    {% for feature in segment.features %}
+                                        <article class="discourse-feature-card">
+                                            <div>
+                                                <span class="feature-type-badge">{{ feature_type_labels[feature.feature_type] }}</span>
+                                                <strong>{{ feature.value }}</strong>
+                                                <p>{{ feature.interpretation or "No interpretation" }}</p>
+                                            </div>
+                                            <form action="{{ url_for('delete_discourse_feature', segment_id=segment.id, feature_id=feature.id) }}" method="post">
+                                                <button type="submit" class="button-danger compact-button">Delete</button>
+                                            </form>
+                                        </article>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <p class="muted-text">No discourse features added.</p>
+                            {% endif %}
+                            <form class="annotation-form" action="{{ url_for('create_discourse_feature', segment_id=segment.id) }}" method="post">
+                                <label>
+                                    <span>Feature type</span>
+                                    <select name="feature_type" required>
+                                        <option value="">Choose feature</option>
+                                        {% for value, label in feature_type_labels.items() %}
+                                            <option value="{{ value }}">{{ label }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </label>
+                                <label>
+                                    <span>Value</span>
+                                    <input type="text" name="value" placeholder="e.g. migration wave" required>
+                                </label>
+                                <label>
+                                    <span>Interpretation</span>
+                                    <textarea name="interpretation" rows="2" placeholder="Analytical interpretation"></textarea>
+                                </label>
+                                <button type="submit" class="button-secondary">Add feature</button>
+                            </form>
+                        </details>
+                    {% else %}
+                        <div class="segment-section disabled-inline">
+                            CDA annotations are hidden in {{ methodology_mode_labels[active_project.methodology_mode] }} mode.
                         </div>
-                        <form class="annotation-form" action="{{ url_for('assign_discourse_marker_to_segment', segment_id=segment.id) }}" method="post">
-                            <label>
-                                <span>Assign CDA marker</span>
-                                <select name="marker_id" required>
-                                    <option value="">Choose marker</option>
-                                    {% for marker in discourse_markers %}
-                                        <option value="{{ marker.id }}">{{ marker.name }} ({{ marker_type_labels[marker.marker_type] }})</option>
-                                    {% endfor %}
-                                </select>
-                            </label>
-                            <label>
-                                <span>Note</span>
-                                <input type="text" name="note" placeholder="Optional CDA note">
-                            </label>
-                            <button type="submit" class="button-secondary">Assign marker</button>
-                        </form>
-                    </details>
-
-                    <details class="segment-section" open>
-                        <summary>Actors</summary>
-                        {% if segment.actors %}
-                            <div class="actor-card-list">
-                                {% for actor in segment.actors %}
-                                    <article class="actor-relation-card">
-                                        <div>
-                                            <strong>{{ actor.name }}</strong>
-                                            <span class="actor-badge">{{ actor_relation_type_labels[actor.relation_type] }}</span>
-                                            <p>{{ actor.note or "No actor note" }}</p>
-                                        </div>
-                                        <form action="{{ url_for('remove_actor_from_segment', segment_id=segment.id, segment_actor_id=actor.id) }}" method="post">
-                                            <button type="submit" class="button-danger compact-button">Remove</button>
-                                        </form>
-                                    </article>
-                                {% endfor %}
-                            </div>
-                        {% else %}
-                            <p class="muted-text">No actors annotated for this segment.</p>
-                        {% endif %}
-                        <form class="annotation-form" action="{{ url_for('assign_actor_to_segment', segment_id=segment.id) }}" method="post">
-                            <label>
-                                <span>Actor</span>
-                                <select name="actor_id" required>
-                                    <option value="">Choose actor</option>
-                                    {% for actor in actors %}
-                                        <option value="{{ actor.id }}">{{ actor.name }} ({{ actor_type_labels[actor.actor_type] }})</option>
-                                    {% endfor %}
-                                </select>
-                            </label>
-                            <label>
-                                <span>Relation</span>
-                                <select name="relation_type" required>
-                                    <option value="">Choose relation</option>
-                                    {% for value, label in actor_relation_type_labels.items() %}
-                                        <option value="{{ value }}">{{ label }}</option>
-                                    {% endfor %}
-                                </select>
-                            </label>
-                            <label>
-                                <span>Note</span>
-                                <input type="text" name="note" placeholder="Optional actor note">
-                            </label>
-                            <button type="submit" class="button-secondary">Assign actor</button>
-                        </form>
-                    </details>
-
-                    <details class="segment-section" open>
-                        <summary>Discourse features</summary>
-                        {% if segment.features %}
-                            <div class="feature-card-list">
-                                {% for feature in segment.features %}
-                                    <article class="discourse-feature-card">
-                                        <div>
-                                            <span class="feature-type-badge">{{ feature_type_labels[feature.feature_type] }}</span>
-                                            <strong>{{ feature.value }}</strong>
-                                            <p>{{ feature.interpretation or "No interpretation" }}</p>
-                                        </div>
-                                        <form action="{{ url_for('delete_discourse_feature', segment_id=segment.id, feature_id=feature.id) }}" method="post">
-                                            <button type="submit" class="button-danger compact-button">Delete</button>
-                                        </form>
-                                    </article>
-                                {% endfor %}
-                            </div>
-                        {% else %}
-                            <p class="muted-text">No discourse features added.</p>
-                        {% endif %}
-                        <form class="annotation-form" action="{{ url_for('create_discourse_feature', segment_id=segment.id) }}" method="post">
-                            <label>
-                                <span>Feature type</span>
-                                <select name="feature_type" required>
-                                    <option value="">Choose feature</option>
-                                    {% for value, label in feature_type_labels.items() %}
-                                        <option value="{{ value }}">{{ label }}</option>
-                                    {% endfor %}
-                                </select>
-                            </label>
-                            <label>
-                                <span>Value</span>
-                                <input type="text" name="value" placeholder="e.g. migration wave" required>
-                            </label>
-                            <label>
-                                <span>Interpretation</span>
-                                <textarea name="interpretation" rows="2" placeholder="Analytical interpretation"></textarea>
-                            </label>
-                            <button type="submit" class="button-secondary">Add feature</button>
-                        </form>
-                    </details>
+                    {% endif %}
                 </article>
             {% endfor %}
         </div>

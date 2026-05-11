@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="page-header">
+    <p class="eyebrow">Workspace disabled</p>
+    <h1>{{ feature_name }}</h1>
+    <p>Active project: {{ active_project.name }}</p>
+</section>
+
+<section class="info-panel disabled-panel">
+    <h2>Not available in {{ mode_label }} mode</h2>
+    <p>
+        This workspace is disabled for the active project's methodology mode.
+        Existing data is retained and will be available again if the project mode is changed.
+    </p>
+    <div class="link-row">
+        <a class="button-secondary" href="{{ url_for('projects') }}">Edit project mode</a>
+        <a class="button-secondary" href="{{ url_for('dashboard') }}">Back to Dashboard</a>
+    </div>
+</section>
+{% endblock %}

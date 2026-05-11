@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="page-header">
+    <p class="eyebrow">{{ "Edit project" if project else "New project" }}</p>
+    <h1>{{ project.name if project else "Create Project" }}</h1>
+    <p>Project metadata controls the active methodology mode. Changing modes hides or shows workspaces without deleting data.</p>
+</section>
+
+<section class="detail-actions">
+    <a class="button-secondary" href="{{ url_for('projects') }}">Back to Projects</a>
+</section>
+
+<section class="info-panel">
+    <h2>Project Details</h2>
+    <form class="document-form" action="{{ form_action }}" method="post">
+        <div class="form-grid">
+            <label>
+                <span>Name</span>
+                <input type="text" name="name" value="{{ project.name if project else '' }}" required>
+            </label>
+            <label>
+                <span>Methodology mode</span>
+                <select name="methodology_mode" required>
+                    {% set selected_mode = project.methodology_mode if project else "mixed" %}
+                    {% for value, label in methodology_mode_labels.items() %}
+                        <option value="{{ value }}" {{ "selected" if selected_mode == value else "" }}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+        </div>
+        <label>
+            <span>Description</span>
+            <textarea name="description" rows="3">{{ project.description if project else "" }}</textarea>
+        </label>
+        <label>
+            <span>Research goal</span>
+            <textarea name="research_goal" rows="3">{{ project.research_goal if project else "" }}</textarea>
+        </label>
+        <label>
+            <span>Principal investigator</span>
+            <input type="text" name="principal_investigator" value="{{ project.principal_investigator if project else '' }}">
+        </label>
+        <button type="submit" class="button-primary">{{ "Save project" if project else "Create project" }}</button>
+    </form>
+</section>
+{% endblock %}

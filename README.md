@@ -4,7 +4,7 @@ discourseLab is a local, lightweight qualitative analysis workspace for discours
 
 It runs on your own computer in a web browser. It does not require an account, cloud service, npm, Node, React, or external web services.
 
-Current phase: **Phase 8 — Exports and research outputs**
+Current phase: **Phase 9 — Project modes and project management**
 
 ## What You Need
 
@@ -82,7 +82,7 @@ py --version
 If you use Git:
 
 ```bash
-git clone https://github.com/YOUR-USERNAME/discourseLab.git
+git clone https://github.com/motajama/discourseLab.git
 cd discourseLab
 ```
 
@@ -229,19 +229,18 @@ py app.py
 ## 9. First Things To Try
 
 1. Open `http://127.0.0.1:5000`.
-2. Go to **Documents**.
-3. Import a `.txt` or `.docx` file.
-4. Open the document.
-5. Select text and create a segment.
-6. Create an open code and assign it to a segment.
-7. Go to **CDA Workspace**.
-8. Create a CDA marker, for example `Metaphor`.
-9. Create an actor, for example `Refugees`.
-10. Return to the document and assign CDA markers, actors, and discourse features to segments.
-11. Open `/cda/features` to view discourse features.
-12. Open `/cda/voice-silence` to view actor voice and silence counts.
-13. Go to **Exports**.
-14. Download the codebook, coded segments, memos, CDA reports, project summary, JSON archive, or complete ZIP package.
+2. Go to **Projects**.
+3. Create a new project and choose a methodology mode: Generic, Grounded Theory, CDA, or Mixed.
+4. Open the project and confirm the sidebar changes for the selected methodology mode.
+5. Go to **Documents**.
+6. Import a `.txt` or `.docx` file.
+7. Open the document.
+8. Select text and create a segment.
+9. Create an open code and assign it to a segment.
+10. If the project supports CDA, create CDA markers, actors, and discourse features.
+11. If the project supports GT, use the GT workspace for axial codes, categories, and comparison.
+12. Go to **Exports**.
+13. Download the codebook, coded segments, memos, available methodology reports, project summary, JSON archive, or complete ZIP package.
 
 ## Data Storage
 
@@ -308,9 +307,14 @@ http://127.0.0.1:5001
 ## Project Notes
 
 - App name: discourseLab
-- Current phase: Phase 8 — Exports and research outputs
+- Current phase: Phase 9 — Project modes and project management
 - Technology: Python, Flask, SQLite, HTML, CSS, vanilla JavaScript
 - Runs locally in your browser
 - No authentication
 - No cloud service
 - No AI features
+
+## Credits
+
+- Jan Motal: project author, concept, research workflow, and product direction.
+- OpenAI Codex: implementation assistance and coding support.
