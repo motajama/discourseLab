@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="page-header">
+    <p class="eyebrow">Methodology note</p>
+    <h1>Edit Methodology Note</h1>
+    <p>{{ note.title }}</p>
+</section>
+
+<section class="detail-actions">
+    <a class="button-secondary" href="{{ url_for('methodology') }}">Back to Methodology</a>
+</section>
+
+<section class="info-panel">
+    <form class="document-form" action="{{ url_for('update_methodology_note', note_id=note.id) }}" method="post">
+        <div class="form-grid">
+            <label><span>Title</span><input type="text" name="title" value="{{ note.title }}" required></label>
+            <label>
+                <span>Type</span>
+                <select name="note_type" required>
+                    {% for value, label in methodology_note_type_labels.items() %}
+                        <option value="{{ value }}" {{ "selected" if note.note_type == value else "" }}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+        </div>
+        <div class="form-grid">
+            <label>
+                <span>Area</span>
+                <select name="methodology_area" required>
+                    {% for value, label in methodology_area_labels.items() %}
+                        <option value="{{ value }}" {{ "selected" if note.methodology_area == value else "" }}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <label>
+                <span>Status</span>
+                <select name="status" required>
+                    {% for value, label in methodology_note_status_labels.items() %}
+                        <option value="{{ value }}" {{ "selected" if note.status == value else "" }}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+        </div>
+        <label>
+            <span>Linked entity</span>
+            <select name="linked_entity">
+                <option value="">Project protocol</option>
+                {% for entity in entity_options %}
+                    <option value="{{ entity.value }}" {{ "selected" if note.entity_value == entity.value else "" }}>[{{ entity.type_label }}] {{ entity.label }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label><span>Body</span><textarea name="body" rows="8" required>{{ note.body }}</textarea></label>
+        <button type="submit" class="button-primary">Save note</button>
+    </form>
+</section>
+{% endblock %}

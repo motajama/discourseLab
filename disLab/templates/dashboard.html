@@ -97,7 +97,7 @@
         <h2>Prepared Workflow</h2>
         <p class="workflow-line">Projects -> Documents -> Segments -> Analysis Mode -> Exports</p>
         <p>
-            Phase 11.5 adds readable visual model exports with analytical modes, legends, and visual encodings.
+            Phase 12 adds a local methodology helper library and project protocol notes.
         </p>
     </article>
 
@@ -135,6 +135,18 @@
                 {% endfor %}
             </ul>
         {% endif %}
+    </article>
+
+    <article class="info-panel">
+        <h2>Methodological Protocol</h2>
+        <ul class="compact-list">
+            <li><span>Methodology mode</span><span>{{ methodology_mode_labels[active_project.methodology_mode] }}</span></li>
+            <li><span>Active protocol notes</span><span>{{ methodology_counts.active_protocol }}</span></li>
+            <li><span>Coding rules</span><span>{{ methodology_counts.coding_rules }}</span></li>
+            <li><span>Sampling rules</span><span>{{ methodology_counts.sampling_rules }}</span></li>
+            <li><span>Needs review</span><span>{{ methodology_counts.needs_review }}</span></li>
+        </ul>
+        <a class="button-secondary" href="{{ url_for('methodology') }}">Open Methodology</a>
     </article>
 
     <article class="info-panel">

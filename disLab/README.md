@@ -1,10 +1,10 @@
 # discourseLab
 
-Phase: 11.5 — Readable visual model exports
+Phase: 12 — Methodology helper library and project protocol
 
 discourseLab is a local lightweight qualitative analysis workspace for discourse analysis, critical discourse analysis, grounded theory, and generic qualitative coding.
 
-Phase 11.5 improves generated visual model exports so analytical relations are readable instead of exported as one undifferentiated graph.
+Phase 12 adds a local methodology helper library and project-specific methodological protocol notes. The helper is not an AI chatbot and does not use network access.
 
 ## Installation
 
@@ -22,76 +22,62 @@ The application runs at:
 http://127.0.0.1:5000
 ```
 
-## Visual Model Exports
+## Methodology Helper Library
 
-Visual exports are scoped to the active project and generated from saved analytical relations. They do not modify the database.
+The methodology helper library is stored locally in JSON files under `methodology/`.
 
-Model modes:
+It provides:
 
-- `full`: all relations, including weak and uncertain, capped at 100 by default.
-- `simplified`: default readable mode; hides weak and uncertain relations by default.
-- `argument`: research questions, categories, axial codes, memos, strong relations, and argument-building relation types.
-- `evidence`: documents, segments, memos, evidence, examples, negative cases, support, and contradiction.
-- `gt`: code-only grounded theory relations.
-- `cda`: actors, discourse markers, discourse features, and CDA relation types.
+- local JSON-based methodology guidance
+- no AI and no internet access
+- APA-style methodological sources
+- project protocol notes
+- methodology-aware helper panels
+- Markdown export of the methodological protocol
 
-Visual encodings:
+Available libraries:
 
-- Node colors = entity type.
-- Edge color = relation family.
-- Edge thickness/dash = relation strength.
-- Edge labels = shortened relation type.
-- SVG tooltips = full metadata for nodes and edges.
-
-Formats:
-
-- Mermaid `.mmd`
-- Graphviz `.dot`
-- TikZ `.tikz`
-- SVG `.svg`
-
-Graphviz example:
-
-```bash
-dot -Tpng discourseLab_analytical_model.dot -o model.png
-```
-
-TikZ exports are snippets to include inside a LaTeX document with TikZ enabled.
+- generic qualitative coding
+- grounded theory
+- Fairclough-oriented CDA
+- van Dijk-oriented CDA
+- Wodak/DHA-oriented CDA
+- mixed GT/CDA protocol guidance
 
 ## Verification
 
 1. Start the app with `python app.py`.
-2. Open a project with several analytical relations.
-3. Go to Model.
-4. Download simplified SVG.
-5. Confirm it has:
-   - legend
-   - different node colors
-   - different edge styles by strength
-   - different edge colors by relation family
-   - readable wrapped node labels
-6. Download argument SVG.
-7. Confirm it shows fewer and more analytically relevant relations.
-8. Download full SVG.
-9. Confirm it still works even if dense.
-10. Download GT mode and CDA mode visual exports.
-11. Confirm filters do not crash with empty result sets.
-12. Confirm package ZIP includes visual exports by model mode.
-13. Confirm no project data is modified by exports.
+2. Open a project.
+3. Open Methodology.
+4. Confirm relevant methodology libraries are shown based on project methodology mode.
+5. Open Grounded Theory library if project mode is GT or mixed.
+6. Open CDA libraries if project mode is CDA or mixed.
+7. Create a protocol note.
+8. Create a coding rule.
+9. Create a reflexive note.
+10. Link a methodology note to a code or segment.
+11. Edit a methodology note.
+12. Filter methodology notes.
+13. Delete a methodology note.
+14. Open GT, CDA, Model, and document pages and confirm methodology helper panels use library content.
+15. Download methodology protocol Markdown.
+16. Download complete research package ZIP and confirm `methodology_protocol.md` is included.
+17. Download project JSON and confirm `methodology_notes` are included.
+18. Restart the app and confirm methodology notes persist.
 
-## Current Phase 11.5
+## Current Phase 12
 
-Phase 11.5 adds:
+Phase 12 adds:
 
-- model modes for visual exports
-- relation strength visual encoding
-- relation family visual encoding
-- node type styling
-- layered SVG layout
-- SVG legend
-- SVG node and edge tooltips
-- wrapped SVG node labels
-- mode-specific Mermaid, DOT, TikZ, and SVG files in the research package ZIP
+- Methodology page
+- Methodology library browsing
+- Project-specific methodology notes
+- Methodology note create/edit/delete/filter workflow
+- Links from methodology notes to project entities
+- Methodological protocol Markdown export
+- Methodological protocol in package ZIP
+- Methodology notes in project JSON
+- Methodology-aware helper panels
 
-This phase does not implement a drag-and-drop graph editor, browser-based interactive network editor, heavy graph layout libraries, AI helpers, inter-coder mode, cloud sync, authentication, or multi-user permissions.
+This phase does not implement an AI methodology assistant, online bibliography lookup, Zotero integration, inter-coder mode, blind recoding mode, advanced protocol validation, cloud sync, authentication, or multi-user permissions.
 

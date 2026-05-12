@@ -1,0 +1,37 @@
+{
+  "id": "cda_wodak_dha",
+  "title": "Critical Discourse Analysis: Wodak and the Discourse-Historical Approach",
+  "short_description": "Guidance for discourse-historical analysis with attention to nomination, predication, argumentation, perspectivization, intensification, mitigation, context, and interdiscursivity.",
+  "phases": [
+    {
+      "id": "historical_context",
+      "title": "Historical context",
+      "description": "Situate discourse in historical, institutional, political, and interdiscursive contexts.",
+      "prompts": ["What historical context is needed?", "Which prior debates are invoked?", "Which institutions matter?"],
+      "recommended_actions": ["Record contextual notes.", "Compare documents over time.", "Link context memos to documents."],
+      "sources": ["reisigl_wodak_2001", "wodak_meyer_2016"]
+    },
+    {
+      "id": "discursive_strategies",
+      "title": "Discursive strategies",
+      "description": "Analyze nomination, predication, argumentation, perspectivization, and intensification or mitigation.",
+      "prompts": ["How are actors named?", "What qualities are attributed?", "Which arguments justify claims?", "Whose perspective organizes the account?"],
+      "recommended_actions": ["Mark actor naming.", "Code evaluations.", "Memo argument patterns."],
+      "sources": ["reisigl_wodak_2001"]
+    }
+  ],
+  "prompts": ["How are social actors named?", "What argument scheme is used?", "What is intensified or mitigated?", "What historical context changes the interpretation?"],
+  "concepts": [
+    {"id": "discourse_historical_approach", "term": "Discourse-historical approach", "description": "A CDA approach that integrates textual analysis with historical and contextual reconstruction.", "prompts": ["What context is necessary?", "How does history shape this discourse?"]},
+    {"id": "nomination", "term": "Nomination", "description": "Naming or referring to persons, groups, objects, or events.", "prompts": ["Who is named?", "Which label is chosen?"]},
+    {"id": "predication", "term": "Predication", "description": "Attributing qualities, characteristics, or evaluations to actors or phenomena.", "prompts": ["What qualities are attached?", "Are they positive or negative?"]},
+    {"id": "argumentation", "term": "Argumentation", "description": "Justifications, topoi, and reasoning patterns used to support claims.", "prompts": ["What reason is given?", "What topoi are implied?"]},
+    {"id": "perspectivization", "term": "Perspectivization", "description": "Positioning speaker perspective, distance, involvement, or viewpoint.", "prompts": ["Whose viewpoint is privileged?"]},
+    {"id": "intensification_mitigation", "term": "Intensification/mitigation", "description": "Strengthening or weakening claims, evaluations, or responsibility.", "prompts": ["What is amplified?", "What is softened?"]},
+    {"id": "interdiscursivity", "term": "Interdiscursivity", "description": "The mixing or articulation of multiple discourses.", "prompts": ["Which discourses are combined?"]}
+  ],
+  "sources": [
+    {"id": "reisigl_wodak_2001", "apa": "Reisigl, M., & Wodak, R. (2001). Discourse and discrimination: Rhetorics of racism and antisemitism. Routledge.", "note": "Use for DHA concepts and discursive strategies."},
+    {"id": "wodak_meyer_2016", "apa": "Wodak, R., & Meyer, M. (Eds.). (2016). Methods of critical discourse studies (3rd ed.). SAGE.", "note": "Use for CDA methods, DHA overview, and comparative methodological grounding."}
+  ]
+}

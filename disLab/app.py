@@ -29,8 +29,8 @@ from werkzeug.utils import secure_filename
 
 
 APP_NAME = "discourseLab"
-APP_PHASE = "11.5"
-CURRENT_PHASE_LABEL = "Phase 11.5 — Readable visual model exports"
+APP_PHASE = "12"
+CURRENT_PHASE_LABEL = "Phase 12 — Methodology helper library and project protocol"
 DEFAULT_PROJECT_NAME = "Demo Project"
 DEFAULT_PROJECT_DESCRIPTION = "Initial local discourseLab project."
 DEFAULT_CODE_COLOR = "#f4c542"
@@ -193,11 +193,50 @@ VISUAL_MODEL_MODES = {
     "full": "Full",
 }
 VISUAL_MODEL_MODE_ORDER = ["simplified", "argument", "evidence", "gt", "cda", "full"]
+METHODOLOGY_NOTE_TYPES = {
+    "protocol": "Protocol",
+    "coding_rule": "Coding rule",
+    "sampling_rule": "Sampling rule",
+    "interpretation_rule": "Interpretation rule",
+    "reflexive_note": "Reflexive note",
+    "source_note": "Source note",
+    "decision_log": "Decision log",
+    "warning": "Warning",
+    "other": "Other",
+}
+METHODOLOGY_AREAS = {
+    "generic": "Generic",
+    "gt": "Grounded Theory",
+    "cda": "CDA",
+    "mixed": "Mixed",
+    "export": "Export",
+    "ethics": "Ethics",
+    "other": "Other",
+}
+METHODOLOGY_NOTE_STATUSES = {
+    "draft": "Draft",
+    "active": "Active",
+    "needs_review": "Needs review",
+    "archived": "Archived",
+}
+METHODOLOGY_LINKED_ENTITY_TYPES = {
+    "project": "Project",
+    "document": "Document",
+    "segment": "Segment",
+    "code": "Code",
+    "memo": "Memo",
+    "research_question": "Research question",
+    "discourse_marker": "CDA marker",
+    "actor": "Actor",
+    "discourse_feature": "Discourse feature",
+    "relation": "Relation",
+}
 
 BASE_DIR = Path(__file__).resolve().parent
 INSTANCE_DIR = BASE_DIR / "instance"
 UPLOAD_DIR = BASE_DIR / "uploads"
 EXPORT_DIR = BASE_DIR / "exports"
+METHODOLOGY_DIR = BASE_DIR / "methodology"
 DATABASE = INSTANCE_DIR / "disLab.sqlite"
 SCHEMA = BASE_DIR / "schema.sql"
 
@@ -227,6 +266,9 @@ def create_app() -> Flask:
             "supports_cda": project_supports_cda(active_project),
             "visual_model_modes": VISUAL_MODEL_MODES,
             "visual_model_mode_order": VISUAL_MODEL_MODE_ORDER,
+            "methodology_note_type_labels": METHODOLOGY_NOTE_TYPES,
+            "methodology_area_labels": METHODOLOGY_AREAS,
+            "methodology_note_status_labels": METHODOLOGY_NOTE_STATUSES,
         }
 
     @app.route("/")
@@ -243,6 +285,7 @@ def create_app() -> Flask:
         gt_preview = get_gt_structure_preview(active_project["id"])
         cda_preview = get_cda_dashboard_preview(active_project["id"])
         model_preview = get_model_dashboard_preview(active_project["id"])
+        methodology_counts = get_methodology_note_counts(active_project["id"])
         return render_template(
             "dashboard.html",
             title="Dashboard",
@@ -259,6 +302,7 @@ def create_app() -> Flask:
             gt_preview=gt_preview,
             cda_preview=cda_preview,
             model_preview=model_preview,
+            methodology_counts=methodology_counts,
             current_phase=CURRENT_PHASE_LABEL,
             export_links=get_dashboard_export_links(),
             memo_type_labels=MEMO_TYPES,
@@ -515,6 +559,7 @@ def create_app() -> Flask:
             memo_type_labels=MEMO_TYPES,
             memo_status_labels=MEMO_STATUSES,
             highlighted_text=highlighted_text,
+            methodology_helper=get_methodology_helper(active_project, "document"),
         )
 
     @app.route("/documents/<int:document_id>/segments", methods=["POST"])
@@ -1028,6 +1073,7 @@ def create_app() -> Flask:
             axial_codes=get_gt_axial_codes(active_project["id"]),
             categories=get_gt_categories(active_project["id"]),
             default_code_color=DEFAULT_CODE_COLOR,
+            methodology_helper=get_methodology_helper(active_project, "gt_workspace"),
         )
 
     @app.route("/gt/axial/create", methods=["POST"])
@@ -1175,6 +1221,7 @@ def create_app() -> Flask:
             code_a=code_a,
             code_b=code_b,
             memo_status_labels=MEMO_STATUSES,
+            methodology_helper=get_methodology_helper(active_project, "gt_compare"),
         )
 
     @app.route("/cda")
@@ -1193,6 +1240,7 @@ def create_app() -> Flask:
             marker_type_labels=CDA_MARKER_TYPES,
             actor_type_labels=ACTOR_TYPES,
             default_marker_color=DEFAULT_CDA_MARKER_COLOR,
+            methodology_helper=get_methodology_helper(active_project, "cda_workspace"),
         )
 
     @app.route("/cda/markers/create", methods=["POST"])
@@ -1524,6 +1572,7 @@ def create_app() -> Flask:
             documents=get_documents_for_memo_links(active_project["id"]),
             filters=filters,
             feature_type_labels=DISCOURSE_FEATURE_TYPES,
+            methodology_helper=get_methodology_helper(active_project, "cda_features"),
         )
 
     @app.route("/cda/voice-silence")
@@ -1538,6 +1587,7 @@ def create_app() -> Flask:
             active_project=active_project,
             rows=get_voice_silence_report(active_project["id"]),
             relation_type_labels=ACTOR_RELATION_TYPES,
+            methodology_helper=get_methodology_helper(active_project, "cda_voice_silence"),
         )
 
     @app.route("/model")
@@ -1566,6 +1616,7 @@ def create_app() -> Flask:
             entity_type_labels=RELATION_ENTITY_TYPES,
             research_questions=get_research_questions_for_project(active_project["id"]),
             mode_prompts=get_model_mode_prompts(active_project),
+            methodology_helper=get_methodology_helper(active_project, "model"),
         )
 
     @app.route("/model/relations/create", methods=["POST"])
@@ -1732,6 +1783,157 @@ def create_app() -> Flask:
         flash("Research question created.", "success")
         return redirect(url_for("model_builder"))
 
+    @app.route("/methodology")
+    def methodology():
+        active_project = get_active_project()
+        filters = {
+            "note_type": request.args.get("note_type", "").strip(),
+            "methodology_area": request.args.get("methodology_area", "").strip(),
+            "status": request.args.get("status", "").strip(),
+            "linked_entity_type": request.args.get("linked_entity_type", "").strip(),
+            "q": request.args.get("q", "").strip(),
+        }
+        return render_template(
+            "methodology.html",
+            title="Methodology",
+            active_page="methodology",
+            active_project=active_project,
+            libraries=get_relevant_methodology_libraries(active_project),
+            overview=get_methodology_overview(active_project),
+            notes=get_methodology_notes_for_project(active_project["id"], filters),
+            note_counts=get_methodology_note_counts(active_project["id"]),
+            filters=filters,
+            entity_options=get_methodology_entity_options(active_project["id"]),
+            linked_entity_type_labels=METHODOLOGY_LINKED_ENTITY_TYPES,
+        )
+
+    @app.route("/methodology/library/<library_id>")
+    def methodology_library(library_id: str):
+        active_project = get_active_project()
+        library = load_methodology_library(library_id)
+        if library is None:
+            flash("Methodology library not found.", "error")
+            abort(404)
+        return render_template(
+            "methodology_library.html",
+            title=library["title"],
+            active_page="methodology",
+            active_project=active_project,
+            library=library,
+        )
+
+    @app.route("/methodology/notes/create", methods=["POST"])
+    def create_methodology_note():
+        active_project = get_active_project()
+        data, error = validate_methodology_note_form(active_project["id"])
+        if error:
+            flash(error, "error")
+            return redirect(safe_next_url(request.form.get("next_url", "")) or url_for("methodology"))
+        note_id = execute_write(
+            """
+            INSERT INTO methodology_notes (
+                project_id, title, body, note_type, linked_entity_type,
+                linked_entity_id, methodology_area, status, updated_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+            """,
+            (
+                active_project["id"],
+                data["title"],
+                data["body"],
+                data["note_type"],
+                data["linked_entity_type"],
+                data["linked_entity_id"],
+                data["methodology_area"],
+                data["status"],
+            ),
+        )
+        log_action(
+            active_project["id"],
+            "methodology_note",
+            note_id,
+            "create_methodology_note",
+            f"Created methodology note: {data['title']}",
+        )
+        flash("Methodology note created.", "success")
+        return redirect(safe_next_url(request.form.get("next_url", "")) or url_for("methodology"))
+
+    @app.route("/methodology/notes/<int:note_id>/edit")
+    def edit_methodology_note(note_id: int):
+        active_project = get_active_project()
+        note = get_methodology_note_for_project(note_id, active_project["id"])
+        if note is None:
+            flash("Methodology note not found.", "error")
+            abort(404)
+        return render_template(
+            "methodology_note_edit.html",
+            title="Edit Methodology Note",
+            active_page="methodology",
+            active_project=active_project,
+            note=note,
+            entity_options=get_methodology_entity_options(active_project["id"]),
+            linked_entity_type_labels=METHODOLOGY_LINKED_ENTITY_TYPES,
+        )
+
+    @app.route("/methodology/notes/<int:note_id>/edit", methods=["POST"])
+    def update_methodology_note(note_id: int):
+        active_project = get_active_project()
+        note = get_methodology_note_for_project(note_id, active_project["id"])
+        if note is None:
+            flash("Methodology note not found.", "error")
+            abort(404)
+        data, error = validate_methodology_note_form(active_project["id"])
+        if error:
+            flash(error, "error")
+            return redirect(url_for("edit_methodology_note", note_id=note_id))
+        execute_write(
+            """
+            UPDATE methodology_notes
+            SET title = ?, body = ?, note_type = ?, linked_entity_type = ?,
+                linked_entity_id = ?, methodology_area = ?, status = ?,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = ? AND project_id = ?
+            """,
+            (
+                data["title"],
+                data["body"],
+                data["note_type"],
+                data["linked_entity_type"],
+                data["linked_entity_id"],
+                data["methodology_area"],
+                data["status"],
+                note_id,
+                active_project["id"],
+            ),
+        )
+        log_action(
+            active_project["id"],
+            "methodology_note",
+            note_id,
+            "update_methodology_note",
+            f"Updated methodology note: {data['title']}",
+        )
+        flash("Methodology note updated.", "success")
+        return redirect(url_for("methodology"))
+
+    @app.route("/methodology/notes/<int:note_id>/delete", methods=["POST"])
+    def delete_methodology_note(note_id: int):
+        active_project = get_active_project()
+        note = get_methodology_note_for_project(note_id, active_project["id"])
+        if note is None:
+            flash("Methodology note not found.", "error")
+            abort(404)
+        execute_write("DELETE FROM methodology_notes WHERE id = ? AND project_id = ?", (note_id, active_project["id"]))
+        log_action(
+            active_project["id"],
+            "methodology_note",
+            note_id,
+            "delete_methodology_note",
+            f"Deleted methodology note: {note['title']}",
+        )
+        flash("Methodology note deleted.", "success")
+        return redirect(url_for("methodology"))
+
     @app.route("/exports")
     def exports():
         active_project = get_active_project()
@@ -1776,6 +1978,18 @@ def create_app() -> Flask:
                         "format": "Markdown",
                         "endpoint": "export_memos_markdown",
                         "button": "Download memos",
+                    },
+                ],
+            },
+            {
+                "title": "Methodology exports",
+                "cards": [
+                    {
+                        "title": "Methodological protocol Markdown",
+                        "description": "Project-specific methodology notes, sources, helper prompts, and protocol decisions.",
+                        "format": "Markdown",
+                        "endpoint": "export_methodology_protocol_markdown",
+                        "button": "Download protocol",
                     },
                 ],
             },
@@ -1935,6 +2149,15 @@ def create_app() -> Flask:
         return download_text(
             generate_memos_markdown(active_project),
             "discourseLab_memos.md",
+            "text/markdown; charset=utf-8",
+        )
+
+    @app.route("/exports/methodology-protocol.md")
+    def export_methodology_protocol_markdown():
+        active_project = get_active_project()
+        return download_text(
+            generate_methodology_protocol_markdown(active_project),
+            "discourseLab_methodology_protocol.md",
             "text/markdown; charset=utf-8",
         )
 
@@ -2226,6 +2449,21 @@ def run_migrations() -> None:
             FOREIGN KEY (segment_id) REFERENCES segments (id) ON DELETE CASCADE
         );
 
+        CREATE TABLE IF NOT EXISTS methodology_notes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            project_id INTEGER NOT NULL,
+            title TEXT NOT NULL,
+            body TEXT NOT NULL,
+            note_type TEXT NOT NULL,
+            linked_entity_type TEXT,
+            linked_entity_id INTEGER,
+            methodology_area TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'active',
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (project_id) REFERENCES projects (id) ON DELETE CASCADE
+        );
+
         CREATE INDEX IF NOT EXISTS idx_discourse_markers_project_id
             ON discourse_markers (project_id);
         CREATE INDEX IF NOT EXISTS idx_segment_discourse_markers_segment_id
@@ -2239,6 +2477,12 @@ def run_migrations() -> None:
             ON segment_actors (actor_id);
         CREATE INDEX IF NOT EXISTS idx_discourse_features_segment_id
             ON discourse_features (segment_id);
+        CREATE INDEX IF NOT EXISTS idx_methodology_notes_project_id
+            ON methodology_notes (project_id);
+        CREATE INDEX IF NOT EXISTS idx_methodology_notes_type
+            ON methodology_notes (note_type);
+        CREATE INDEX IF NOT EXISTS idx_methodology_notes_status
+            ON methodology_notes (status);
         """
     )
     db.commit()
@@ -3205,7 +3449,7 @@ def make_entity_option(entity_type: str, entity_id: int, label: str, meta: str |
         "id": entity_id,
         "value": f"{entity_type}:{entity_id}",
         "label": label,
-        "type_label": RELATION_ENTITY_TYPES[entity_type],
+        "type_label": RELATION_ENTITY_TYPES.get(entity_type) or METHODOLOGY_LINKED_ENTITY_TYPES.get(entity_type, entity_type),
         "meta": meta or "",
     }
 
@@ -3521,6 +3765,159 @@ def get_research_questions_for_project(project_id: int) -> list[sqlite3.Row]:
         """,
         (project_id,),
     )
+
+
+def get_methodology_overview(active_project: sqlite3.Row) -> str:
+    mode = active_project["methodology_mode"]
+    descriptions = {
+        "generic": "Generic qualitative coding supports open coding, memo-writing, comparison, synthesis, and transparent reporting.",
+        "gt": "Grounded Theory mode supports iterative coding, constant comparison, axial coding, categories, and theoretical integration.",
+        "cda": "CDA mode supports text analysis, discursive practice, social practice, actor voice, ideology, and power analysis.",
+        "mixed": "Mixed GT + CDA mode enables both workflows and requires explicit protocol decisions about how methods are combined.",
+    }
+    return descriptions.get(mode, descriptions["generic"])
+
+
+def get_methodology_entity_options(project_id: int) -> list[dict]:
+    options = [make_entity_option("project", project_id, "Project: Active project")]
+    for entity_type in RELATION_ENTITY_TYPES:
+        options.extend(get_entities_for_type(entity_type, project_id))
+    for relation in get_relations_for_project(project_id, {}):
+        label = f"Relation: {relation['source_label']} — {relation['relation_label']} → {relation['target_label']}"
+        options.append(make_entity_option("relation", relation["id"], truncate_text(label, 120)))
+    return sorted(options, key=lambda entity: (entity["type_label"], entity["label"].lower()))
+
+
+def get_methodology_entity_reference(entity_type: str | None, entity_id: int | None, project_id: int) -> dict | None:
+    if not entity_type or entity_id is None:
+        return None
+    if entity_type == "project":
+        project = get_project(entity_id)
+        if project and project["id"] == project_id:
+            return make_entity_option("project", project_id, f"Project: {project['name']}")
+        return None
+    if entity_type == "relation":
+        relation = get_relation_for_project(entity_id, project_id)
+        if relation:
+            label = f"Relation: {relation['source_label']} — {relation['relation_label']} → {relation['target_label']}"
+            return make_entity_option("relation", relation["id"], truncate_text(label, 120))
+        return None
+    return get_entity_reference(entity_type, entity_id, project_id)
+
+
+def hydrate_methodology_note(row: sqlite3.Row, project_id: int) -> dict:
+    note = row_to_dict(row)
+    reference = get_methodology_entity_reference(note["linked_entity_type"], note["linked_entity_id"], project_id)
+    note["linked_entity_label"] = reference["label"] if reference else "Project protocol"
+    note["note_type_label"] = METHODOLOGY_NOTE_TYPES.get(note["note_type"], note["note_type"])
+    note["methodology_area_label"] = METHODOLOGY_AREAS.get(note["methodology_area"], note["methodology_area"])
+    note["status_label"] = METHODOLOGY_NOTE_STATUSES.get(note["status"], note["status"])
+    note["entity_value"] = (
+        f"{note['linked_entity_type']}:{note['linked_entity_id']}"
+        if note["linked_entity_type"] and note["linked_entity_id"]
+        else ""
+    )
+    return note
+
+
+def get_methodology_notes_for_project(project_id: int, filters: dict | None = None, limit: int | None = None) -> list[dict]:
+    filters = filters or {}
+    sql = "SELECT * FROM methodology_notes WHERE project_id = ?"
+    params: list = [project_id]
+    if filters.get("note_type") in METHODOLOGY_NOTE_TYPES:
+        sql += " AND note_type = ?"
+        params.append(filters["note_type"])
+    if filters.get("methodology_area") in METHODOLOGY_AREAS:
+        sql += " AND methodology_area = ?"
+        params.append(filters["methodology_area"])
+    if filters.get("status") in METHODOLOGY_NOTE_STATUSES:
+        sql += " AND status = ?"
+        params.append(filters["status"])
+    if filters.get("linked_entity_type") in METHODOLOGY_LINKED_ENTITY_TYPES:
+        sql += " AND linked_entity_type = ?"
+        params.append(filters["linked_entity_type"])
+    q = filters.get("q", "").strip().lower()
+    sql += " ORDER BY datetime(updated_at) DESC, datetime(created_at) DESC, id DESC"
+    if limit is not None:
+        sql += " LIMIT ?"
+        params.append(limit)
+    notes = [hydrate_methodology_note(row, project_id) for row in query_all(sql, tuple(params))]
+    if q:
+        notes = [note for note in notes if q in note["title"].lower() or q in note["body"].lower()]
+    return notes
+
+
+def get_methodology_note_for_project(note_id: int, project_id: int) -> dict | None:
+    row = query_one("SELECT * FROM methodology_notes WHERE id = ? AND project_id = ?", (note_id, project_id))
+    if row is None:
+        return None
+    return hydrate_methodology_note(row, project_id)
+
+
+def get_methodology_note_counts(project_id: int) -> dict[str, int]:
+    return {
+        "total": query_one("SELECT COUNT(*) AS count FROM methodology_notes WHERE project_id = ?", (project_id,))["count"],
+        "active_protocol": query_one(
+            "SELECT COUNT(*) AS count FROM methodology_notes WHERE project_id = ? AND note_type = 'protocol' AND status = 'active'",
+            (project_id,),
+        )["count"],
+        "coding_rules": query_one(
+            "SELECT COUNT(*) AS count FROM methodology_notes WHERE project_id = ? AND note_type = 'coding_rule'",
+            (project_id,),
+        )["count"],
+        "sampling_rules": query_one(
+            "SELECT COUNT(*) AS count FROM methodology_notes WHERE project_id = ? AND note_type = 'sampling_rule'",
+            (project_id,),
+        )["count"],
+        "needs_review": query_one(
+            "SELECT COUNT(*) AS count FROM methodology_notes WHERE project_id = ? AND status = 'needs_review'",
+            (project_id,),
+        )["count"],
+    }
+
+
+def validate_methodology_note_form(project_id: int) -> tuple[dict, str | None]:
+    title = request.form.get("title", "").strip()
+    body = request.form.get("body", "").strip()
+    note_type = request.form.get("note_type", "protocol").strip()
+    methodology_area = request.form.get("methodology_area", "generic").strip()
+    status = request.form.get("status", "active").strip()
+    raw_entity = request.form.get("linked_entity", "").strip()
+    linked_entity_type = None
+    linked_entity_id = None
+    if not title:
+        return {}, "Title is required."
+    if not body:
+        return {}, "Body is required."
+    if note_type not in METHODOLOGY_NOTE_TYPES:
+        return {}, "Invalid methodology note type."
+    if methodology_area not in METHODOLOGY_AREAS:
+        return {}, "Invalid methodology area."
+    if status not in METHODOLOGY_NOTE_STATUSES:
+        return {}, "Invalid methodology note status."
+    if raw_entity:
+        linked_entity_type, linked_entity_id = parse_entity_value(raw_entity)
+        if linked_entity_type is None and raw_entity.startswith("project:"):
+            raw_type, raw_id = raw_entity.split(":", 1)
+            linked_entity_type = raw_type if raw_id.isdigit() else None
+            linked_entity_id = int(raw_id) if raw_id.isdigit() else None
+        if linked_entity_type is None and raw_entity.startswith("relation:"):
+            raw_type, raw_id = raw_entity.split(":", 1)
+            linked_entity_type = raw_type if raw_id.isdigit() else None
+            linked_entity_id = int(raw_id) if raw_id.isdigit() else None
+        if linked_entity_type not in METHODOLOGY_LINKED_ENTITY_TYPES or linked_entity_id is None:
+            return {}, "Invalid linked entity."
+        if get_methodology_entity_reference(linked_entity_type, linked_entity_id, project_id) is None:
+            return {}, "Linked entity does not belong to the active project."
+    return {
+        "title": title,
+        "body": body,
+        "note_type": note_type,
+        "methodology_area": methodology_area,
+        "status": status,
+        "linked_entity_type": linked_entity_type,
+        "linked_entity_id": linked_entity_id,
+    }, None
 
 
 def get_model_mode_prompts(active_project: sqlite3.Row) -> list[str]:
@@ -4382,6 +4779,7 @@ def get_dashboard_export_links() -> list[dict[str, str]]:
         {"label": "Codebook", "endpoint": "export_codebook_markdown"},
         {"label": "Coded segments", "endpoint": "export_coded_segments_csv"},
         {"label": "Memos", "endpoint": "export_memos_markdown"},
+        {"label": "Methodology protocol", "endpoint": "export_methodology_protocol_markdown"},
         {"label": "Analytical model", "endpoint": "export_model_markdown"},
         {"label": "Project package", "endpoint": "export_project_package"},
     ]
@@ -4401,6 +4799,150 @@ def row_to_dict(row: sqlite3.Row) -> dict:
 
 def rows_to_dicts(rows: list[sqlite3.Row]) -> list[dict]:
     return [row_to_dict(row) for row in rows]
+
+
+def load_methodology_library(library_id: str) -> dict | None:
+    if not re.fullmatch(r"[a-z0-9_]+", library_id or ""):
+        return None
+    path = METHODOLOGY_DIR / f"{library_id}.json"
+    if not path.exists():
+        return None
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return None
+
+
+def methodology_library_ids_for_mode(methodology_mode: str) -> list[str]:
+    mapping = {
+        "generic": ["generic_qualitative"],
+        "gt": ["generic_qualitative", "grounded_theory"],
+        "cda": ["generic_qualitative", "cda_fairclough", "cda_van_dijk", "cda_wodak_dha"],
+        "mixed": [
+            "generic_qualitative",
+            "grounded_theory",
+            "cda_fairclough",
+            "cda_van_dijk",
+            "cda_wodak_dha",
+            "mixed_gt_cda",
+        ],
+    }
+    return mapping.get(methodology_mode, mapping["generic"])
+
+
+def get_relevant_methodology_libraries(active_project: sqlite3.Row) -> list[dict]:
+    libraries = []
+    for library_id in methodology_library_ids_for_mode(active_project["methodology_mode"]):
+        library = load_methodology_library(library_id)
+        if library:
+            libraries.append(library)
+    return libraries
+
+
+def get_methodology_phase_prompts(library_ids: list[str], phase_ids: list[str], limit: int = 8) -> list[dict]:
+    prompts = []
+    for library_id in library_ids:
+        library = load_methodology_library(library_id)
+        if not library:
+            continue
+        for phase in library.get("phases", []):
+            if phase.get("id") in phase_ids:
+                for prompt in phase.get("prompts", []):
+                    prompts.append(
+                        {
+                            "library_title": library["title"],
+                            "phase_title": phase["title"],
+                            "prompt": prompt,
+                        }
+                    )
+    return prompts[:limit]
+
+
+def get_methodology_concept_prompts(library_ids: list[str], concept_ids: list[str], limit: int = 8) -> list[dict]:
+    prompts = []
+    for library_id in library_ids:
+        library = load_methodology_library(library_id)
+        if not library:
+            continue
+        for concept in library.get("concepts", []):
+            if concept.get("id") in concept_ids:
+                for prompt in concept.get("prompts", []):
+                    prompts.append(
+                        {
+                            "library_title": library["title"],
+                            "phase_title": concept["term"],
+                            "prompt": prompt,
+                        }
+                    )
+    return prompts[:limit]
+
+
+def get_methodology_helper(active_project: sqlite3.Row, context: str) -> dict:
+    mode = active_project["methodology_mode"]
+    if context == "gt_workspace":
+        prompts = get_methodology_phase_prompts(
+            ["grounded_theory"],
+            ["open_coding", "axial_coding", "category_development", "constant_comparison"],
+            10,
+        )
+        return {"title": "Grounded Theory helper", "prompts": prompts}
+    if context == "gt_compare":
+        return {
+            "title": "Constant comparison helper",
+            "prompts": get_methodology_phase_prompts(["grounded_theory"], ["constant_comparison"], 8),
+        }
+    if context == "cda_workspace":
+        return {
+            "title": "CDA helper",
+            "prompts": get_methodology_phase_prompts(
+                ["cda_fairclough", "cda_van_dijk", "cda_wodak_dha"],
+                ["text_analysis", "discursive_practice", "social_practice", "power_access", "ideology_groups", "discursive_strategies"],
+                10,
+            ),
+        }
+    if context == "cda_features":
+        return {
+            "title": "Discourse feature helper",
+            "prompts": get_methodology_concept_prompts(
+                ["cda_fairclough", "cda_wodak_dha"],
+                ["metaphor", "presupposition", "modality", "legitimation", "argumentation"],
+                8,
+            ),
+        }
+    if context == "cda_voice_silence":
+        return {
+            "title": "Voice and silence helper",
+            "prompts": get_methodology_phase_prompts(["cda_van_dijk"], ["power_access"], 5)
+            + get_methodology_concept_prompts(["cda_van_dijk"], ["voice_silence", "dominance"], 5),
+        }
+    if context == "model":
+        library_ids = ["mixed_gt_cda"] if mode == "mixed" else methodology_library_ids_for_mode(mode)
+        return {
+            "title": "Model-building methodology helper",
+            "prompts": get_methodology_phase_prompts(
+                library_ids,
+                ["relation_modeling", "argument_building", "theoretical_integration", "analytical_synthesis", "social_practice"],
+                10,
+            ),
+        }
+    if context == "document":
+        if mode == "gt":
+            library_ids = ["grounded_theory"]
+            phase_ids = ["open_coding", "memo_writing"]
+        elif mode == "cda":
+            library_ids = ["cda_fairclough", "cda_van_dijk", "cda_wodak_dha"]
+            phase_ids = ["text_analysis", "power_access", "discursive_strategies"]
+        elif mode == "mixed":
+            library_ids = ["grounded_theory", "cda_fairclough", "cda_van_dijk", "mixed_gt_cda"]
+            phase_ids = ["open_coding", "memo_writing", "text_analysis", "actor_voice_mapping", "discourse_feature_marking"]
+        else:
+            library_ids = ["generic_qualitative"]
+            phase_ids = ["close_reading", "open_coding"]
+        return {
+            "title": "Reading and coding helper",
+            "prompts": get_methodology_phase_prompts(library_ids, phase_ids, 8),
+        }
+    return {"title": "Methodology helper", "prompts": []}
 
 
 def download_text(content: str, filename: str, mimetype: str) -> Response:
@@ -4868,6 +5410,7 @@ def generate_gt_hierarchy_markdown(active_project: sqlite3.Row) -> str:
 def generate_project_summary_markdown(active_project: sqlite3.Row) -> str:
     project_id = active_project["id"]
     counts = get_dashboard_counts(project_id)
+    methodology_counts = get_methodology_note_counts(project_id)
     documents = get_documents_for_project(project_id)
     research_questions = query_all(
         """
@@ -4988,6 +5531,12 @@ def generate_project_summary_markdown(active_project: sqlite3.Row) -> str:
     lines.append("- Visual exports are available in the complete research package ZIP.")
     lines.extend(["", "### Most Common Relation Types", ""])
     lines.extend([f"- {row['relation_type']}: {row['count']}" for row in top_relation_types] or ["None."])
+    lines.extend(["", "## Methodological Protocol", ""])
+    lines.append(f"- Methodology mode: {METHODOLOGY_MODES.get(active_project['methodology_mode'], active_project['methodology_mode'])}")
+    lines.append(f"- Research goal: {active_project['research_goal'] or ''}")
+    lines.append(f"- Methodology notes: {methodology_counts['total']}")
+    lines.append(f"- Active protocol notes: {methodology_counts['active_protocol']}")
+    lines.append(f"- Notes needing review: {methodology_counts['needs_review']}")
     lines.extend(["", "## Latest Important Memos", ""])
     lines.extend([f"- {row['title']} ({row['memo_type']}, {row['status']}, {row['created_at']})" for row in important_memos] or ["None."])
     lines.extend(["", "## Audit Log Summary", ""])
@@ -5040,6 +5589,7 @@ def generate_project_json(active_project: sqlite3.Row) -> str:
         "segments": rows_for_ids("SELECT * FROM segments WHERE id IN ({placeholders}) ORDER BY id", segment_ids),
         "segment_codes": rows_for_ids("SELECT * FROM segment_codes WHERE segment_id IN ({placeholders}) ORDER BY segment_id, code_id", segment_ids),
         "memos": rows_to_dicts(query_all("SELECT * FROM memos WHERE project_id = ? ORDER BY id", (project_id,))),
+        "methodology_notes": rows_to_dicts(query_all("SELECT * FROM methodology_notes WHERE project_id = ? ORDER BY id", (project_id,))),
         "relations": rows_to_dicts(query_all("SELECT * FROM relations WHERE project_id = ? ORDER BY id", (project_id,))),
         "research_questions": rows_to_dicts(query_all("SELECT * FROM research_questions WHERE project_id = ? ORDER BY id", (project_id,))),
         "discourse_markers": rows_to_dicts(query_all("SELECT * FROM discourse_markers WHERE project_id = ? ORDER BY id", (project_id,))),
@@ -5619,6 +6169,100 @@ def generate_model_svg(active_project: sqlite3.Row, filters: dict | None = None)
     return "\n".join(lines)
 
 
+def generate_methodology_protocol_markdown(active_project: sqlite3.Row) -> str:
+    project_id = active_project["id"]
+    notes = get_methodology_notes_for_project(project_id, {})
+    libraries = get_relevant_methodology_libraries(active_project)
+    counts = get_methodology_note_counts(project_id)
+    lines = [
+        "# Methodological Protocol",
+        "",
+        f"Project: {active_project['name']}",
+        f"Methodology mode: {METHODOLOGY_MODES.get(active_project['methodology_mode'], active_project['methodology_mode'])}",
+        f"Principal investigator: {active_project['principal_investigator'] or ''}",
+        f"Research goal: {active_project['research_goal'] or ''}",
+        f"Exported: {export_timestamp()}",
+        "",
+        "## Project methodology",
+        "",
+        get_methodology_overview(active_project),
+        "",
+        "## Protocol counts",
+        "",
+        f"- Total methodology notes: {counts['total']}",
+        f"- Active protocol notes: {counts['active_protocol']}",
+        f"- Coding rules: {counts['coding_rules']}",
+        f"- Sampling rules: {counts['sampling_rules']}",
+        f"- Notes needing review: {counts['needs_review']}",
+        "",
+        "## Active protocol notes",
+        "",
+    ]
+    active_notes = [note for note in notes if note["status"] == "active"]
+    if active_notes:
+        grouped: dict[tuple[str, str], list[dict]] = {}
+        for note in active_notes:
+            grouped.setdefault((note["note_type_label"], note["methodology_area_label"]), []).append(note)
+        for (note_type, area), group_notes in sorted(grouped.items()):
+            lines.extend([f"### {note_type} — {area}", ""])
+            for note in group_notes:
+                lines.extend(methodology_note_markdown_block(note))
+    else:
+        lines.extend(["No active protocol notes.", ""])
+    review_notes = [note for note in notes if note["status"] == "needs_review"]
+    lines.extend(["## Notes needing review", ""])
+    if review_notes:
+        for note in review_notes:
+            lines.extend(methodology_note_markdown_block(note))
+    else:
+        lines.extend(["None.", ""])
+    lines.extend(["## Methodological sources", ""])
+    seen_sources = set()
+    for library in libraries:
+        lines.append(f"### {library['title']}")
+        lines.append("")
+        for source in library.get("sources", []):
+            if source["id"] in seen_sources:
+                continue
+            seen_sources.add(source["id"])
+            lines.append(f"- {source['apa']}")
+            if source.get("note"):
+                lines.append(f"  - {source['note']}")
+        lines.append("")
+    lines.extend(["## Helper prompts used in this project", ""])
+    for library in libraries:
+        lines.append(f"### {library['title']}")
+        lines.append("")
+        for phase in library.get("phases", []):
+            if phase.get("prompts"):
+                lines.append(f"- {phase['title']}")
+                for prompt in phase["prompts"]:
+                    lines.append(f"  - {prompt}")
+        for concept in library.get("concepts", []):
+            if concept.get("prompts"):
+                lines.append(f"- {concept['term']}")
+                for prompt in concept["prompts"]:
+                    lines.append(f"  - {prompt}")
+        lines.append("")
+    return "\n".join(lines)
+
+
+def methodology_note_markdown_block(note: dict) -> list[str]:
+    return [
+        f"#### {note['title']}",
+        "",
+        f"Type: {note['note_type_label']}",
+        f"Area: {note['methodology_area_label']}",
+        f"Status: {note['status_label']}",
+        f"Linked entity: {note['linked_entity_label']}",
+        f"Created: {note['created_at']}",
+        f"Updated: {note['updated_at']}",
+        "",
+        note["body"],
+        "",
+    ]
+
+
 def generate_project_package_zip(active_project: sqlite3.Row) -> bytes:
     timestamp = export_timestamp()
     readme = "\n".join(
@@ -5635,6 +6279,7 @@ def generate_project_package_zip(active_project: sqlite3.Row) -> bytes:
             "- coded_segments.csv",
             "- coded_segments.md",
             "- memos.md",
+            "- methodology_protocol.md",
             "- project_summary.md",
             "- project.json",
             "- analytical_model.md",
@@ -5663,7 +6308,7 @@ def generate_project_package_zip(active_project: sqlite3.Row) -> bytes:
             "- cda: actor, marker, feature, and CDA relation structure.",
             "- full: all relations, including weak and uncertain, capped at 100.",
             "",
-            "Uploaded source documents are not included in this package in Phase 11.5.",
+            "Uploaded source documents are not included in this package in Phase 12.",
             "",
         ]
     )
@@ -5672,6 +6317,7 @@ def generate_project_package_zip(active_project: sqlite3.Row) -> bytes:
         "coded_segments.csv": generate_coded_segments_csv(active_project),
         "coded_segments.md": generate_coded_segments_markdown(active_project),
         "memos.md": generate_memos_markdown(active_project),
+        "methodology_protocol.md": generate_methodology_protocol_markdown(active_project),
         "project_summary.md": generate_project_summary_markdown(active_project),
         "project.json": generate_project_json(active_project),
         "analytical_model.md": generate_model_markdown(active_project),

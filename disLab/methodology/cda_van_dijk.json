@@ -1,0 +1,42 @@
+{
+  "id": "cda_van_dijk",
+  "title": "Critical Discourse Analysis: van Dijk",
+  "short_description": "Guidance for analyzing discourse, power, ideology, access, elite discourse, and group representation.",
+  "phases": [
+    {
+      "id": "power_access",
+      "title": "Power and access",
+      "description": "Analyze who has access to discourse, who controls topics, and whose voice is authorized.",
+      "prompts": ["Who has access to voice?", "Who defines the situation?", "Who is excluded from speaking?"],
+      "recommended_actions": ["Map actors.", "Record voice and silence.", "Link actors to claims and features."],
+      "sources": ["van_dijk_2008", "van_dijk_2009"]
+    },
+    {
+      "id": "ideology_groups",
+      "title": "Ideology and groups",
+      "description": "Analyze ingroup/outgroup construction, self-presentation, other-presentation, and dominance.",
+      "prompts": ["How are us and them constructed?", "Is there positive self-presentation?", "Is there negative other-presentation?"],
+      "recommended_actions": ["Code actor descriptions.", "Compare evaluations across groups.", "Memo ideological patterns."],
+      "sources": ["van_dijk_1998"]
+    },
+    {
+      "id": "elite_discourse",
+      "title": "Elite discourse",
+      "description": "Analyze how elite speakers, institutions, and media reproduce or challenge dominance.",
+      "prompts": ["Which elite actors speak?", "How is dominance reproduced?", "What is treated as legitimate knowledge?"],
+      "recommended_actions": ["Track institution and expert actors.", "Create CDA power relations.", "Compare quoted and unquoted actors."],
+      "sources": ["van_dijk_2008"]
+    }
+  ],
+  "prompts": ["Who controls the definition of the situation?", "Which group is evaluated positively or negatively?", "Whose mental model is invited?"],
+  "concepts": [
+    {"id": "mental_models", "term": "Mental models", "description": "Socially shaped representations through which people understand events and groups.", "prompts": ["What event model is implied?", "What social knowledge is assumed?"]},
+    {"id": "dominance", "term": "Dominance", "description": "Power abuse or unequal control reproduced through discourse and institutions.", "prompts": ["Who benefits?", "Who loses voice or agency?"]},
+    {"id": "voice_silence", "term": "Voice and silence", "description": "Patterns of speaking, being quoted, being spoken about, or being absent.", "prompts": ["Who speaks?", "Who is spoken about?", "Who is silent?"]}
+  ],
+  "sources": [
+    {"id": "van_dijk_1998", "apa": "van Dijk, T. A. (1998). Ideology: A multidisciplinary approach. SAGE.", "note": "Use for ideology, groups, and social cognition."},
+    {"id": "van_dijk_2008", "apa": "van Dijk, T. A. (2008). Discourse and power. Palgrave Macmillan.", "note": "Use for power, dominance, elite discourse, and access."},
+    {"id": "van_dijk_2009", "apa": "van Dijk, T. A. (2009). Society and discourse: How social contexts influence text and talk. Cambridge University Press.", "note": "Use for social context, mental models, and discourse-society links."}
+  ]
+}

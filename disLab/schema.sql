@@ -185,6 +185,21 @@ CREATE TABLE research_questions (
     FOREIGN KEY (project_id) REFERENCES projects (id) ON DELETE CASCADE
 );
 
+CREATE TABLE methodology_notes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id INTEGER NOT NULL,
+    title TEXT NOT NULL,
+    body TEXT NOT NULL,
+    note_type TEXT NOT NULL,
+    linked_entity_type TEXT,
+    linked_entity_id INTEGER,
+    methodology_area TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'active',
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (project_id) REFERENCES projects (id) ON DELETE CASCADE
+);
+
 CREATE TABLE audit_log (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     project_id INTEGER,
@@ -211,4 +226,5 @@ CREATE INDEX idx_discourse_features_segment_id ON discourse_features (segment_id
 CREATE INDEX idx_memos_project_id ON memos (project_id);
 CREATE INDEX idx_relations_project_id ON relations (project_id);
 CREATE INDEX idx_research_questions_project_id ON research_questions (project_id);
+CREATE INDEX idx_methodology_notes_project_id ON methodology_notes (project_id);
 CREATE INDEX idx_audit_log_project_id ON audit_log (project_id);

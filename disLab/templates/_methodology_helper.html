@@ -1,0 +1,16 @@
+{% if methodology_helper and methodology_helper.prompts %}
+<section class="info-panel helper-panel methodology-helper-panel">
+    <div class="section-heading">
+        <h2>{{ methodology_helper.title }}</h2>
+        <a class="button-secondary compact-button" href="{{ url_for('methodology') }}">Open Methodology</a>
+    </div>
+    <ul class="prompt-list compact-list">
+        {% for item in methodology_helper.prompts %}
+            <li>
+                <span>{{ item.prompt }}</span>
+                <span>{{ item.phase_title }}</span>
+            </li>
+        {% endfor %}
+    </ul>
+</section>
+{% endif %}

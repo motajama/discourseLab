@@ -1,0 +1,103 @@
+{
+  "id": "grounded_theory",
+  "title": "Grounded Theory",
+  "short_description": "Guidance for iterative coding, constant comparison, memo-writing, category development, and theoretical integration.",
+  "phases": [
+    {
+      "id": "open_coding",
+      "title": "Initial/open coding",
+      "description": "Stay close to the data and code actions, processes, and meanings.",
+      "prompts": ["What is happening here?", "What process is visible?", "What is the actor doing?", "Can this code be phrased actively?"],
+      "recommended_actions": ["Create short active codes.", "Keep codes provisional.", "Write early memos."],
+      "sources": ["charmaz_2014", "strauss_corbin_1998"]
+    },
+    {
+      "id": "constant_comparison",
+      "title": "Constant comparison",
+      "description": "Compare incident with incident, code with code, and category with category.",
+      "prompts": ["How is this incident similar?", "How is it different?", "What property or dimension changes?"],
+      "recommended_actions": ["Compare across documents.", "Record differences in memos.", "Revise code definitions."],
+      "sources": ["charmaz_2014"]
+    },
+    {
+      "id": "focused_coding",
+      "title": "Focused coding",
+      "description": "Select the most useful or frequent codes for more systematic analysis.",
+      "prompts": ["Which codes have analytic reach?", "Which codes organize many incidents?", "Which codes should be merged or split?"],
+      "recommended_actions": ["Review high-use codes.", "Strengthen code definitions.", "Promote promising codes into axial codes."],
+      "sources": ["charmaz_2014"]
+    },
+    {
+      "id": "axial_coding",
+      "title": "Axial coding",
+      "description": "Relate codes through conditions, context, action/interaction, and consequences.",
+      "prompts": ["What conditions shape this phenomenon?", "What actions or interactions respond to it?", "What consequences follow?"],
+      "recommended_actions": ["Link open codes to axial codes.", "Document properties and dimensions.", "Use relations for evidence chains."],
+      "sources": ["strauss_corbin_1998"]
+    },
+    {
+      "id": "category_development",
+      "title": "Category development",
+      "description": "Develop categories with explanatory power and clear relationships to supporting codes.",
+      "prompts": ["Which axial codes belong together?", "What explains variation?", "What negative cases test this category?"],
+      "recommended_actions": ["Assign axial codes to categories.", "Write theoretical memos.", "Compare categories."],
+      "sources": ["charmaz_2014", "clarke_2005"]
+    },
+    {
+      "id": "theoretical_integration",
+      "title": "Theoretical integration",
+      "description": "Integrate categories into a coherent analytical explanation.",
+      "prompts": ["What is the central process?", "How do categories connect?", "Which relation is strongest?"],
+      "recommended_actions": ["Build analytical relations.", "Export the model.", "Check the argument against evidence."],
+      "sources": ["charmaz_2014", "strauss_corbin_1998"]
+    },
+    {
+      "id": "memo_writing",
+      "title": "Memo-writing",
+      "description": "Use memos to elaborate codes, categories, comparisons, and theoretical decisions.",
+      "prompts": ["What is this code/category doing?", "What evidence supports it?", "What still needs comparison?"],
+      "recommended_actions": ["Link memos to codes and segments.", "Mark theoretical memos important.", "Return to memos during integration."],
+      "sources": ["charmaz_2014"]
+    },
+    {
+      "id": "saturation_refinement",
+      "title": "Saturation/refinement",
+      "description": "Refine categories by checking whether new data adds important properties, dimensions, or contradictions.",
+      "prompts": ["Does this add a new property?", "Is a category still underdeveloped?", "What evidence is missing?"],
+      "recommended_actions": ["Review negative cases.", "Clarify category boundaries.", "Record saturation decisions."],
+      "sources": ["strauss_corbin_1998"]
+    }
+  ],
+  "prompts": ["What process is visible?", "What comparison should be made next?", "What category does this evidence strengthen?"],
+  "concepts": [
+    {
+      "id": "constant_comparison",
+      "term": "Constant comparison",
+      "description": "The iterative practice of comparing data, codes, and categories to refine concepts.",
+      "prompts": ["What changes across incidents?", "What remains stable?"]
+    },
+    {
+      "id": "theoretical_memo",
+      "term": "Theoretical memo",
+      "description": "A memo that develops conceptual relationships rather than only describing data.",
+      "prompts": ["What claim is emerging?", "What relation needs evidence?"]
+    }
+  ],
+  "sources": [
+    {
+      "id": "charmaz_2014",
+      "apa": "Charmaz, K. (2014). Constructing grounded theory (2nd ed.). SAGE.",
+      "note": "Use for initial coding, focused coding, memo-writing, and constructivist GT."
+    },
+    {
+      "id": "strauss_corbin_1998",
+      "apa": "Strauss, A., & Corbin, J. (1998). Basics of qualitative research: Techniques and procedures for developing grounded theory (2nd ed.). SAGE.",
+      "note": "Use for axial coding, categories, properties, dimensions, and theoretical integration."
+    },
+    {
+      "id": "clarke_2005",
+      "apa": "Clarke, A. E. (2005). Situational analysis: Grounded theory after the postmodern turn. SAGE.",
+      "note": "Use for situational mapping and extending GT toward discourse and social worlds."
+    }
+  ]
+}

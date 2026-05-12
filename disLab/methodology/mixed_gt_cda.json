@@ -1,0 +1,101 @@
+{
+  "id": "mixed_gt_cda",
+  "title": "Mixed Grounded Theory and Critical Discourse Analysis",
+  "short_description": "A mixed GT/CDA protocol guide for combining inductive coding, discourse feature marking, actor/voice mapping, category development, relation modeling, and argument building.",
+  "phases": [
+    {
+      "id": "corpus_preparation",
+      "title": "Corpus preparation",
+      "description": "Define what counts as data, how texts are selected, and why GT and CDA are being combined.",
+      "prompts": ["Why is a mixed GT/CDA design appropriate?", "What is the corpus boundary?", "Which methodological priority leads?"],
+      "recommended_actions": ["Write an explicit protocol note.", "Record sampling rules.", "Clarify how CDA and GT outputs will be integrated."],
+      "sources": ["charmaz_2014", "fairclough_1992", "wodak_meyer_2016"]
+    },
+    {
+      "id": "open_coding",
+      "title": "Open coding",
+      "description": "Use open coding to name actions, processes, and meanings without losing discourse context.",
+      "prompts": ["What is happening here?", "What process is visible?", "What discourse feature shapes the process?"],
+      "recommended_actions": ["Create open codes.", "Link segments to CDA features where relevant.", "Memo methodological tensions."],
+      "sources": ["charmaz_2014", "saldana_2021"]
+    },
+    {
+      "id": "discourse_feature_marking",
+      "title": "Discourse feature marking",
+      "description": "Mark textual and discursive features such as modality, metaphor, presupposition, legitimation, and framing.",
+      "prompts": ["What linguistic feature matters here?", "What power relation does it support or challenge?", "How does it relate to a code?"],
+      "recommended_actions": ["Create discourse features.", "Use CDA markers.", "Link features to codes or relations."],
+      "sources": ["fairclough_1995", "van_dijk_2008"]
+    },
+    {
+      "id": "actor_voice_mapping",
+      "title": "Actor/voice mapping",
+      "description": "Map actors, speaking positions, silence, agency, and evaluation.",
+      "prompts": ["Who speaks?", "Who is spoken about?", "Who is silenced or backgrounded?", "Who is responsible for action?"],
+      "recommended_actions": ["Annotate actors.", "Use voice/silence reports.", "Create CDA power relations."],
+      "sources": ["van_dijk_2008", "reisigl_wodak_2001"]
+    },
+    {
+      "id": "axial_category_development",
+      "title": "Axial/category development",
+      "description": "Develop GT categories while checking how discourse and power shape category meaning.",
+      "prompts": ["Which open codes belong together?", "What CDA evidence changes the category?", "What negative case complicates it?"],
+      "recommended_actions": ["Assign open codes to axial codes.", "Assign axial codes to categories.", "Memo how CDA evidence informs GT categories."],
+      "sources": ["strauss_corbin_1998", "clarke_2005"]
+    },
+    {
+      "id": "relation_modeling",
+      "title": "Relation modeling",
+      "description": "Connect evidence, actors, discourse features, codes, categories, memos, and research questions.",
+      "prompts": ["What explains what?", "What is evidence for the claim?", "Which relation is strong, weak, or uncertain?"],
+      "recommended_actions": ["Create analytical relations.", "Use argument/evidence visual modes.", "Review uncertain relations."],
+      "sources": ["miles_huberman_saldana_2020"]
+    },
+    {
+      "id": "theoretical_memo_writing",
+      "title": "Theoretical memo-writing",
+      "description": "Write memos that explicitly connect GT categories and CDA interpretations.",
+      "prompts": ["What claim connects coding and discourse analysis?", "What source supports this procedure?", "What decision should be documented?"],
+      "recommended_actions": ["Write protocol notes.", "Write theoretical memos.", "Link memos to codes, features, actors, and relations."],
+      "sources": ["charmaz_2014", "fairclough_1992"]
+    },
+    {
+      "id": "argument_building",
+      "title": "Argument building",
+      "description": "Build a transparent argument from evidence, categories, discourse features, and methodological decisions.",
+      "prompts": ["What is the central claim?", "What evidence chain supports it?", "What methodological caveat must be reported?"],
+      "recommended_actions": ["Export the analytical model.", "Export the methodological protocol.", "Check claims against notes needing review."],
+      "sources": ["wodak_meyer_2016", "miles_huberman_saldana_2020"]
+    }
+  ],
+  "prompts": [
+    "Which methodological tradition is doing the work in this step?",
+    "What must be written into the project protocol?",
+    "How do GT categories and CDA evidence connect?"
+  ],
+  "concepts": [
+    {
+      "id": "methodological_mixing",
+      "term": "Methodological mixing",
+      "description": "Combining GT and CDA requires explicit decisions about sequence, priority, integration, and reporting.",
+      "prompts": ["Is GT or CDA primary here?", "Where are the outputs integrated?", "What decision needs a protocol note?"]
+    },
+    {
+      "id": "evidence_chain",
+      "term": "Evidence chain",
+      "description": "A traceable connection from documents and segments to features, codes, memos, relations, and claims.",
+      "prompts": ["Can the claim be traced back to evidence?", "Where is the interpretation documented?"]
+    }
+  ],
+  "sources": [
+    {"id": "charmaz_2014", "apa": "Charmaz, K. (2014). Constructing grounded theory (2nd ed.). SAGE.", "note": "Use for coding, comparison, memo-writing, and categories."},
+    {"id": "fairclough_1992", "apa": "Fairclough, N. (1992). Discourse and social change. Polity.", "note": "Use for linking text, discursive practice, and social practice."},
+    {"id": "van_dijk_2008", "apa": "van Dijk, T. A. (2008). Discourse and power. Palgrave Macmillan.", "note": "Use for power, access, dominance, and voice."},
+    {"id": "wodak_meyer_2016", "apa": "Wodak, R., & Meyer, M. (Eds.). (2016). Methods of critical discourse studies (3rd ed.). SAGE.", "note": "Use for CDA method transparency and discourse-historical considerations."},
+    {"id": "miles_huberman_saldana_2020", "apa": "Miles, M. B., Huberman, A. M., & Saldaña, J. (2020). Qualitative data analysis: A methods sourcebook (4th ed.). SAGE.", "note": "Use for displays, synthesis, and evidence-supported conclusions."},
+    {"id": "saldana_2021", "apa": "Saldaña, J. (2021). The coding manual for qualitative researchers (4th ed.). SAGE.", "note": "Use for coding practices and codebook development."},
+    {"id": "strauss_corbin_1998", "apa": "Strauss, A., & Corbin, J. (1998). Basics of qualitative research: Techniques and procedures for developing grounded theory (2nd ed.). SAGE.", "note": "Use for axial coding and category development."},
+    {"id": "clarke_2005", "apa": "Clarke, A. E. (2005). Situational analysis: Grounded theory after the postmodern turn. SAGE.", "note": "Use for situational mapping and postmodern GT extensions."},
+    {"id": "reisigl_wodak_2001", "apa": "Reisigl, M., & Wodak, R. (2001). Discourse and discrimination: Rhetorics of racism and antisemitism. Routledge.", "note": "Use for DHA strategies and historical context."}
+  ]
+}

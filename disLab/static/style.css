@@ -441,6 +441,73 @@ button:disabled {
     border-bottom: 1px solid var(--surface-muted);
 }
 
+.methodology-library-list,
+.protocol-note-list,
+.methodology-card-grid {
+    display: grid;
+    gap: 14px;
+}
+
+.methodology-library-card,
+.methodology-phase-card,
+.concept-card,
+.source-card,
+.protocol-note-card,
+.methodology-helper-panel {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+}
+
+.methodology-library-card {
+    display: grid;
+    gap: 6px;
+    padding: 14px;
+    color: inherit;
+    text-decoration: none;
+    background: var(--surface);
+}
+
+.methodology-library-card:hover {
+    border-color: var(--accent);
+}
+
+.protocol-note-card {
+    padding: 16px;
+    background: var(--surface);
+}
+
+.note-type-badge,
+.note-status-badge {
+    display: inline-flex;
+    margin-right: 6px;
+    padding: 3px 8px;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    background: var(--surface-muted);
+    color: var(--muted);
+}
+
+.status-active {
+    background: #e8f7e4;
+    color: #2f6f35;
+}
+
+.status-needs_review {
+    background: #fff4d6;
+    color: #7a5a00;
+}
+
+.methodology-mode-help {
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface-muted);
+}
+
+.methodology-mode-help p {
+    margin: 4px 0;
+}
+
 .actions-cell form {
     margin: 0;
 }

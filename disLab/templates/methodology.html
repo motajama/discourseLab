@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="page-header">
+    <p class="eyebrow">Phase 12 — Methodology helper library and project protocol</p>
+    <h1>Methodology</h1>
+    <p>Active project: {{ active_project.name }} · {{ methodology_mode_labels[active_project.methodology_mode] }}</p>
+</section>
+
+<section class="dashboard-grid">
+    <article class="info-panel methodology-overview-card">
+        <h2>Project Methodology</h2>
+        <p>{{ overview }}</p>
+        <dl class="metadata-list">
+            <div><dt>Total methodology notes</dt><dd>{{ note_counts.total }}</dd></div>
+            <div><dt>Active protocol notes</dt><dd>{{ note_counts.active_protocol }}</dd></div>
+            <div><dt>Needs review</dt><dd>{{ note_counts.needs_review }}</dd></div>
+        </dl>
+        <a class="button-secondary" href="{{ url_for('export_methodology_protocol_markdown') }}">Export protocol Markdown</a>
+    </article>
+
+    <article class="info-panel">
+        <h2>Relevant Libraries</h2>
+        <div class="methodology-library-list">
+            {% for library in libraries %}
+                <a class="methodology-library-card" href="{{ url_for('methodology_library', library_id=library.id) }}">
+                    <strong>{{ library.title }}</strong>
+                    <span>{{ library.short_description }}</span>
+                </a>
+            {% endfor %}
+        </div>
+    </article>
+</section>
+
+<section class="info-panel import-panel">
+    <h2>Create Methodology Note</h2>
+    <form class="document-form" action="{{ url_for('create_methodology_note') }}" method="post">
+        <input type="hidden" name="next_url" value="{{ request.full_path }}">
+        <div class="form-grid">
+            <label><span>Title</span><input type="text" name="title" required></label>
+            <label>
+                <span>Type</span>
+                <select name="note_type" required>
+                    {% for value, label in methodology_note_type_labels.items() %}
+                        <option value="{{ value }}">{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+        </div>
+        <div class="form-grid">
+            <label>
+                <span>Area</span>
+                <select name="methodology_area" required>
+                    {% for value, label in methodology_area_labels.items() %}
+                        <option value="{{ value }}" {{ "selected" if value == active_project.methodology_mode else "" }}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <label>
+                <span>Status</span>
+                <select name="status" required>
+                    {% for value, label in methodology_note_status_labels.items() %}
+                        <option value="{{ value }}" {{ "selected" if value == "active" else "" }}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+        </div>
+        <label>
+            <span>Linked entity</span>
+            <select name="linked_entity">
+                <option value="">Project protocol</option>
+                {% for entity in entity_options %}
+                    <option value="{{ entity.value }}">[{{ entity.type_label }}] {{ entity.label }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label><span>Body</span><textarea name="body" rows="6" required></textarea></label>
+        <button type="submit" class="button-primary">Create note</button>
+    </form>
+</section>
+
+<section class="info-panel import-panel">
+    <h2>Filters</h2>
+    <form class="filter-form" action="{{ url_for('methodology') }}" method="get">
+        <label><span>Type</span><select name="note_type"><option value="">All</option>{% for value, label in methodology_note_type_labels.items() %}<option value="{{ value }}" {{ "selected" if filters.note_type == value else "" }}>{{ label }}</option>{% endfor %}</select></label>
+        <label><span>Area</span><select name="methodology_area"><option value="">All</option>{% for value, label in methodology_area_labels.items() %}<option value="{{ value }}" {{ "selected" if filters.methodology_area == value else "" }}>{{ label }}</option>{% endfor %}</select></label>
+        <label><span>Status</span><select name="status"><option value="">All</option>{% for value, label in methodology_note_status_labels.items() %}<option value="{{ value }}" {{ "selected" if filters.status == value else "" }}>{{ label }}</option>{% endfor %}</select></label>
+        <label><span>Linked type</span><select name="linked_entity_type"><option value="">All</option>{% for value, label in linked_entity_type_labels.items() %}<option value="{{ value }}" {{ "selected" if filters.linked_entity_type == value else "" }}>{{ label }}</option>{% endfor %}</select></label>
+        <label><span>Search</span><input type="search" name="q" value="{{ filters.q }}"></label>
+        <button type="submit" class="button-secondary">Apply</button>
+        <a class="button-secondary" href="{{ url_for('methodology') }}">Clear</a>
+    </form>
+</section>
+
+<section class="info-panel">
+    <h2>Project Protocol Notes</h2>
+    {% if notes %}
+        <div class="protocol-note-list">
+            {% for note in notes %}
+                <article class="protocol-note-card">
+                    <div class="relation-card-header">
+                        <div>
+                            <h3>{{ note.title }}</h3>
+                            <span class="note-type-badge">{{ note.note_type_label }}</span>
+                            <span class="note-status-badge status-{{ note.status }}">{{ note.status_label }}</span>
+                        </div>
+                        <div class="actions-cell">
+                            <a class="button-secondary" href="{{ url_for('edit_methodology_note', note_id=note.id) }}">Edit</a>
+                            <form action="{{ url_for('delete_methodology_note', note_id=note.id) }}" method="post">
+                                <button class="button-danger" type="submit">Delete</button>
+                            </form>
+                        </div>
+                    </div>
+                    <p>{{ note.body }}</p>
+                    <p class="muted-text">{{ note.methodology_area_label }} · {{ note.linked_entity_label }} · Updated {{ note.updated_at }}</p>
+                </article>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p>No methodology notes match the current filters.</p>
+    {% endif %}
+</section>
+{% endblock %}

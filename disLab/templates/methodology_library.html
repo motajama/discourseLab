@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="page-header">
+    <p class="eyebrow">Methodology library</p>
+    <h1>{{ library.title }}</h1>
+    <p>{{ library.short_description }}</p>
+</section>
+
+<section class="detail-actions">
+    <a class="button-secondary" href="{{ url_for('methodology') }}">Back to Methodology</a>
+</section>
+
+<section class="methodology-card-grid">
+    {% for phase in library.phases %}
+        <article class="info-panel methodology-phase-card">
+            <h2>{{ phase.title }}</h2>
+            <p>{{ phase.description }}</p>
+            {% if phase.prompts %}
+                <h3>Prompts</h3>
+                <ul>{% for prompt in phase.prompts %}<li>{{ prompt }}</li>{% endfor %}</ul>
+            {% endif %}
+            {% if phase.recommended_actions %}
+                <h3>Recommended actions</h3>
+                <ul>{% for action in phase.recommended_actions %}<li>{{ action }}</li>{% endfor %}</ul>
+            {% endif %}
+            {% if phase.sources %}
+                <p class="muted-text">Sources: {{ phase.sources|join(", ") }}</p>
+            {% endif %}
+        </article>
+    {% endfor %}
+</section>
+
+{% if library.concepts %}
+<section class="export-section">
+    <div class="section-heading"><h2>Concepts</h2></div>
+    <div class="methodology-card-grid">
+        {% for concept in library.concepts %}
+            <article class="info-panel concept-card">
+                <h3>{{ concept.term }}</h3>
+                <p>{{ concept.description }}</p>
+                {% if concept.prompts %}
+                    <ul>{% for prompt in concept.prompts %}<li>{{ prompt }}</li>{% endfor %}</ul>
+                {% endif %}
+            </article>
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
+
+<section class="export-section">
+    <div class="section-heading"><h2>APA Sources</h2></div>
+    <div class="methodology-card-grid">
+        {% for source in library.sources %}
+            <article class="info-panel source-card">
+                <h3>{{ source.id }}</h3>
+                <p>{{ source.apa }}</p>
+                {% if source.note %}<p class="muted-text">{{ source.note }}</p>{% endif %}
+            </article>
+        {% endfor %}
+    </div>
+</section>
+{% endblock %}

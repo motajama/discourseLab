@@ -1,0 +1,48 @@
+{
+  "id": "cda_fairclough",
+  "title": "Critical Discourse Analysis: Fairclough",
+  "short_description": "Guidance for analyzing text, discursive practice, and social practice with attention to ideology, hegemony, and intertextuality.",
+  "phases": [
+    {
+      "id": "text_analysis",
+      "title": "Text analysis",
+      "description": "Analyze lexical choices, grammar, modality, agency, nominalization, passivization, and presupposition.",
+      "prompts": ["What textual choices carry evaluative meaning?", "How is agency distributed?", "What is presupposed?"],
+      "recommended_actions": ["Mark modality and evaluation.", "Code nominalization and passivization.", "Memo textual patterns."],
+      "sources": ["fairclough_1992", "fairclough_1995"]
+    },
+    {
+      "id": "discursive_practice",
+      "title": "Discursive practice",
+      "description": "Analyze production, circulation, consumption, genre, and intertextual relations.",
+      "prompts": ["Which genres are mixed?", "Which prior texts or discourses are invoked?", "Who is the imagined audience?"],
+      "recommended_actions": ["Record intertextuality.", "Compare documents.", "Link discourse features to actors and codes."],
+      "sources": ["fairclough_1992"]
+    },
+    {
+      "id": "social_practice",
+      "title": "Social practice",
+      "description": "Connect discourse to wider social relations, institutions, ideology, and hegemony.",
+      "prompts": ["What social practice is reproduced?", "What power relation is normalized?", "What alternative is made difficult to say?"],
+      "recommended_actions": ["Create power-related relations.", "Write interpretive memos.", "Connect textual evidence to claims."],
+      "sources": ["fairclough_1995", "chouliaraki_fairclough_1999"]
+    }
+  ],
+  "prompts": ["What is foregrounded or backgrounded?", "How does the text relate to wider social practice?", "Which discourse becomes common sense?"],
+  "concepts": [
+    {"id": "intertextuality", "term": "Intertextuality", "description": "The presence or transformation of other texts and discourses within a text.", "prompts": ["Which text or discourse is echoed?", "What changes in this recontextualization?"]},
+    {"id": "modality", "term": "Modality", "description": "Degrees of certainty, obligation, possibility, or necessity expressed in language.", "prompts": ["What is presented as certain?", "What is presented as only possible?"]},
+    {"id": "nominalization", "term": "Nominalization", "description": "Turning processes into nouns, often obscuring agency.", "prompts": ["What action is turned into a thing?", "Who disappears from the sentence?"]},
+    {"id": "passivization", "term": "Passivization", "description": "Passive constructions that can background actors or responsibility.", "prompts": ["Who acts?", "Who is acted upon?"]},
+    {"id": "presupposition", "term": "Presupposition", "description": "Background assumptions treated as already accepted.", "prompts": ["What must be accepted for this sentence to make sense?"]},
+    {"id": "metaphor", "term": "Metaphor", "description": "A figurative mapping that frames one domain through another.", "prompts": ["What metaphor organizes the issue?", "What does the metaphor hide or highlight?"]},
+    {"id": "legitimation", "term": "Legitimation", "description": "Discursive work that makes an action, actor, or policy appear justified or necessary.", "prompts": ["How is this action justified?", "Which authority, value, or necessity is invoked?"]},
+    {"id": "ideology", "term": "Ideology", "description": "Meaning systems that help reproduce social relations and power.", "prompts": ["What worldview is normalized?"]},
+    {"id": "hegemony", "term": "Hegemony", "description": "Dominance secured through consent, common sense, and institutional practice.", "prompts": ["How is consent invited?"]}
+  ],
+  "sources": [
+    {"id": "fairclough_1992", "apa": "Fairclough, N. (1992). Discourse and social change. Polity.", "note": "Use for text, discursive practice, social practice, and intertextuality."},
+    {"id": "fairclough_1995", "apa": "Fairclough, N. (1995). Critical discourse analysis: The critical study of language. Longman.", "note": "Use for textual analysis, ideology, and power."},
+    {"id": "chouliaraki_fairclough_1999", "apa": "Chouliaraki, L., & Fairclough, N. (1999). Discourse in late modernity: Rethinking critical discourse analysis. Edinburgh University Press.", "note": "Use for linking CDA to social theory and late modernity."}
+  ]
+}

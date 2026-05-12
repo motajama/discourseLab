@@ -1,0 +1,150 @@
+{
+  "id": "generic_qualitative",
+  "title": "Generic Qualitative Coding",
+  "short_description": "General-purpose qualitative analysis guidance for preparing a corpus, reading closely, coding, memo-writing, comparison, synthesis, and reporting.",
+  "phases": [
+    {
+      "id": "preparing_corpus",
+      "title": "Preparing corpus",
+      "description": "Clarify the research focus, document inclusion criteria, and organize the corpus before detailed analysis.",
+      "prompts": [
+        "Why does this document belong in the corpus?",
+        "What context is needed to interpret this text responsibly?",
+        "What is missing from the current corpus?"
+      ],
+      "recommended_actions": [
+        "Record sampling decisions.",
+        "Write document notes.",
+        "Keep source metadata consistent."
+      ],
+      "sources": ["saldana_2021", "miles_huberman_saldana_2020"]
+    },
+    {
+      "id": "close_reading",
+      "title": "Close reading",
+      "description": "Read slowly for meaning, context, repetition, contradiction, and surprising details.",
+      "prompts": [
+        "What stands out in this passage?",
+        "What assumptions does the text invite?",
+        "Which words or phrases deserve coding?"
+      ],
+      "recommended_actions": [
+        "Create focused segments.",
+        "Record interpretive uncertainties.",
+        "Avoid coding entire documents when a passage is enough."
+      ],
+      "sources": ["saldana_2021"]
+    },
+    {
+      "id": "open_coding",
+      "title": "Open coding",
+      "description": "Create provisional labels for patterns, actions, meanings, and topics in the data.",
+      "prompts": [
+        "What is this passage about?",
+        "What action, process, value, or problem is visible?",
+        "What code name would remain understandable later?"
+      ],
+      "recommended_actions": [
+        "Use concise code names.",
+        "Define codes as they stabilize.",
+        "Revise overlapping codes."
+      ],
+      "sources": ["saldana_2021", "miles_huberman_saldana_2020"]
+    },
+    {
+      "id": "memo_writing",
+      "title": "Memo-writing",
+      "description": "Use memos to capture interpretations, uncertainties, methodological decisions, and emerging arguments.",
+      "prompts": [
+        "What do I think this means?",
+        "What evidence supports this interpretation?",
+        "What alternative interpretation should be kept open?"
+      ],
+      "recommended_actions": [
+        "Write memos early.",
+        "Link memos to codes, documents, or segments.",
+        "Mark important memos for later synthesis."
+      ],
+      "sources": ["saldana_2021"]
+    },
+    {
+      "id": "comparison",
+      "title": "Comparison",
+      "description": "Compare segments, codes, documents, and cases to refine distinctions and patterns.",
+      "prompts": [
+        "How is this instance similar to earlier instances?",
+        "How is it different?",
+        "Does this comparison split, merge, or redefine a code?"
+      ],
+      "recommended_actions": [
+        "Compare within and across documents.",
+        "Look for negative or deviant cases.",
+        "Update code definitions."
+      ],
+      "sources": ["miles_huberman_saldana_2020"]
+    },
+    {
+      "id": "analytical_synthesis",
+      "title": "Analytical synthesis",
+      "description": "Move from coded material toward claims, explanations, and evidence-backed conclusions.",
+      "prompts": [
+        "Which codes form a larger pattern?",
+        "What evidence is strongest?",
+        "What claim can be made without overstating the data?"
+      ],
+      "recommended_actions": [
+        "Use relations to connect evidence and claims.",
+        "Review memos marked important.",
+        "Check claims against negative cases."
+      ],
+      "sources": ["miles_huberman_saldana_2020"]
+    },
+    {
+      "id": "export_reporting",
+      "title": "Export/reporting",
+      "description": "Prepare transparent outputs for reporting codes, evidence, memos, and methodological decisions.",
+      "prompts": [
+        "Can another reader follow the analytical procedure?",
+        "Which exports document the evidence chain?",
+        "Which protocol decisions should be reported?"
+      ],
+      "recommended_actions": [
+        "Export the codebook.",
+        "Export coded segments and memos.",
+        "Export the methodological protocol."
+      ],
+      "sources": ["saldana_2021", "miles_huberman_saldana_2020"]
+    }
+  ],
+  "prompts": [
+    "What is the research question asking me to notice?",
+    "What evidence supports this interpretation?",
+    "What methodological decision should be documented?"
+  ],
+  "concepts": [
+    {
+      "id": "code_definition",
+      "term": "Code definition",
+      "description": "A clear statement of when and why a code should be applied.",
+      "prompts": ["When should this code be used?", "What should be excluded?"]
+    },
+    {
+      "id": "negative_case",
+      "term": "Negative case",
+      "description": "A case or passage that complicates, contradicts, or limits an emerging claim.",
+      "prompts": ["What does this case challenge?", "Should the claim be revised?"]
+    }
+  ],
+  "sources": [
+    {
+      "id": "saldana_2021",
+      "apa": "Saldaña, J. (2021). The coding manual for qualitative researchers (4th ed.). SAGE.",
+      "note": "Use for coding cycles, code definitions, analytic memoing, and reporting."
+    },
+    {
+      "id": "miles_huberman_saldana_2020",
+      "apa": "Miles, M. B., Huberman, A. M., & Saldaña, J. (2020). Qualitative data analysis: A methods sourcebook (4th ed.). SAGE.",
+      "note": "Use for qualitative data displays, analytic condensation, and evidence-based conclusions."
+    }
+  ]
+}

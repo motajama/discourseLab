@@ -25,6 +25,7 @@
                 <a href="{{ url_for('codes') }}" class="{{ 'active' if active_page == 'codes' else '' }}">Codes</a>
                 <a href="{{ url_for('memos') }}" class="{{ 'active' if active_page == 'memos' else '' }}">Memos</a>
                 <a href="{{ url_for('model_builder') }}" class="{{ 'active' if active_page == 'model' else '' }}">Model</a>
+                <a href="{{ url_for('methodology') }}" class="{{ 'active' if active_page == 'methodology' else '' }}">Methodology</a>
                 {% if supports_gt %}
                     <a href="{{ url_for('gt_workspace') }}" class="{{ 'active' if active_page == 'gt' else '' }}">GT Workspace</a>
                 {% else %}

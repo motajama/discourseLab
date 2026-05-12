@@ -4,11 +4,11 @@ discourseLab is a local, lightweight qualitative analysis workspace for discours
 
 It runs on your own computer in a web browser. It does not require an account, cloud service, npm, Node, React, or external web services.
 
-Current phase: **Phase 11.5 — Readable visual model exports**
+Current phase: **Phase 12 — Methodology helper library and project protocol**
 
 The analytical model builder connects project entities such as segments, codes, categories, actors, discourse features, memos, and research questions into explicit analytical relations.
 
-Phase 11.5 adds readable visual model exports generated from saved analytical relations. Exports support model modes, node-type colors, relation-family colors, strength-specific edge styles, wrapped SVG labels, and SVG tooltips.
+Phase 12 adds a local JSON-based methodology helper library, methodology-aware helper panels, project protocol notes, and methodological protocol exports. It does not add AI or internet-based guidance.
 
 ## What You Need
 
@@ -256,13 +256,32 @@ py app.py
 22. Link a relation to the research question.
 23. Download `/exports/model.md`.
 24. Download `/exports/model.json`.
-25. Download simplified SVG and confirm it has a legend, different node colors, different edge styles by strength, relation-family edge colors, and readable wrapped labels.
-26. Download argument SVG and confirm it shows fewer, analytically focused relations.
-27. Download full SVG and confirm it still works even if dense.
-28. Download GT and CDA visual exports.
-29. Confirm filters do not crash with empty result sets.
-30. Download the complete research package ZIP and confirm it includes visual exports by model mode.
-31. Restart the app and confirm exports did not modify project data.
+25. Open **Methodology**.
+26. Confirm relevant methodology libraries are shown based on the project methodology mode.
+27. Open Grounded Theory library if the project mode is GT or mixed.
+28. Open CDA libraries if the project mode is CDA or mixed.
+29. Create a protocol note, a coding rule, and a reflexive note.
+30. Link a methodology note to a code or segment.
+31. Edit and filter methodology notes.
+32. Delete a methodology note.
+33. Open GT, CDA, Model, and document pages and confirm methodology helper panels use library content.
+34. Download methodology protocol Markdown.
+35. Download the complete research package ZIP and confirm `methodology_protocol.md` is included.
+36. Download project JSON and confirm `methodology_notes` are included.
+37. Restart the app and confirm methodology notes persist.
+
+## Methodology Helper Library
+
+The methodology helper library is local JSON guidance stored in `disLab/methodology`. It does not call AI services, does not require internet access, and does not look up bibliography online.
+
+It provides:
+
+- methodology-aware guidance for generic qualitative coding, Grounded Theory, CDA, and mixed GT/CDA work
+- structured phases, concepts, prompts, and recommended actions
+- APA-style methodological sources
+- project-specific protocol notes and decision logs
+- helper panels on GT, CDA, Model, and document pages
+- Markdown export of the project methodological protocol
 
 ## Visual Model Exports
 
@@ -358,7 +377,7 @@ http://127.0.0.1:5001
 ## Project Notes
 
 - App name: discourseLab
-- Current phase: Phase 11.5 — Readable visual model exports
+- Current phase: Phase 12 — Methodology helper library and project protocol
 - Technology: Python, Flask, SQLite, HTML, CSS, vanilla JavaScript
 - Runs locally in your browser
 - No authentication
