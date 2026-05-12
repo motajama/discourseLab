@@ -420,6 +420,27 @@ button:disabled {
     gap: 8px;
 }
 
+.button-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.visual-mode-table {
+    display: grid;
+    gap: 10px;
+    margin-top: 14px;
+}
+
+.visual-mode-row {
+    display: grid;
+    grid-template-columns: minmax(120px, 180px) 1fr;
+    gap: 12px;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--surface-muted);
+}
+
 .actions-cell form {
     margin: 0;
 }

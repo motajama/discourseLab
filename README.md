@@ -4,9 +4,11 @@ discourseLab is a local, lightweight qualitative analysis workspace for discours
 
 It runs on your own computer in a web browser. It does not require an account, cloud service, npm, Node, React, or external web services.
 
-Current phase: **Phase 10 — Relations and analytical model builder**
+Current phase: **Phase 11.5 — Readable visual model exports**
 
 The analytical model builder connects project entities such as segments, codes, categories, actors, discourse features, memos, and research questions into explicit analytical relations.
+
+Phase 11.5 adds readable visual model exports generated from saved analytical relations. Exports support model modes, node-type colors, relation-family colors, strength-specific edge styles, wrapped SVG labels, and SVG tooltips.
 
 ## What You Need
 
@@ -254,9 +256,42 @@ py app.py
 22. Link a relation to the research question.
 23. Download `/exports/model.md`.
 24. Download `/exports/model.json`.
-25. Download the complete research package ZIP and confirm `analytical_model.md` and `analytical_model.json` are included.
-26. Restart the app and confirm relations persist.
-27. Confirm data remains scoped to the active project.
+25. Download simplified SVG and confirm it has a legend, different node colors, different edge styles by strength, relation-family edge colors, and readable wrapped labels.
+26. Download argument SVG and confirm it shows fewer, analytically focused relations.
+27. Download full SVG and confirm it still works even if dense.
+28. Download GT and CDA visual exports.
+29. Confirm filters do not crash with empty result sets.
+30. Download the complete research package ZIP and confirm it includes visual exports by model mode.
+31. Restart the app and confirm exports did not modify project data.
+
+## Visual Model Exports
+
+Model modes:
+
+- `simplified`: default readable mode; hides weak and uncertain relations unless requested.
+- `argument`: focuses on research questions, categories, axial codes, memos, strong relations, and argument-building relation types.
+- `evidence`: focuses on documents, segments, memos, evidence, examples, negative cases, support, and contradiction.
+- `gt`: focuses on code-only grounded theory relations.
+- `cda`: focuses on actors, discourse markers, discourse features, and CDA relation types.
+- `full`: shows all relations and may be visually dense.
+
+Visual encodings:
+
+- Node colors show entity type.
+- Edge color shows relation family.
+- Edge thickness and dash pattern show relation strength.
+- Edge labels use shortened relation names.
+- SVG tooltips include full node and edge metadata.
+
+- Mermaid `.mmd`: paste into Mermaid-compatible Markdown tools, GitHub, Obsidian, or Mermaid editors.
+- Graphviz `.dot`: render with Graphviz:
+
+```bash
+dot -Tpng discourseLab_analytical_model.dot -o model.png
+```
+
+- TikZ `.tikz`: a snippet to include inside a LaTeX document with TikZ enabled.
+- SVG `.svg`: open directly in a browser or vector editor.
 
 ## Data Storage
 
@@ -323,7 +358,7 @@ http://127.0.0.1:5001
 ## Project Notes
 
 - App name: discourseLab
-- Current phase: Phase 10 — Relations and analytical model builder
+- Current phase: Phase 11.5 — Readable visual model exports
 - Technology: Python, Flask, SQLite, HTML, CSS, vanilla JavaScript
 - Runs locally in your browser
 - No authentication

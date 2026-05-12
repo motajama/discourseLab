@@ -2,9 +2,29 @@
 
 {% block content %}
 <section class="page-header">
-    <p class="eyebrow">Phase 10 — Relations and analytical model builder</p>
+    <p class="eyebrow">Phase 11.5 — Readable visual model exports</p>
     <h1>Exports</h1>
     <p>Active project: {{ active_project.name }}</p>
+</section>
+
+<section class="info-panel export-section">
+    <div class="section-heading">
+        <h2>Visual model export options</h2>
+    </div>
+    <p>Simplified mode hides weak and uncertain relations by default. Full mode shows everything and may be visually dense.</p>
+    <div class="visual-mode-table">
+        {% for mode in visual_model_mode_order %}
+            <div class="visual-mode-row">
+                <strong>{{ visual_model_modes[mode] }}</strong>
+                <div class="button-row">
+                    <a class="button-secondary compact-button" href="{{ url_for('export_model_svg', model_mode=mode) }}">SVG</a>
+                    <a class="button-secondary compact-button" href="{{ url_for('export_model_mermaid', model_mode=mode) }}">Mermaid</a>
+                    <a class="button-secondary compact-button" href="{{ url_for('export_model_dot', model_mode=mode) }}">DOT</a>
+                    <a class="button-secondary compact-button" href="{{ url_for('export_model_tikz', model_mode=mode) }}">TikZ</a>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
 </section>
 
 {% for section in export_sections %}

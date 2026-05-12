@@ -1,5 +1,6 @@
 import csv
 from datetime import datetime
+import html
 import io
 import json
 from pathlib import Path
@@ -28,8 +29,8 @@ from werkzeug.utils import secure_filename
 
 
 APP_NAME = "discourseLab"
-APP_PHASE = "10"
-CURRENT_PHASE_LABEL = "Phase 10 — Relations and analytical model builder"
+APP_PHASE = "11.5"
+CURRENT_PHASE_LABEL = "Phase 11.5 — Readable visual model exports"
 DEFAULT_PROJECT_NAME = "Demo Project"
 DEFAULT_PROJECT_DESCRIPTION = "Initial local discourseLab project."
 DEFAULT_CODE_COLOR = "#f4c542"
@@ -183,6 +184,15 @@ RELATION_STRENGTHS = {
     "strong": "Strong",
     "uncertain": "Uncertain",
 }
+VISUAL_MODEL_MODES = {
+    "simplified": "Simplified",
+    "argument": "Argument",
+    "evidence": "Evidence",
+    "gt": "GT",
+    "cda": "CDA",
+    "full": "Full",
+}
+VISUAL_MODEL_MODE_ORDER = ["simplified", "argument", "evidence", "gt", "cda", "full"]
 
 BASE_DIR = Path(__file__).resolve().parent
 INSTANCE_DIR = BASE_DIR / "instance"
@@ -215,6 +225,8 @@ def create_app() -> Flask:
             "methodology_mode_labels": METHODOLOGY_MODES,
             "supports_gt": project_supports_gt(active_project),
             "supports_cda": project_supports_cda(active_project),
+            "visual_model_modes": VISUAL_MODEL_MODES,
+            "visual_model_mode_order": VISUAL_MODEL_MODE_ORDER,
         }
 
     @app.route("/")
@@ -1799,6 +1811,39 @@ def create_app() -> Flask:
                 ],
             },
             {
+                "title": "Visual model exports",
+                "cards": [
+                    {
+                        "title": "Mermaid flowchart",
+                        "description": "Use in Markdown documents, GitHub, Obsidian, or Mermaid-compatible editors.",
+                        "format": "MMD",
+                        "endpoint": "export_model_mermaid",
+                        "button": "Download Mermaid",
+                    },
+                    {
+                        "title": "Graphviz DOT",
+                        "description": "Use with graphviz: dot -Tpng model.dot -o model.png.",
+                        "format": "DOT",
+                        "endpoint": "export_model_dot",
+                        "button": "Download DOT",
+                    },
+                    {
+                        "title": "LaTeX/TikZ snippet",
+                        "description": "Use in LaTeX documents; paste into a TikZ-enabled document.",
+                        "format": "TikZ",
+                        "endpoint": "export_model_tikz",
+                        "button": "Download TikZ",
+                    },
+                    {
+                        "title": "SVG diagram",
+                        "description": "Open directly in a browser or vector editor.",
+                        "format": "SVG",
+                        "endpoint": "export_model_svg",
+                        "button": "Download SVG",
+                    },
+                ],
+            },
+            {
                 "title": "Project exports",
                 "cards": [
                     {
@@ -1945,6 +1990,42 @@ def create_app() -> Flask:
             generate_model_json(active_project),
             "discourseLab_analytical_model.json",
             "application/json; charset=utf-8",
+        )
+
+    @app.route("/exports/model.mmd")
+    def export_model_mermaid():
+        active_project = get_active_project()
+        return download_text(
+            generate_model_mermaid(active_project, get_visual_export_filters()),
+            "discourseLab_analytical_model.mmd",
+            "text/plain; charset=utf-8",
+        )
+
+    @app.route("/exports/model.dot")
+    def export_model_dot():
+        active_project = get_active_project()
+        return download_text(
+            generate_model_dot(active_project, get_visual_export_filters()),
+            "discourseLab_analytical_model.dot",
+            "text/vnd.graphviz; charset=utf-8",
+        )
+
+    @app.route("/exports/model.tikz")
+    def export_model_tikz():
+        active_project = get_active_project()
+        return download_text(
+            generate_model_tikz(active_project, get_visual_export_filters()),
+            "discourseLab_analytical_model.tikz",
+            "text/plain; charset=utf-8",
+        )
+
+    @app.route("/exports/model.svg")
+    def export_model_svg():
+        active_project = get_active_project()
+        return download_text(
+            generate_model_svg(active_project, get_visual_export_filters()),
+            "discourseLab_analytical_model.svg",
+            "image/svg+xml; charset=utf-8",
         )
 
     @app.route("/exports/project.json")
@@ -3235,6 +3316,156 @@ def get_relations_for_project(project_id: int, filters: dict, limit: int | None 
     return relations
 
 
+def get_visual_export_filters() -> dict:
+    model_mode = request.args.get("model_mode", "simplified").strip()
+    if model_mode not in VISUAL_MODEL_MODES:
+        model_mode = "simplified"
+    full_mode = model_mode == "full"
+    include_uncertain = request.args.get("include_uncertain", "1" if full_mode else "0").strip()
+    include_weak = request.args.get("include_weak", "1" if full_mode else "0").strip()
+    max_default = 100 if full_mode else 25
+    try:
+        max_relations = int(request.args.get("max_relations", str(max_default)).strip())
+    except ValueError:
+        max_relations = max_default
+    max_relations = max(1, min(max_relations, 250))
+    return {
+        "model_mode": model_mode,
+        "relation_type": request.args.get("relation_type", "").strip(),
+        "strength": request.args.get("strength", "").strip(),
+        "involves_type": request.args.get("entity_type", "").strip(),
+        "include_uncertain": include_uncertain == "1",
+        "include_weak": include_weak == "1",
+        "max_relations": max_relations,
+    }
+
+
+def get_visual_model_relations(project_id: int, filters: dict | None = None) -> list[dict]:
+    filters = filters or {}
+    model_mode = filters.get("model_mode", "simplified")
+    relations = get_relations_for_project(
+        project_id,
+        {
+            "relation_type": filters.get("relation_type", ""),
+            "strength": filters.get("strength", ""),
+            "involves_type": filters.get("involves_type", ""),
+        },
+    )
+    if model_mode != "full" and not filters.get("include_weak") and filters.get("strength") != "weak":
+        relations = [relation for relation in relations if relation["strength"] != "weak"]
+    if model_mode != "full" and not filters.get("include_uncertain") and filters.get("strength") != "uncertain":
+        relations = [relation for relation in relations if relation["strength"] != "uncertain"]
+    if model_mode != "full":
+        relations = [relation for relation in relations if relation_matches_visual_mode(relation, model_mode)]
+    relations = sorted(relations, key=visual_relation_sort_key)
+    return relations[: filters.get("max_relations", 25)]
+
+
+def code_type_from_label(label: str) -> str:
+    match = re.search(r"\((open|axial|category)\)\s*$", label or "")
+    return match.group(1) if match else ""
+
+
+def relation_code_types(relation: dict) -> set[str]:
+    code_types = set()
+    for side in ("source", "target"):
+        if relation[f"{side}_type"] == "code":
+            code_type = code_type_from_label(relation[f"{side}_label"])
+            if code_type:
+                code_types.add(code_type)
+    return code_types
+
+
+def relation_has_entity_type(relation: dict, entity_types: set[str]) -> bool:
+    return relation["source_type"] in entity_types or relation["target_type"] in entity_types
+
+
+def relation_matches_visual_mode(relation: dict, model_mode: str) -> bool:
+    if model_mode == "simplified":
+        return True
+    if model_mode == "argument":
+        return (
+            relation_has_entity_type(relation, {"research_question", "memo"})
+            or bool(relation_code_types(relation) & {"axial", "category"})
+            or relation["strength"] == "strong"
+            or relation["relation_type"] in {
+                "is_evidence_for",
+                "supports",
+                "explains",
+                "leads_to",
+                "legitimizes",
+                "naturalizes",
+                "reproduces_power_relation",
+                "challenges_power_relation",
+            }
+        )
+    if model_mode == "evidence":
+        return (
+            relation_has_entity_type(relation, {"segment", "document", "memo"})
+            or relation["relation_type"] in {
+                "is_evidence_for",
+                "is_example_of",
+                "is_negative_case_for",
+                "supports",
+                "contradicts",
+            }
+        )
+    if model_mode == "gt":
+        return (
+            relation["source_type"] == "code"
+            and relation["target_type"] == "code"
+            and relation["relation_type"] in {
+                "open_code_supports_axial_code",
+                "axial_code_supports_category",
+                "category_integrates",
+                "property_of",
+                "dimension_of",
+                "condition_for",
+                "consequence_of",
+            }
+        )
+    if model_mode == "cda":
+        return (
+            relation_has_entity_type(relation, {"actor", "discourse_marker", "discourse_feature"})
+            or relation["relation_type"] in {
+                "frames",
+                "legitimizes",
+                "delegitimizes",
+                "naturalizes",
+                "silences",
+                "foregrounds",
+                "backgrounds",
+                "individualizes",
+                "aggregates",
+                "constructs_actor_as",
+                "reproduces_power_relation",
+                "challenges_power_relation",
+                "presupposes",
+                "metaphorizes",
+            }
+        )
+    return True
+
+
+def visual_relation_sort_key(relation: dict) -> tuple:
+    strength_rank = {"strong": 0, "moderate": 1, "weak": 2, "uncertain": 3}
+    family_rank = {
+        "support": 0,
+        "gt": 1,
+        "cda_power": 2,
+        "cda_representation": 3,
+        "causal_process": 4,
+        "contrast": 5,
+        "generic": 6,
+    }
+    return (
+        strength_rank.get(relation["strength"], 9),
+        family_rank.get(relation_family(relation["relation_type"]), 9),
+        relation["relation_type"],
+        relation["id"],
+    )
+
+
 def get_relation_for_project(relation_id: int, project_id: int) -> dict | None:
     row = query_one("SELECT * FROM relations WHERE id = ? AND project_id = ?", (relation_id, project_id))
     if row is None:
@@ -3994,6 +4225,158 @@ def truncate_text(text: str, length: int = 80) -> str:
     return text[: length - 3] + "..."
 
 
+def short_label(label: str, max_length: int = 40) -> str:
+    return truncate_text(label, max_length)
+
+
+def graph_node_id(entity_type: str, entity_id: int) -> str:
+    raw_id = f"{entity_type}_{entity_id}"
+    return re.sub(r"[^A-Za-z0-9_]", "_", raw_id)
+
+
+def short_relation_label(relation_type: str) -> str:
+    labels = {
+        "open_code_supports_axial_code": "open→axial",
+        "axial_code_supports_category": "axial→category",
+        "reproduces_power_relation": "reproduces power",
+        "challenges_power_relation": "challenges power",
+        "constructs_actor_as": "constructs as",
+        "is_negative_case_for": "negative case",
+        "is_evidence_for": "evidence for",
+        "is_example_of": "example of",
+        "contrasts_with": "contrasts",
+        "transforms_into": "transforms",
+        "category_integrates": "integrates",
+        "condition_for": "condition for",
+        "consequence_of": "consequence of",
+        "property_of": "property of",
+        "dimension_of": "dimension of",
+    }
+    return labels.get(relation_type, relation_type.replace("_", " "))
+
+
+def relation_family(relation_type: str) -> str:
+    if relation_type in {"supports", "is_evidence_for", "is_example_of", "elaborates", "explains"}:
+        return "support"
+    if relation_type in {"contradicts", "contrasts_with", "is_negative_case_for"}:
+        return "contrast"
+    if relation_type in {"leads_to", "causes", "conditions", "enables", "limits", "transforms_into"}:
+        return "causal_process"
+    if relation_type in {
+        "open_code_supports_axial_code",
+        "axial_code_supports_category",
+        "category_integrates",
+        "property_of",
+        "dimension_of",
+        "consequence_of",
+        "condition_for",
+    }:
+        return "gt"
+    if relation_type in {
+        "legitimizes",
+        "delegitimizes",
+        "naturalizes",
+        "silences",
+        "foregrounds",
+        "backgrounds",
+        "reproduces_power_relation",
+        "challenges_power_relation",
+    }:
+        return "cda_power"
+    if relation_type in {
+        "frames",
+        "constructs_actor_as",
+        "individualizes",
+        "aggregates",
+        "presupposes",
+        "metaphorizes",
+    }:
+        return "cda_representation"
+    return "generic"
+
+
+def relation_family_styles() -> dict[str, dict[str, str]]:
+    return {
+        "support": {"label": "support", "color": "#2563eb", "tikz": "blue!70!black"},
+        "contrast": {"label": "contrast", "color": "#b4233a", "tikz": "red!70!black"},
+        "causal_process": {"label": "causal/process", "color": "#9a5a00", "tikz": "orange!80!black"},
+        "gt": {"label": "GT", "color": "#6d4ba3", "tikz": "purple!75!black"},
+        "cda_power": {"label": "CDA power", "color": "#c2410c", "tikz": "orange!90!black"},
+        "cda_representation": {"label": "CDA representation", "color": "#0f766e", "tikz": "teal!80!black"},
+        "generic": {"label": "generic", "color": "#64748b", "tikz": "gray!80!black"},
+    }
+
+
+def strength_style(strength: str) -> dict[str, str]:
+    styles = {
+        "strong": {
+            "svg_width": "3.0",
+            "svg_opacity": "0.95",
+            "svg_dash": "",
+            "dot_penwidth": "3",
+            "dot_style": "solid",
+            "tikz": "very thick",
+            "mermaid": "==>",
+        },
+        "moderate": {
+            "svg_width": "2.0",
+            "svg_opacity": "0.8",
+            "svg_dash": "",
+            "dot_penwidth": "2",
+            "dot_style": "solid",
+            "tikz": "thick",
+            "mermaid": "-->",
+        },
+        "weak": {
+            "svg_width": "1.2",
+            "svg_opacity": "0.45",
+            "svg_dash": "5,4",
+            "dot_penwidth": "1",
+            "dot_style": "dashed",
+            "tikz": "thin,dashed",
+            "mermaid": "-.->",
+        },
+        "uncertain": {
+            "svg_width": "1.2",
+            "svg_opacity": "0.45",
+            "svg_dash": "2,4",
+            "dot_penwidth": "1",
+            "dot_style": "dotted",
+            "tikz": "thin,dotted",
+            "mermaid": "-.->",
+        },
+    }
+    return styles.get(strength, styles["moderate"])
+
+
+def escape_mermaid_text(text: str) -> str:
+    return empty(text).replace("\\", "\\\\").replace('"', '\\"')
+
+
+def escape_dot_text(text: str) -> str:
+    return empty(text).replace("\\", "\\\\").replace('"', '\\"')
+
+
+def escape_latex_text(text: str) -> str:
+    replacements = {
+        "\\": r"\textbackslash{}",
+        "#": r"\#",
+        "$": r"\$",
+        "%": r"\%",
+        "&": r"\&",
+        "_": r"\_",
+        "{": r"\{",
+        "}": r"\}",
+        "~": r"\textasciitilde{}",
+        "^": r"\textasciicircum{}",
+    }
+    return "".join(replacements.get(char, char) for char in empty(text))
+
+
+def escape_svg_text(text: str) -> str:
+    return html.escape(empty(text), quote=True)
+
+
 def get_dashboard_export_links() -> list[dict[str, str]]:
     return [
         {"label": "Codebook", "endpoint": "export_codebook_markdown"},
@@ -4520,6 +4903,17 @@ def generate_project_summary_markdown(active_project: sqlite3.Row) -> str:
         (project_id,),
     )
     top_features = get_discourse_feature_counts(project_id)[:10]
+    top_relation_types = query_all(
+        """
+        SELECT relation_type, COUNT(*) AS count
+        FROM relations
+        WHERE project_id = ?
+        GROUP BY relation_type
+        ORDER BY count DESC, relation_type
+        LIMIT 10
+        """,
+        (project_id,),
+    )
     important_memos = query_all(
         """
         SELECT title, memo_type, status, created_at
@@ -4589,6 +4983,11 @@ def generate_project_summary_markdown(active_project: sqlite3.Row) -> str:
     lines.extend([f"- {row['name']} ({row['actor_type']}): {row['count']}" for row in top_actors] or ["None."])
     lines.extend(["", "## Top Discourse Feature Types", ""])
     lines.extend([f"- {row['feature_type']}: {row['count']}" for row in top_features] or ["None."])
+    lines.extend(["", "## Analytical Relations", ""])
+    lines.append(f"- Total relations: {counts.get('relations', 0)}")
+    lines.append("- Visual exports are available in the complete research package ZIP.")
+    lines.extend(["", "### Most Common Relation Types", ""])
+    lines.extend([f"- {row['relation_type']}: {row['count']}" for row in top_relation_types] or ["None."])
     lines.extend(["", "## Latest Important Memos", ""])
     lines.extend([f"- {row['title']} ({row['memo_type']}, {row['status']}, {row['created_at']})" for row in important_memos] or ["None."])
     lines.extend(["", "## Audit Log Summary", ""])
@@ -4653,9 +5052,9 @@ def generate_project_json(active_project: sqlite3.Row) -> str:
     return json.dumps(data, indent=2, ensure_ascii=False)
 
 
-def get_model_export_data(active_project: sqlite3.Row) -> dict:
+def get_model_export_data(active_project: sqlite3.Row, filters: dict | None = None) -> dict:
     project_id = active_project["id"]
-    relations = get_relations_for_project(project_id, {})
+    relations = get_visual_model_relations(project_id, filters) if filters else get_relations_for_project(project_id, {})
     entities = {}
     for relation in relations:
         for side in ("source", "target"):
@@ -4775,6 +5174,451 @@ def generate_model_json(active_project: sqlite3.Row) -> str:
     return json.dumps(get_model_export_data(active_project), indent=2, ensure_ascii=False)
 
 
+def visual_model_nodes(relations: list[dict]) -> list[dict]:
+    nodes = {}
+    for relation in relations:
+        for side in ("source", "target"):
+            entity_type = relation[f"{side}_type"]
+            entity_id = relation[f"{side}_id"]
+            key = (entity_type, entity_id)
+            nodes[key] = {
+                "type": entity_type,
+                "id": entity_id,
+                "node_id": graph_node_id(entity_type, entity_id),
+                "label": relation[f"{side}_label"],
+                "short_label": short_label(relation[f"{side}_label"]),
+                "code_type": code_type_from_label(relation[f"{side}_label"]) if entity_type == "code" else "",
+            }
+    return sorted(nodes.values(), key=lambda node: (node["type"], node["id"]))
+
+
+def visual_export_header(prefix: str, active_project: sqlite3.Row) -> list[str]:
+    return [
+        f"{prefix} Generated by discourseLab",
+        f"{prefix} Project: {active_project['name']}",
+        f"{prefix} Exported: {export_timestamp()}",
+    ]
+
+
+def relation_edge_label(relation: dict) -> str:
+    return f"{short_relation_label(relation['relation_type'])} / {relation['strength']}"
+
+
+def visual_node_style(node: dict) -> dict[str, str]:
+    entity_type = node["type"]
+    code_type = node.get("code_type", "")
+    styles = {
+        "document": {"class": "document", "label": "Document", "fill": "#f1f5f9", "stroke": "#64748b", "dot_shape": "tab", "tikz": "documentnode"},
+        "segment": {"class": "segment", "label": "Segment", "fill": "#fff8d6", "stroke": "#9a7a00", "dot_shape": "note", "tikz": "segmentnode"},
+        "memo": {"class": "memo", "label": "Memo", "fill": "#e8f7e4", "stroke": "#3c7a3c", "dot_shape": "folder", "tikz": "memonode"},
+        "research_question": {"class": "rq", "label": "RQ", "fill": "#ffe6e6", "stroke": "#a33", "dot_shape": "diamond", "tikz": "rqnode"},
+        "discourse_marker": {"class": "marker", "label": "CDA marker", "fill": "#d9f6f1", "stroke": "#0f766e", "dot_shape": "hexagon", "tikz": "markernode"},
+        "actor": {"class": "actor", "label": "Actor", "fill": "#fff2cc", "stroke": "#a66a00", "dot_shape": "ellipse", "tikz": "actornode"},
+        "discourse_feature": {"class": "feature", "label": "Feature", "fill": "#e0f7ff", "stroke": "#0369a1", "dot_shape": "component", "tikz": "featurenode"},
+    }
+    if entity_type == "code":
+        if code_type == "category":
+            return {"class": "category", "label": "Code: category", "fill": "#ddd0ff", "stroke": "#5b21b6", "dot_shape": "box", "tikz": "categorynode"}
+        if code_type == "axial":
+            return {"class": "axial", "label": "Code: axial", "fill": "#eee5ff", "stroke": "#6b46a3", "dot_shape": "box", "tikz": "axialnode"}
+        return {"class": "code", "label": f"Code: {code_type or 'open'}", "fill": "#e8f1ff", "stroke": "#3566a0", "dot_shape": "box", "tikz": "codenode"}
+    return styles.get(entity_type, {"class": "generic", "label": entity_type.replace("_", " ").title(), "fill": "#f8fafc", "stroke": "#64748b", "dot_shape": "box", "tikz": "genericnode"})
+
+
+def visual_model_mode_label(filters: dict | None) -> str:
+    mode = (filters or {}).get("model_mode", "simplified")
+    return VISUAL_MODEL_MODES.get(mode, VISUAL_MODEL_MODES["simplified"])
+
+
+def visual_model_mode_filters(model_mode: str) -> dict:
+    full_mode = model_mode == "full"
+    return {
+        "model_mode": model_mode,
+        "relation_type": "",
+        "strength": "",
+        "involves_type": "",
+        "include_uncertain": full_mode,
+        "include_weak": full_mode,
+        "max_relations": 100 if full_mode else 25,
+    }
+
+
+def generate_model_mermaid(active_project: sqlite3.Row, filters: dict | None = None) -> str:
+    data = get_model_export_data(active_project, filters)
+    relations = data["relations"]
+    lines = visual_export_header("%%", active_project)
+    lines.append(f"%% Model mode: {visual_model_mode_label(filters)}")
+    if not relations:
+        lines.extend(["%% No relations exist yet.", "flowchart TD", '  empty["No analytical relations yet"]'])
+        return "\n".join(lines) + "\n"
+    lines.extend(
+        [
+            "flowchart TD",
+            "  classDef actor fill:#fff2cc,stroke:#a66a00;",
+            "  classDef code fill:#e8f1ff,stroke:#3566a0;",
+            "  classDef axial fill:#eee5ff,stroke:#6b46a3;",
+            "  classDef category fill:#ddd0ff,stroke:#5b21b6;",
+            "  classDef memo fill:#e8f7e4,stroke:#3c7a3c;",
+            "  classDef segment fill:#fff8d6,stroke:#9a7a00;",
+            "  classDef document fill:#f1f5f9,stroke:#64748b;",
+            "  classDef rq fill:#ffe6e6,stroke:#a33;",
+            "  classDef marker fill:#d9f6f1,stroke:#0f766e;",
+            "  classDef feature fill:#e0f7ff,stroke:#0369a1;",
+        ]
+    )
+    for node in visual_model_nodes(relations):
+        style = visual_node_style(node)
+        label = escape_mermaid_text(node["short_label"])
+        lines.append(f'  {node["node_id"]}["{label}"]')
+        lines.append(f'  class {node["node_id"]} {style["class"]};')
+    for relation in relations:
+        source_id = graph_node_id(relation["source_type"], relation["source_id"])
+        target_id = graph_node_id(relation["target_type"], relation["target_id"])
+        edge_label = escape_mermaid_text(relation_edge_label(relation))
+        arrow = strength_style(relation["strength"])["mermaid"]
+        lines.append(f'  {source_id} {arrow}|"{edge_label}"| {target_id}')
+    return "\n".join(lines) + "\n"
+
+
+def generate_model_dot(active_project: sqlite3.Row, filters: dict | None = None) -> str:
+    data = get_model_export_data(active_project, filters)
+    relations = data["relations"]
+    if not relations:
+        return "\n".join(
+            [
+                "digraph discourseLabModel {",
+                '  empty [label="No analytical relations yet"];',
+                "}",
+                "",
+            ]
+        )
+    lines = [
+        "digraph discourseLabModel {",
+        "  graph [rankdir=LR, splines=true, overlap=false];",
+        "  node [shape=box, style=\"rounded,filled\", fontname=\"Arial\"];",
+        "  edge [fontname=\"Arial\"];",
+        f'  label="discourseLab analytical model — {escape_dot_text(visual_model_mode_label(filters))}";',
+        "  labelloc=t;",
+        "",
+    ]
+    for node in visual_model_nodes(relations):
+        style = visual_node_style(node)
+        node_id = escape_dot_text(node["node_id"])
+        label = escape_dot_text(f"{style['label']}\\n{node['short_label']}").replace("\\\\n", "\\n")
+        lines.append(
+            f'  "{node_id}" [label="{label}", shape={style["dot_shape"]}, '
+            f'fillcolor="{style["fill"]}", color="{style["stroke"]}"];'
+        )
+    for relation in relations:
+        source_id = escape_dot_text(graph_node_id(relation["source_type"], relation["source_id"]))
+        target_id = escape_dot_text(graph_node_id(relation["target_type"], relation["target_id"]))
+        edge_label = escape_dot_text(relation_edge_label(relation))
+        family = relation_family(relation["relation_type"])
+        family_style = relation_family_styles()[family]
+        strength = strength_style(relation["strength"])
+        tooltip = escape_dot_text(edge_tooltip(relation))
+        lines.append(
+            f'  "{source_id}" -> "{target_id}" [label="{edge_label}", color="{family_style["color"]}", '
+            f'fontcolor="{family_style["color"]}", penwidth={strength["dot_penwidth"]}, '
+            f'style={strength["dot_style"]}, tooltip="{tooltip}"];'
+        )
+    lines.extend(["}", ""])
+    return "\n".join(lines)
+
+
+def generate_model_tikz(active_project: sqlite3.Row, filters: dict | None = None) -> str:
+    data = get_model_export_data(active_project, filters)
+    relations = data["relations"]
+    lines = visual_export_header("%", active_project)
+    lines.append(f"% Model mode: {visual_model_mode_label(filters)}")
+    lines.append("% Generated layout is deterministic and may need manual adjustment in publication documents.")
+    if not relations:
+        lines.extend(
+            [
+                r"\begin{tikzpicture}",
+                r"\node[draw, rounded corners] at (0,0) {No analytical relations yet};",
+                r"\end{tikzpicture}",
+                "",
+            ]
+        )
+        return "\n".join(lines)
+    nodes = visual_model_nodes(relations)
+    lines.extend(
+        [
+            r"\begin{tikzpicture}[",
+            r"  node distance=2cm,",
+            r"  every node/.style={draw, rounded corners, align=center, font=\small},",
+            r"  relation/.style={->, >=stealth},",
+            r"  documentnode/.style={fill=gray!12, draw=gray!70},",
+            r"  segmentnode/.style={fill=yellow!18, draw=yellow!55!black},",
+            r"  codenode/.style={fill=blue!10, draw=blue!55!black},",
+            r"  axialnode/.style={fill=purple!10, draw=purple!60!black},",
+            r"  categorynode/.style={fill=purple!20, draw=purple!75!black},",
+            r"  memonode/.style={fill=green!12, draw=green!50!black},",
+            r"  rqnode/.style={fill=red!10, draw=red!60!black},",
+            r"  actornode/.style={fill=orange!15, draw=orange!70!black},",
+            r"  markernode/.style={fill=teal!12, draw=teal!70!black},",
+            r"  featurenode/.style={fill=cyan!12, draw=cyan!70!black},",
+            r"  genericnode/.style={fill=gray!8, draw=gray!70}",
+            r"]",
+        ]
+    )
+    positions, _, _ = layered_svg_positions(nodes)
+    for node in nodes:
+        x, y = positions[node["node_id"]]
+        style = visual_node_style(node)
+        label = f"{escape_latex_text(style['label'])}\\\\ {escape_latex_text(node['short_label'])}"
+        lines.append(fr"\node[{style['tikz']}] ({node['node_id']}) at ({x / 90:.2f},{-y / 90:.2f}) {{{label}}};")
+    for relation in relations:
+        source_id = graph_node_id(relation["source_type"], relation["source_id"])
+        target_id = graph_node_id(relation["target_type"], relation["target_id"])
+        edge_label = escape_latex_text(relation_edge_label(relation))
+        family = relation_family_styles()[relation_family(relation["relation_type"])]
+        strength = strength_style(relation["strength"])
+        lines.append(
+            fr"\draw[relation,{strength['tikz']},{family['tikz']}] ({source_id}) "
+            fr"to[bend left=8] node[above, draw=none, fill=white] {{{edge_label}}} ({target_id});"
+        )
+    lines.extend([r"\end{tikzpicture}", ""])
+    return "\n".join(lines)
+
+
+def node_layer(node: dict) -> int:
+    if node["type"] in {"document", "segment", "discourse_feature"}:
+        return 0
+    if node["type"] in {"actor", "discourse_marker"}:
+        return 1
+    if node["type"] == "code":
+        return {"open": 1, "axial": 2, "category": 3}.get(node.get("code_type", ""), 1)
+    if node["type"] == "memo":
+        return 2
+    if node["type"] == "research_question":
+        return 3
+    return 4
+
+
+def layered_svg_positions(nodes: list[dict]) -> tuple[dict[str, tuple[float, float]], int, int]:
+    node_width = 230
+    node_height = 76
+    x_gap = 90
+    y_gap = 28
+    margin_x = 50
+    margin_y = 90
+    layers: dict[int, list[dict]] = {}
+    for node in nodes:
+        layers.setdefault(node_layer(node), []).append(node)
+    for layer_nodes in layers.values():
+        layer_nodes.sort(key=lambda node: (node["type"], node.get("code_type", ""), node["label"].lower()))
+    layer_count = max(layers.keys(), default=0) + 1
+    max_layer_size = max((len(layer_nodes) for layer_nodes in layers.values()), default=1)
+    graph_width = margin_x * 2 + layer_count * node_width + max(0, layer_count - 1) * x_gap
+    graph_height = margin_y * 2 + max_layer_size * node_height + max(0, max_layer_size - 1) * y_gap
+    graph_width = max(graph_width, 1100)
+    graph_height = max(graph_height, 700)
+    positions = {}
+    for layer, layer_nodes in layers.items():
+        layer_height = len(layer_nodes) * node_height + max(0, len(layer_nodes) - 1) * y_gap
+        y_start = margin_y + max(0, (graph_height - margin_y * 2 - layer_height) / 2)
+        x = margin_x + layer * (node_width + x_gap)
+        for index, node in enumerate(layer_nodes):
+            y = y_start + index * (node_height + y_gap)
+            positions[node["node_id"]] = (x, y)
+    return positions, graph_width, graph_height
+
+
+def svg_wrapped_text(text: str, x: float, y: float, max_chars: int = 24, max_lines: int = 3, css_class: str = "node-label") -> list[str]:
+    words = " ".join((text or "").split()).split()
+    lines: list[str] = []
+    current = ""
+    for word in words:
+        candidate = f"{current} {word}".strip()
+        if len(candidate) <= max_chars:
+            current = candidate
+            continue
+        if current:
+            lines.append(current)
+        current = word
+        if len(lines) == max_lines - 1:
+            break
+    remaining_words = words[len(" ".join(lines + ([current] if current else [])).split()):]
+    if current:
+        if remaining_words or len(current) > max_chars:
+            current = truncate_text(current, max_chars)
+        lines.append(current)
+    if not lines:
+        lines = [""]
+    lines = lines[:max_lines]
+    output = [f'  <text x="{x:.1f}" y="{y:.1f}" text-anchor="middle" class="{css_class}">']
+    for index, line in enumerate(lines):
+        dy = 0 if index == 0 else 15
+        output.append(f'    <tspan x="{x:.1f}" dy="{dy}">{escape_svg_text(line)}</tspan>')
+    output.append("  </text>")
+    return output
+
+
+def edge_tooltip(relation: dict) -> str:
+    parts = [
+        f"Relation: {relation['relation_type']}",
+        f"Strength: {relation['strength']}",
+    ]
+    if relation.get("title"):
+        parts.append(f"Title: {relation['title']}")
+    if relation.get("memo"):
+        parts.append(f"Memo: {short_label(relation['memo'], 120)}")
+    if relation.get("evidence_note"):
+        parts.append(f"Evidence: {short_label(relation['evidence_note'], 120)}")
+    return "\n".join(parts)
+
+
+def node_tooltip(node: dict) -> str:
+    return f"{node['label']}\nEntity type: {node['type']}"
+
+
+def svg_legend(x: float, y: float) -> list[str]:
+    lines = [
+        f'  <g id="legend">',
+        f'    <rect x="{x}" y="{y}" width="280" height="675" rx="8" fill="#f8fafc" stroke="#cbd5e1" />',
+        f'    <text x="{x + 16}" y="{y + 26}" class="legend-title">Legend</text>',
+        f'    <text x="{x + 16}" y="{y + 52}" class="legend-title">Node types</text>',
+    ]
+    node_examples = [
+        {"label": "Document", "fill": "#f1f5f9", "stroke": "#64748b"},
+        {"label": "Segment", "fill": "#fff8d6", "stroke": "#9a7a00"},
+        {"label": "Open code", "fill": "#e8f1ff", "stroke": "#3566a0"},
+        {"label": "Axial code", "fill": "#eee5ff", "stroke": "#6b46a3"},
+        {"label": "Category", "fill": "#ddd0ff", "stroke": "#5b21b6"},
+        {"label": "Memo", "fill": "#e8f7e4", "stroke": "#3c7a3c"},
+        {"label": "Research question", "fill": "#ffe6e6", "stroke": "#a33"},
+        {"label": "Actor", "fill": "#fff2cc", "stroke": "#a66a00"},
+        {"label": "CDA marker", "fill": "#d9f6f1", "stroke": "#0f766e"},
+        {"label": "Discourse feature", "fill": "#e0f7ff", "stroke": "#0369a1"},
+    ]
+    current_y = y + 74
+    for item in node_examples:
+        lines.append(f'    <rect x="{x + 18}" y="{current_y - 12}" width="22" height="14" rx="3" fill="{item["fill"]}" stroke="{item["stroke"]}" />')
+        lines.append(f'    <text x="{x + 50}" y="{current_y}" class="legend-text">{item["label"]}</text>')
+        current_y += 25
+    current_y += 12
+    lines.append(f'    <text x="{x + 16}" y="{current_y}" class="legend-title">Edge strength</text>')
+    current_y += 24
+    strength_examples = [
+        ("strong", "thick solid"),
+        ("moderate", "medium solid"),
+        ("weak", "thin dashed"),
+        ("uncertain", "thin dotted"),
+    ]
+    for strength, label in strength_examples:
+        style = strength_style(strength)
+        dash = f' stroke-dasharray="{style["svg_dash"]}"' if style["svg_dash"] else ""
+        lines.append(f'    <line x1="{x + 18}" y1="{current_y - 4}" x2="{x + 78}" y2="{current_y - 4}" stroke="#334155" stroke-width="{style["svg_width"]}" opacity="{style["svg_opacity"]}"{dash} />')
+        lines.append(f'    <text x="{x + 90}" y="{current_y}" class="legend-text">{strength} = {label}</text>')
+        current_y += 25
+    current_y += 12
+    lines.append(f'    <text x="{x + 16}" y="{current_y}" class="legend-title">Relation families</text>')
+    current_y += 24
+    for family in ["support", "contrast", "causal_process", "gt", "cda_power", "cda_representation", "generic"]:
+        style = relation_family_styles()[family]
+        lines.append(f'    <line x1="{x + 18}" y1="{current_y - 4}" x2="{x + 78}" y2="{current_y - 4}" stroke="{style["color"]}" stroke-width="3" />')
+        lines.append(f'    <text x="{x + 90}" y="{current_y}" class="legend-text">{escape_svg_text(style["label"])}</text>')
+        current_y += 25
+    lines.append("  </g>")
+    return lines
+
+
+def generate_model_svg(active_project: sqlite3.Row, filters: dict | None = None) -> str:
+    data = get_model_export_data(active_project, filters)
+    relations = data["relations"]
+    if not relations:
+        return "\n".join(
+            [
+                '<svg xmlns="http://www.w3.org/2000/svg" width="640" height="160" viewBox="0 0 640 160">',
+                "  <title>discourseLab analytical model</title>",
+                '  <text x="320" y="82" text-anchor="middle" font-family="Arial, sans-serif" font-size="18">No analytical relations yet</text>',
+                "</svg>",
+                "",
+            ]
+        )
+    nodes = visual_model_nodes(relations)
+    positions, graph_width, graph_height = layered_svg_positions(nodes)
+    node_width = 230
+    node_height = 76
+    legend_width = 300
+    width = graph_width + legend_width + 40
+    height = max(graph_height, 820)
+    family_styles = relation_family_styles()
+    lines = [
+        f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 {width} {height}">',
+        "  <title>discourseLab analytical model</title>",
+        "  <style>",
+        "    text { font-family: Arial, sans-serif; fill: #172033; }",
+        "    .node-type { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; fill: #475569; }",
+        "    .node-label { font-size: 12px; }",
+        "    .edge-label { font-size: 10.5px; fill: #172033; }",
+        "    .legend-title { font-size: 13px; font-weight: 700; }",
+        "    .legend-text { font-size: 11px; fill: #334155; }",
+        "  </style>",
+        "  <defs>",
+        '    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">',
+        '      <path d="M0,0 L0,6 L9,3 z" fill="#334155" />',
+        "    </marker>",
+        "  </defs>",
+        '  <rect width="100%" height="100%" fill="#ffffff" />',
+        f'  <text x="50" y="34" font-size="18" font-weight="700">discourseLab analytical model — {escape_svg_text(visual_model_mode_label(filters))}</text>',
+        f'  <text x="50" y="56" font-size="12" fill="#64748b">Project: {escape_svg_text(active_project["name"])}</text>',
+    ]
+    for index, relation in enumerate(relations):
+        source_id = graph_node_id(relation["source_type"], relation["source_id"])
+        target_id = graph_node_id(relation["target_type"], relation["target_id"])
+        source_x, source_y = positions[source_id]
+        target_x, target_y = positions[target_id]
+        source_center_x = source_x + node_width / 2
+        target_center_x = target_x + node_width / 2
+        source_center_y = source_y + node_height / 2
+        target_center_y = target_y + node_height / 2
+        if target_center_x >= source_center_x:
+            x1 = source_x + node_width
+            x2 = target_x
+        else:
+            x1 = source_x
+            x2 = target_x + node_width
+        y1 = source_y + node_height / 2
+        y2 = target_y + node_height / 2
+        curve = max(70, abs(x2 - x1) * 0.38)
+        c1x = x1 + curve if x2 >= x1 else x1 - curve
+        c2x = x2 - curve if x2 >= x1 else x2 + curve
+        path = f"M {x1:.1f},{y1:.1f} C {c1x:.1f},{y1:.1f} {c2x:.1f},{y2:.1f} {x2:.1f},{y2:.1f}"
+        label_x = (x1 + x2) / 2
+        label_y = (y1 + y2) / 2 - 10 + ((index % 3) - 1) * 12
+        edge_label = escape_svg_text(relation_edge_label(relation))
+        family = relation_family(relation["relation_type"])
+        family_style = family_styles[family]
+        strength = strength_style(relation["strength"])
+        dash = f' stroke-dasharray="{strength["svg_dash"]}"' if strength["svg_dash"] else ""
+        lines.append(
+            f'  <path d="{path}" fill="none" stroke="{family_style["color"]}" '
+            f'stroke-width="{strength["svg_width"]}" opacity="{strength["svg_opacity"]}" '
+            f'marker-end="url(#arrow)"{dash}>'
+        )
+        lines.append(f"    <title>{escape_svg_text(edge_tooltip(relation))}</title>")
+        lines.append("  </path>")
+        label_width = min(150, max(70, len(edge_label) * 6))
+        lines.append(f'  <rect x="{label_x - label_width / 2:.1f}" y="{label_y - 12:.1f}" width="{label_width}" height="17" rx="3" fill="#ffffff" opacity="0.92" />')
+        lines.append(f'  <text x="{label_x:.1f}" y="{label_y:.1f}" text-anchor="middle" class="edge-label">{edge_label}</text>')
+    for node in nodes:
+        x, y = positions[node["node_id"]]
+        style = visual_node_style(node)
+        rx = 20 if node["type"] == "actor" else 7
+        lines.append(f'  <g id="{node["node_id"]}">')
+        lines.append(f"    <title>{escape_svg_text(node_tooltip(node))}</title>")
+        lines.append(f'    <rect x="{x}" y="{y}" width="{node_width}" height="{node_height}" rx="{rx}" fill="{style["fill"]}" stroke="{style["stroke"]}" stroke-width="1.4" />')
+        lines.append(f'    <text x="{x + node_width / 2:.1f}" y="{y + 18:.1f}" text-anchor="middle" class="node-type">{escape_svg_text(style["label"])}</text>')
+        lines.extend(svg_wrapped_text(node["label"], x + node_width / 2, y + 39, max_chars=26, max_lines=2))
+        lines.append("  </g>")
+    lines.extend(svg_legend(graph_width + 30, 90))
+    lines.extend(["</svg>", ""])
+    return "\n".join(lines)
+
+
 def generate_project_package_zip(active_project: sqlite3.Row) -> bytes:
     timestamp = export_timestamp()
     readme = "\n".join(
@@ -4795,6 +5639,10 @@ def generate_project_package_zip(active_project: sqlite3.Row) -> bytes:
             "- project.json",
             "- analytical_model.md",
             "- analytical_model.json",
+            "- analytical_model_[mode].mmd for simplified, argument, evidence, gt, cda, full",
+            "- analytical_model_[mode].dot for simplified, argument, evidence, gt, cda, full",
+            "- analytical_model_[mode].tikz for simplified, argument, evidence, gt, cda, full",
+            "- analytical_model_[mode].svg for simplified, argument, evidence, gt, cda, full",
             *(
                 ["- gt_hierarchy.md"]
                 if project_supports_gt(active_project)
@@ -4806,7 +5654,16 @@ def generate_project_package_zip(active_project: sqlite3.Row) -> bytes:
                 else []
             ),
             "",
-            "Uploaded source documents are not included in this package in Phase 10.",
+            "Visual model exports are generated from saved analytical relations.",
+            "Model modes:",
+            "- simplified: strong and moderate relations by default, capped for readability.",
+            "- argument: research questions, categories, axial codes, memos, strong relations, and argument-building relation types.",
+            "- evidence: documents, segments, memos, evidence/example/negative-case/support/contradiction relations.",
+            "- gt: code-only grounded theory relation structure.",
+            "- cda: actor, marker, feature, and CDA relation structure.",
+            "- full: all relations, including weak and uncertain, capped at 100.",
+            "",
+            "Uploaded source documents are not included in this package in Phase 11.5.",
             "",
         ]
     )
@@ -4821,6 +5678,12 @@ def generate_project_package_zip(active_project: sqlite3.Row) -> bytes:
         "analytical_model.json": generate_model_json(active_project),
         "README_EXPORT.txt": readme,
     }
+    for mode in VISUAL_MODEL_MODE_ORDER:
+        filters = visual_model_mode_filters(mode)
+        files[f"analytical_model_{mode}.mmd"] = generate_model_mermaid(active_project, filters)
+        files[f"analytical_model_{mode}.dot"] = generate_model_dot(active_project, filters)
+        files[f"analytical_model_{mode}.tikz"] = generate_model_tikz(active_project, filters)
+        files[f"analytical_model_{mode}.svg"] = generate_model_svg(active_project, filters)
     if project_supports_gt(active_project):
         files["gt_hierarchy.md"] = generate_gt_hierarchy_markdown(active_project)
     if project_supports_cda(active_project):

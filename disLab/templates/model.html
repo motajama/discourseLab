@@ -2,7 +2,7 @@
 
 {% block content %}
 <section class="page-header">
-    <p class="eyebrow">Phase 10 — Relations and analytical model builder</p>
+    <p class="eyebrow">Phase 11.5 — Readable visual model exports</p>
     <h1>Analytical Model</h1>
     <p>
         The analytical model connects codes, categories, actors, discourse features,
@@ -29,6 +29,36 @@
             <li><span>Negative case relations</span><span>{{ relation_counts.negative_cases }}</span></li>
         </ul>
     </article>
+    <article class="info-panel">
+        <h2>Visual Exports</h2>
+        <p>Visual exports are generated from saved analytical relations. Edit relations here before exporting.</p>
+        <div class="button-row">
+            <a class="button-secondary" href="{{ url_for('export_model_svg') }}">Download simplified SVG</a>
+            <a class="button-secondary" href="{{ url_for('export_model_mermaid') }}">Download simplified Mermaid</a>
+            <a class="button-secondary" href="{{ url_for('export_model_dot') }}">Download simplified DOT</a>
+            <a class="button-secondary" href="{{ url_for('export_model_tikz') }}">Download simplified TikZ</a>
+        </div>
+    </article>
+</section>
+
+<section class="info-panel export-section">
+    <div class="section-heading">
+        <h2>Visual model export options</h2>
+    </div>
+    <p>Simplified mode hides weak and uncertain relations by default. Full mode shows everything and may be visually dense.</p>
+    <div class="visual-mode-table">
+        {% for mode in visual_model_mode_order %}
+            <div class="visual-mode-row">
+                <strong>{{ visual_model_modes[mode] }}</strong>
+                <div class="button-row">
+                    <a class="button-secondary compact-button" href="{{ url_for('export_model_svg', model_mode=mode) }}">SVG</a>
+                    <a class="button-secondary compact-button" href="{{ url_for('export_model_mermaid', model_mode=mode) }}">Mermaid</a>
+                    <a class="button-secondary compact-button" href="{{ url_for('export_model_dot', model_mode=mode) }}">DOT</a>
+                    <a class="button-secondary compact-button" href="{{ url_for('export_model_tikz', model_mode=mode) }}">TikZ</a>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
 </section>
 
 <section class="info-panel import-panel">
