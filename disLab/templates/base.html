@@ -9,36 +9,43 @@
 </head>
 <body>
     <div class="app-shell">
-        <header class="topbar">
-            <div class="app-name">discourseLab</div>
-            <div class="app-context">
-                {{ active_project.name if active_project else "No active project" }}
-                {% if active_project %}· {{ methodology_mode_labels[active_project.methodology_mode] }}{% endif %}
+        <header class="topbar" aria-label="Application navigation">
+            <div class="topbar-brand">
+                <a class="app-name" href="{{ url_for('dashboard') }}">discourseLab</a>
+                <span class="app-project">{{ active_project.name if active_project else "No active project" }}</span>
+                {% if active_project %}
+                    <span class="methodology-badge">{{ methodology_mode_labels[active_project.methodology_mode] }}</span>
+                {% endif %}
             </div>
-        </header>
 
-        <aside class="sidebar" aria-label="Main navigation">
-            <nav class="sidebar-nav">
+            <nav class="top-nav" aria-label="Main navigation">
                 <a href="{{ url_for('dashboard') }}" class="{{ 'active' if active_page == 'dashboard' else '' }}">Dashboard</a>
                 <a href="{{ url_for('projects') }}" class="{{ 'active' if active_page == 'projects' else '' }}">Projects</a>
                 <a href="{{ url_for('documents') }}" class="{{ 'active' if active_page == 'documents' else '' }}">Documents</a>
                 <a href="{{ url_for('codes') }}" class="{{ 'active' if active_page == 'codes' else '' }}">Codes</a>
                 <a href="{{ url_for('memos') }}" class="{{ 'active' if active_page == 'memos' else '' }}">Memos</a>
-                <a href="{{ url_for('model_builder') }}" class="{{ 'active' if active_page == 'model' else '' }}">Model</a>
-                <a href="{{ url_for('methodology') }}" class="{{ 'active' if active_page == 'methodology' else '' }}">Methodology</a>
                 {% if supports_gt %}
-                    <a href="{{ url_for('gt_workspace') }}" class="{{ 'active' if active_page == 'gt' else '' }}">GT Workspace</a>
+                    <a href="{{ url_for('gt_workspace') }}" class="{{ 'active' if active_page == 'gt' else '' }}">GT</a>
                 {% else %}
-                    <span class="nav-disabled">GT Workspace</span>
+                    <span class="nav-disabled">GT</span>
                 {% endif %}
                 {% if supports_cda %}
-                    <a href="{{ url_for('cda_workspace') }}" class="{{ 'active' if active_page == 'cda' else '' }}">CDA Workspace</a>
+                    <a href="{{ url_for('cda_workspace') }}" class="{{ 'active' if active_page == 'cda' else '' }}">CDA</a>
                 {% else %}
-                    <span class="nav-disabled">CDA Workspace</span>
+                    <span class="nav-disabled">CDA</span>
                 {% endif %}
+                <a href="{{ url_for('model_builder') }}" class="{{ 'active' if active_page == 'model' else '' }}">Model</a>
+                <a href="{{ url_for('methodology') }}" class="{{ 'active' if active_page == 'methodology' else '' }}">Methodology</a>
                 <a href="{{ url_for('exports') }}" class="{{ 'active' if active_page == 'exports' else '' }}">Exports</a>
             </nav>
-        </aside>
+
+            {% if active_project %}
+                <nav class="top-nav top-nav-actions" aria-label="Project actions">
+                    <a href="{{ url_for('edit_project', project_id=active_project.id) }}">Project Settings</a>
+                    <a href="{{ url_for('export_project_backup') }}">Backup</a>
+                </nav>
+            {% endif %}
+        </header>
 
         <main class="content">
             {% with messages = get_flashed_messages(with_categories=true) %}

@@ -18,6 +18,7 @@
 
 body {
     margin: 0;
+    padding-top: 112px;
     min-height: 100vh;
     background: var(--bg);
     color: var(--text);
@@ -30,79 +31,115 @@ a {
 }
 
 .app-shell {
-    display: grid;
+    display: block;
     min-height: 100vh;
-    grid-template-columns: 240px 1fr;
-    grid-template-rows: 64px 1fr;
 }
 
 .topbar {
-    grid-column: 1 / -1;
+    position: fixed;
+    top: 0;
+    right: 0;
+    left: 0;
+    z-index: 30;
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 24px;
-    padding: 0 28px;
+    flex-wrap: wrap;
+    gap: 10px 18px;
+    min-height: 64px;
+    padding: 10px 24px;
     color: #ffffff;
     background: var(--sidebar);
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 4px 18px rgba(24, 32, 42, 0.18);
+}
+
+.topbar-brand {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px 10px;
+    min-width: 220px;
 }
 
 .app-name {
+    color: #ffffff;
     font-size: 1.25rem;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.app-project {
+    color: #d5dde5;
+    font-size: 0.92rem;
+}
+
+.methodology-badge {
+    display: inline-flex;
+    align-items: center;
+    min-height: 24px;
+    padding: 3px 8px;
+    border-radius: 999px;
+    color: #d8f0ed;
+    background: rgba(47, 111, 115, 0.36);
+    border: 1px solid rgba(216, 240, 237, 0.22);
+    font-size: 0.78rem;
     font-weight: 700;
 }
 
-.app-context {
-    color: #d5dde5;
-    font-size: 0.92rem;
-    text-align: right;
+.project-card .methodology-badge {
+    color: var(--accent-dark);
+    background: var(--accent-soft);
+    border-color: #c8ddda;
 }
 
-.sidebar {
-    background: var(--sidebar);
-    color: #e7edf2;
-    padding: 22px 14px;
-}
-
-.sidebar-nav {
+.top-nav {
     display: flex;
-    flex-direction: column;
-    gap: 6px;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 4px;
 }
 
-.sidebar-nav a {
+.top-nav-actions {
+    margin-left: auto;
+}
+
+.top-nav a,
+.top-nav .nav-disabled {
     display: block;
-    padding: 11px 14px;
+    min-height: 32px;
+    padding: 7px 10px;
     border-radius: 6px;
     text-decoration: none;
-    font-size: 0.96rem;
+    font-size: 0.9rem;
+    line-height: 1.2;
 }
 
-.nav-disabled {
-    display: block;
-    padding: 11px 14px;
-    border-radius: 6px;
-    color: rgba(231, 237, 242, 0.48);
-    font-size: 0.96rem;
+.top-nav a {
+    color: #e7edf2;
 }
 
-.sidebar-nav a:hover,
-.sidebar-nav a:focus {
+.top-nav .nav-disabled {
+    color: rgba(231, 237, 242, 0.42);
+    border: 1px solid rgba(231, 237, 242, 0.12);
+}
+
+.top-nav a:hover,
+.top-nav a:focus {
     background: rgba(255, 255, 255, 0.08);
     outline: none;
 }
 
-.sidebar-nav a.active {
+.top-nav a.active {
     background: var(--sidebar-active);
     color: #ffffff;
     font-weight: 700;
 }
 
 .content {
-    padding: 32px;
-    max-width: 1240px;
+    padding: 28px;
+    max-width: 1480px;
     width: 100%;
+    margin: 0 auto;
 }
 
 .flash-stack {
@@ -166,6 +203,181 @@ a {
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 16px;
     margin-bottom: 24px;
+}
+
+.dashboard-hero,
+.dashboard-section {
+    margin-bottom: 18px;
+}
+
+.project-card {
+    display: grid;
+    grid-template-columns: minmax(220px, 0.8fr) minmax(280px, 1.3fr) auto;
+    gap: 18px;
+    align-items: center;
+    padding: 22px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    box-shadow: 0 1px 2px rgba(24, 32, 42, 0.04);
+}
+
+.project-card h1 {
+    margin: 0 0 8px;
+    font-size: 1.6rem;
+}
+
+.project-card-summary p {
+    margin: 0 0 8px;
+    color: var(--muted);
+}
+
+.project-card-summary p:last-child {
+    margin-bottom: 0;
+}
+
+.section-heading {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 10px;
+}
+
+.section-heading h2 {
+    margin: 0;
+    font-size: 1.1rem;
+}
+
+.section-heading p {
+    margin: 0;
+    color: var(--muted);
+    font-size: 0.92rem;
+}
+
+.progress-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.progress-card {
+    padding: 16px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+}
+
+.progress-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 10px;
+}
+
+.progress-card h3 {
+    margin: 0;
+    font-size: 0.98rem;
+}
+
+.progress-card-header span {
+    color: var(--accent-dark);
+    font-size: 1.1rem;
+    font-weight: 700;
+}
+
+.progress-bar {
+    height: 10px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: var(--surface-muted);
+}
+
+.progress-bar span {
+    display: block;
+    height: 100%;
+    min-width: 0;
+    border-radius: inherit;
+    background: var(--accent);
+}
+
+.progress-card p {
+    margin: 8px 0 0;
+    color: var(--muted);
+    font-size: 0.9rem;
+}
+
+.action-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.dashboard-action {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 62px;
+    padding: 16px;
+    color: var(--text);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    box-shadow: 0 1px 2px rgba(24, 32, 42, 0.04);
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.dashboard-action:hover,
+.dashboard-action:focus {
+    border-color: #b8d2ce;
+    background: var(--accent-soft);
+    outline: none;
+}
+
+.dashboard-action span {
+    width: 28px;
+    font-size: 1.35rem;
+    text-align: center;
+}
+
+.dashboard-grid-compact {
+    grid-template-columns: minmax(280px, 0.9fr) minmax(320px, 1.1fr);
+}
+
+.suggestion-list {
+    display: grid;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.suggestion-list li {
+    padding: 10px 12px;
+    background: var(--accent-soft);
+    border: 1px solid #c8ddda;
+    border-radius: 8px;
+}
+
+.compact-count-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.compact-count-grid span {
+    padding: 7px 10px;
+    color: var(--muted);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    font-size: 0.9rem;
+}
+
+.compact-count-grid strong {
+    color: var(--text);
 }
 
 .dashboard-grid {
@@ -549,7 +761,7 @@ button:disabled {
 
 .selection-helper {
     position: fixed;
-    left: 256px;
+    left: 24px;
     right: 24px;
     bottom: 16px;
     z-index: 20;
@@ -1170,33 +1382,35 @@ button:disabled {
 }
 
 @media (max-width: 820px) {
-    .app-shell {
-        grid-template-columns: 1fr;
-        grid-template-rows: auto auto 1fr;
+    body {
+        padding-top: 180px;
     }
 
     .topbar {
         align-items: flex-start;
-        flex-direction: column;
-        padding: 16px 20px;
-        gap: 4px;
+        padding: 12px 16px;
+        gap: 8px 12px;
     }
 
-    .app-context {
-        text-align: left;
-    }
-
-    .sidebar {
-        padding: 12px;
-    }
-
-    .sidebar-nav {
-        flex-direction: row;
-        flex-wrap: wrap;
+    .top-nav-actions {
+        margin-left: 0;
     }
 
     .content {
         padding: 22px;
+    }
+
+    .project-card,
+    .progress-grid,
+    .action-grid,
+    .dashboard-grid-compact {
+        grid-template-columns: 1fr;
+    }
+
+    .section-heading {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 4px;
     }
 
     .metrics-grid {

@@ -4,22 +4,22 @@ discourseLab is a local, lightweight qualitative analysis workspace for discours
 
 It runs on your own computer in a web browser. It does not require an account, cloud service, npm, Node, React, or external web services.
 
-Current phase: **Phase 12.5a — Safety and workflow hotfixes**
+Current phase: **Phase 12.5b — Dashboard and horizontal navigation**
 
 The analytical model builder connects project entities such as segments, codes, categories, actors, discourse features, memos, and research questions into explicit analytical relations.
 
-Phase 12.5a adds focused workflow and safety fixes: editable CDA markers and actors, delete confirmations, scroll preservation on the document detail page after coding and annotation actions, a fixed bottom segment selection bar, and `/exports/project-backup.zip`. It does not add AI, cloud sync, authentication, Node, npm, React, Vue, or external CDN usage.
+Phase 12.5b improves app orientation with fixed horizontal navigation, progress barometers, prominent dashboard action buttons, and rule-based suggested next actions. It keeps the document coding workflow intact and does not add AI, cloud sync, authentication, Node, npm, React, Vue, or external CDN usage.
 
-## Phase 12.5a Verification
+## Phase 12.5b Verification
 
 1. Start the app with `python app.py`.
-2. Edit a CDA marker.
-3. Edit an actor.
-4. Try deleting a segment, document, or code and confirm the warning appears.
-5. Open a long document, scroll down, create a segment, and confirm scroll position is preserved.
-6. Confirm the segment creation UI does not cover selected text.
+2. Confirm the horizontal navigation is fixed at the top.
+3. Confirm the left sidebar no longer consumes workspace width.
+4. Confirm the dashboard shows progress barometers.
+5. Confirm the large dashboard action buttons open the expected sections.
+6. Confirm methodology mode affects GT and CDA navigation availability.
 7. Download `/exports/project-backup.zip`.
-8. Confirm the app restarts without data loss.
+8. Confirm `/health` returns `"phase": "12.5b"`.
 
 ## What You Need
 

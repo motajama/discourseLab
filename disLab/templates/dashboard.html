@@ -1,165 +1,75 @@
 {% extends "base.html" %}
 
 {% block content %}
-<section class="page-header dashboard-title">
-    <p class="eyebrow">{{ current_phase }}</p>
-    <h1>discourseLab</h1>
-    <p>Local qualitative analysis workspace for discourse analysis, CDA, and grounded theory.</p>
-</section>
-
-<section class="metrics-grid" aria-label="Project counts">
-    <article class="metric-card">
-        <span class="metric-value">{{ counts.documents }}</span>
-        <span class="metric-label">Documents</span>
-    </article>
-    <article class="metric-card">
-        <span class="metric-value">{{ counts.segments }}</span>
-        <span class="metric-label">Segments</span>
-    </article>
-    <article class="metric-card">
-        <span class="metric-value">{{ counts.open_codes }}</span>
-        <span class="metric-label">Open Codes</span>
-    </article>
-    <article class="metric-card">
-        <span class="metric-value">{{ counts.axial_codes }}</span>
-        <span class="metric-label">Axial Codes</span>
-    </article>
-    <article class="metric-card">
-        <span class="metric-value">{{ counts.categories }}</span>
-        <span class="metric-label">Categories</span>
-    </article>
-    <article class="metric-card">
-        <span class="metric-value">{{ counts.cda_markers }}</span>
-        <span class="metric-label">CDA Markers</span>
-    </article>
-    <article class="metric-card">
-        <span class="metric-value">{{ counts.actors }}</span>
-        <span class="metric-label">Actors</span>
-    </article>
-    <article class="metric-card">
-        <span class="metric-value">{{ counts.discourse_features }}</span>
-        <span class="metric-label">Discourse Features</span>
-    </article>
-    <article class="metric-card">
-        <span class="metric-value">{{ counts.relations }}</span>
-        <span class="metric-label">Relations</span>
-    </article>
-    <article class="metric-card">
-        <span class="metric-value">{{ counts.memos }}</span>
-        <span class="metric-label">Memos</span>
+<section class="dashboard-hero">
+    <article class="project-card">
+        <div>
+            <p class="eyebrow">{{ current_phase }}</p>
+            <h1>{{ active_project.name }}</h1>
+            <span class="methodology-badge">{{ methodology_mode_labels[active_project.methodology_mode] }}</span>
+        </div>
+        <div class="project-card-summary">
+            <p>{{ active_project.research_goal or active_project.description or "No research goal yet." }}</p>
+            <p><strong>Principal investigator:</strong> {{ active_project.principal_investigator or "Not specified" }}</p>
+        </div>
+        <a class="button-secondary" href="{{ url_for('edit_project', project_id=active_project.id) }}">Project settings</a>
     </article>
 </section>
 
-<section class="dashboard-grid">
-    <article class="info-panel">
-        <h2>Project Metadata</h2>
-        <dl class="metadata-list">
-            <div>
-                <dt>Project name</dt>
-                <dd>{{ active_project.name }}</dd>
-            </div>
-            <div>
-                <dt>Project description</dt>
-                <dd>{{ active_project.description }}</dd>
-            </div>
-            <div>
-                <dt>Methodology mode</dt>
-                <dd>{{ methodology_mode_labels[active_project.methodology_mode] }}</dd>
-            </div>
-            <div>
-                <dt>Research goal</dt>
-                <dd>{{ active_project.research_goal or "No research goal" }}</dd>
-            </div>
-            <div>
-                <dt>Principal investigator</dt>
-                <dd>{{ active_project.principal_investigator or "Not specified" }}</dd>
-            </div>
-            <div>
-                <dt>Last opened</dt>
-                <dd>{{ active_project.last_opened_at or "Not recorded" }}</dd>
-            </div>
-            <div>
-                <dt>Created at</dt>
-                <dd>{{ active_project.created_at }}</dd>
-            </div>
-            <div>
-                <dt>Updated at</dt>
-                <dd>{{ active_project.updated_at }}</dd>
-            </div>
-            <div>
-                <dt>Current phase</dt>
-                <dd>{{ current_phase }}</dd>
-            </div>
-        </dl>
-    </article>
+<section class="dashboard-section">
+    <div class="section-heading">
+        <h2>Project Progress</h2>
+        <p>Barometers focus on how much of the material has moved into analysis.</p>
+    </div>
+    <div class="progress-grid">
+        {% for item in progress_barometers %}
+            <article class="progress-card">
+                <div class="progress-card-header">
+                    <h3>{{ item.label }}</h3>
+                    <span>{{ item.percent }}%</span>
+                </div>
+                <div class="progress-bar" aria-label="{{ item.label }}: {{ item.percent }}%">
+                    <span style="width: {{ item.percent }}%"></span>
+                </div>
+                <p>{{ item.summary }}</p>
+            </article>
+        {% endfor %}
+    </div>
+</section>
 
-    <article class="info-panel">
-        <h2>Prepared Workflow</h2>
-        <p class="workflow-line">Projects -> Documents -> Segments -> Analysis Mode -> Exports</p>
-        <p>
-            Phase 12 adds a local methodology helper library and project protocol notes.
-        </p>
-    </article>
+<section class="dashboard-section">
+    <div class="section-heading">
+        <h2>Actions</h2>
+    </div>
+    <div class="action-grid">
+        <a class="dashboard-action" href="{{ url_for('documents') }}"><span>📄</span>Import documents</a>
+        <a class="dashboard-action" href="{{ url_for('document_view', document_id=first_document_id) if first_document_id else url_for('documents') }}"><span>✂️</span>Start coding</a>
+        <a class="dashboard-action" href="{{ url_for('codes') }}"><span>🏷️</span>Manage codes</a>
+        <a class="dashboard-action" href="{{ url_for('memos') }}"><span>🧠</span>Write memo</a>
+        <a class="dashboard-action" href="{{ url_for('methodology') }}"><span>🧭</span>Methodology</a>
+        <a class="dashboard-action" href="{{ url_for('model_builder') }}"><span>🕸️</span>Build model</a>
+        <a class="dashboard-action" href="{{ url_for('exports') }}"><span>📦</span>Export package</a>
+        <a class="dashboard-action" href="{{ url_for('export_project_backup') }}"><span>💾</span>Backup project</a>
+        <a class="dashboard-action" href="{{ url_for('edit_project', project_id=active_project.id) }}"><span>⚙️</span>Project settings</a>
+    </div>
+</section>
 
+<section class="dashboard-grid dashboard-grid-compact">
     <article class="info-panel">
-        <h2>Next Steps</h2>
-        <ol class="next-steps">
-            <li>Later: Add graphical model editing.</li>
-            <li>Later: Add inter-coder workflows.</li>
-        </ol>
-    </article>
-
-    <article class="info-panel">
-        <h2>CDA Preview</h2>
-        <ul class="compact-list">
-            <li><span>Segments with CDA markers</span><span>{{ cda_preview.segments_with_markers }}</span></li>
-            <li><span>Actors annotated</span><span>{{ cda_preview.actors_annotated }}</span></li>
-            <li><span>Most frequent actor relation type</span><span>{{ cda_preview.top_relation_type }}</span></li>
-            <li><span>Most frequent discourse feature type</span><span>{{ cda_preview.top_feature_type }}</span></li>
-        </ul>
-    </article>
-
-    <article class="info-panel">
-        <h2>Model Preview</h2>
-        <ul class="compact-list">
-            <li><span>Total relations</span><span>{{ model_preview.total }}</span></li>
-            <li><span>Strong relations</span><span>{{ model_preview.strong }}</span></li>
-            <li><span>Uncertain relations</span><span>{{ model_preview.uncertain }}</span></li>
-            <li><span>Most common relation type</span><span>{{ model_preview.top_relation_type }}</span></li>
-        </ul>
-        {% if model_preview.latest_relations %}
-            <h3>Latest relations</h3>
-            <ul class="compact-list">
-                {% for relation in model_preview.latest_relations %}
-                    <li><span>{{ relation.source_label }}</span><span>{{ relation.relation_label }} → {{ relation.target_label }}</span></li>
+        <h2>Next Suggested Actions</h2>
+        {% if suggested_actions %}
+            <ul class="suggestion-list">
+                {% for suggestion in suggested_actions %}
+                    <li>{{ suggestion }}</li>
                 {% endfor %}
             </ul>
+        {% else %}
+            <p>The main setup signals are complete. Continue coding, memoing, and modeling your analysis.</p>
         {% endif %}
     </article>
 
     <article class="info-panel">
-        <h2>Methodological Protocol</h2>
-        <ul class="compact-list">
-            <li><span>Methodology mode</span><span>{{ methodology_mode_labels[active_project.methodology_mode] }}</span></li>
-            <li><span>Active protocol notes</span><span>{{ methodology_counts.active_protocol }}</span></li>
-            <li><span>Coding rules</span><span>{{ methodology_counts.coding_rules }}</span></li>
-            <li><span>Sampling rules</span><span>{{ methodology_counts.sampling_rules }}</span></li>
-            <li><span>Needs review</span><span>{{ methodology_counts.needs_review }}</span></li>
-        </ul>
-        <a class="button-secondary" href="{{ url_for('methodology') }}">Open Methodology</a>
-    </article>
-
-    <article class="info-panel">
-        <h2>Available Exports</h2>
-        <div class="link-row">
-            {% for export_link in export_links %}
-                <a class="button-secondary" href="{{ url_for(export_link.endpoint) }}">{{ export_link.label }}</a>
-            {% endfor %}
-        </div>
-    </article>
-
-    <article class="info-panel">
-        <h2>Audit Log Preview</h2>
+        <h2>Recent Activity</h2>
         {% if audit_entries %}
             <ul class="audit-list">
                 {% for entry in audit_entries %}
@@ -174,112 +84,19 @@
             <p>No audit log entries yet.</p>
         {% endif %}
     </article>
+</section>
 
-    <article class="info-panel">
-        <h2>Latest Documents</h2>
-        {% if latest_documents %}
-            <ul class="compact-list">
-                {% for document in latest_documents %}
-                    <li>
-                        <span>{{ document.title }}</span>
-                        <span>{{ document.file_type }} · {{ document.created_at }}</span>
-                    </li>
-                {% endfor %}
-            </ul>
-        {% else %}
-            <p>No documents imported yet.</p>
-        {% endif %}
-    </article>
-
-    <article class="info-panel">
-        <h2>Latest Segments</h2>
-        {% if latest_segments %}
-            <ul class="compact-list">
-                {% for segment in latest_segments %}
-                    <li>
-                        <span>{{ segment.name or segment.document_title }}</span>
-                        <span>{{ segment.selected_text[:120] }}{% if segment.selected_text|length > 120 %}...{% endif %}</span>
-                        <span>{{ segment.created_at }}</span>
-                    </li>
-                {% endfor %}
-            </ul>
-        {% else %}
-            <p>No segments created yet.</p>
-        {% endif %}
-    </article>
-
-    <article class="info-panel">
-        <h2>Latest Open Codes</h2>
-        {% if latest_open_codes %}
-            <ul class="compact-list">
-                {% for code in latest_open_codes %}
-                    <li>
-                        <span><span class="color-swatch small" style="background: {{ code.color }}"></span>{{ code.name }}</span>
-                        <span>{{ code.assigned_segment_count }} assigned segments</span>
-                    </li>
-                {% endfor %}
-            </ul>
-        {% else %}
-            <p>No open codes created yet.</p>
-        {% endif %}
-    </article>
-
-    <article class="info-panel">
-        <h2>Latest Coded Segments</h2>
-        {% if latest_coded_segments %}
-            <ul class="compact-list">
-                {% for segment in latest_coded_segments %}
-                    <li>
-                        <span>{{ segment.name or segment.document_title }}</span>
-                        <span>{{ segment.code_names }}</span>
-                        <span>{{ segment.created_at }}</span>
-                    </li>
-                {% endfor %}
-            </ul>
-        {% else %}
-            <p>No coded segments yet.</p>
-        {% endif %}
-    </article>
-
-    <article class="info-panel">
-        <h2>Latest Memos</h2>
-        {% if latest_memos %}
-            <ul class="compact-list">
-                {% for memo in latest_memos %}
-                    <li>
-                        <span>{{ memo.title }}</span>
-                        <span>{{ memo_type_labels[memo.memo_type] }} · {{ memo_status_labels[memo.status] }} · {{ memo.created_at }}</span>
-                    </li>
-                {% endfor %}
-            </ul>
-        {% else %}
-            <p>No memos created yet.</p>
-        {% endif %}
-    </article>
-
-    <article class="info-panel">
-        <h2>Codes Missing Definitions</h2>
-        {% if codes_missing_definitions %}
-            <ul class="compact-list">
-                {% for code in codes_missing_definitions %}
-                    <li>
-                        <span>{{ code.name }}</span>
-                        <span>Missing definition</span>
-                    </li>
-                {% endfor %}
-            </ul>
-        {% else %}
-            <p>All open codes have definitions.</p>
-        {% endif %}
-    </article>
-
-    <article class="info-panel">
-        <h2>GT Structure Preview</h2>
-        <ul class="compact-list">
-            <li><span>Open codes without axial parent</span><span>{{ gt_preview.open_without_axial }}</span></li>
-            <li><span>Axial codes without category parent</span><span>{{ gt_preview.axial_without_category }}</span></li>
-            <li><span>Categories</span><span>{{ gt_preview.categories }}</span></li>
-        </ul>
-    </article>
+<section class="dashboard-section raw-counts">
+    <div class="section-heading">
+        <h2>Counts</h2>
+    </div>
+    <div class="compact-count-grid">
+        <span>Documents <strong>{{ counts.documents }}</strong></span>
+        <span>Segments <strong>{{ counts.segments }}</strong></span>
+        <span>Coded segments <strong>{{ counts.coded_segments }}</strong></span>
+        <span>Open codes <strong>{{ counts.open_codes }}</strong></span>
+        <span>Memos <strong>{{ counts.memos }}</strong></span>
+        <span>Relations <strong>{{ counts.relations }}</strong></span>
+    </div>
 </section>
 {% endblock %}

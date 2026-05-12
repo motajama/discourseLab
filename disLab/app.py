@@ -29,8 +29,8 @@ from werkzeug.utils import secure_filename
 
 
 APP_NAME = "discourseLab"
-APP_PHASE = "12.5a"
-CURRENT_PHASE_LABEL = "Phase 12.5a — Safety and workflow hotfixes"
+APP_PHASE = "12.5b"
+CURRENT_PHASE_LABEL = "Phase 12.5b — Dashboard and horizontal navigation"
 DEFAULT_PROJECT_NAME = "Demo Project"
 DEFAULT_PROJECT_DESCRIPTION = "Initial local discourseLab project."
 DEFAULT_CODE_COLOR = "#f4c542"
@@ -276,16 +276,9 @@ def create_app() -> Flask:
         active_project = get_active_project()
         counts = get_dashboard_counts(active_project["id"])
         audit_entries = get_latest_audit_entries(active_project["id"])
-        latest_documents = get_latest_documents(active_project["id"])
-        latest_segments = get_latest_segments(active_project["id"])
-        latest_open_codes = get_latest_open_codes(active_project["id"])
-        latest_coded_segments = get_latest_coded_segments(active_project["id"])
-        latest_memos = get_latest_memos(active_project["id"])
-        codes_missing_definitions = get_codes_missing_definitions(active_project["id"])
-        gt_preview = get_gt_structure_preview(active_project["id"])
-        cda_preview = get_cda_dashboard_preview(active_project["id"])
-        model_preview = get_model_dashboard_preview(active_project["id"])
         methodology_counts = get_methodology_note_counts(active_project["id"])
+        progress_barometers = get_dashboard_progress_barometers(active_project, counts)
+        first_document_id = get_first_document_id(active_project["id"])
         return render_template(
             "dashboard.html",
             title="Dashboard",
@@ -293,18 +286,13 @@ def create_app() -> Flask:
             active_project=active_project,
             counts=counts,
             audit_entries=audit_entries,
-            latest_documents=latest_documents,
-            latest_segments=latest_segments,
-            latest_open_codes=latest_open_codes,
-            latest_coded_segments=latest_coded_segments,
-            latest_memos=latest_memos,
-            codes_missing_definitions=codes_missing_definitions,
-            gt_preview=gt_preview,
-            cda_preview=cda_preview,
-            model_preview=model_preview,
             methodology_counts=methodology_counts,
+            progress_barometers=progress_barometers,
+            suggested_actions=get_dashboard_suggestions(
+                active_project, counts, methodology_counts, progress_barometers
+            ),
+            first_document_id=first_document_id,
             current_phase=CURRENT_PHASE_LABEL,
-            export_links=get_dashboard_export_links(),
             memo_type_labels=MEMO_TYPES,
             memo_status_labels=MEMO_STATUSES,
         )
@@ -2824,6 +2812,268 @@ def get_dashboard_counts(project_id: int) -> dict[str, int]:
             "SELECT COUNT(*) AS count FROM relations WHERE project_id = ?", (project_id,)
         )["count"],
     }
+
+
+def percent(numerator: int, denominator: int) -> int:
+    if denominator <= 0:
+        return 0
+    return round((numerator / denominator) * 100)
+
+
+def dashboard_barometer(
+    label: str,
+    numerator: int,
+    denominator: int,
+    zero_text: str,
+) -> dict[str, int | str]:
+    return {
+        "label": label,
+        "numerator": numerator,
+        "denominator": denominator,
+        "percent": percent(numerator, denominator),
+        "summary": zero_text if denominator == 0 else f"{numerator} of {denominator}",
+    }
+
+
+def get_dashboard_progress_barometers(
+    active_project: sqlite3.Row,
+    counts: dict[str, int],
+) -> list[dict[str, int | str]]:
+    project_id = active_project["id"]
+    barometers = [
+        dashboard_barometer(
+            "Documents engaged",
+            count_documents_with_segments(project_id),
+            counts["documents"],
+            "No documents yet.",
+        ),
+        dashboard_barometer(
+            "Segments coded",
+            count_segments_with_codes(project_id),
+            counts["segments"],
+            "No segments yet.",
+        ),
+        dashboard_barometer(
+            "Codebook completeness",
+            count_codes_with_definitions(project_id),
+            counts["open_codes"] + counts["axial_codes"] + counts["categories"],
+            "No codes yet.",
+        ),
+        dashboard_barometer(
+            "Memo coverage",
+            count_segments_with_memos(project_id),
+            counts["segments"],
+            "No segments yet.",
+        ),
+    ]
+
+    if project_supports_gt(active_project):
+        barometers.extend(
+            [
+                dashboard_barometer(
+                    "Open codes assigned to axial codes",
+                    count_open_codes_with_axial(project_id),
+                    counts["open_codes"],
+                    "No open codes yet.",
+                ),
+                dashboard_barometer(
+                    "Axial codes assigned to categories",
+                    count_axial_codes_with_category(project_id),
+                    counts["axial_codes"],
+                    "No axial codes yet.",
+                ),
+            ]
+        )
+
+    if project_supports_cda(active_project):
+        barometers.extend(
+            [
+                dashboard_barometer(
+                    "Segments with CDA annotations",
+                    count_segments_with_cda_annotations(project_id),
+                    counts["segments"],
+                    "No segments yet.",
+                ),
+                dashboard_barometer(
+                    "Actors used",
+                    count_actors_used(project_id),
+                    counts["actors"],
+                    "No actors yet.",
+                ),
+            ]
+        )
+
+    return barometers
+
+
+def get_dashboard_suggestions(
+    active_project: sqlite3.Row,
+    counts: dict[str, int],
+    methodology_counts: dict[str, int],
+    progress_barometers: list[dict[str, int | str]],
+) -> list[str]:
+    project_id = active_project["id"]
+    progress = {item["label"]: item for item in progress_barometers}
+    suggestions = []
+    if counts["documents"] == 0:
+        suggestions.append("Import your first document.")
+    if counts["documents"] > 0 and counts["segments"] == 0:
+        suggestions.append("Open a document and create your first segment.")
+    if counts["segments"] > 0 and progress["Segments coded"]["percent"] < 70:
+        suggestions.append("Assign open codes to uncoded segments.")
+    if counts["open_codes"] + counts["axial_codes"] + counts["categories"] > 0 and progress["Codebook completeness"]["percent"] < 100:
+        suggestions.append("Complete your codebook definitions.")
+    if project_supports_gt(active_project):
+        if counts["open_codes"] > 0 and count_open_codes_with_axial(project_id) < counts["open_codes"]:
+            suggestions.append("Assign open codes to axial codes.")
+        if counts["axial_codes"] > 0 and count_axial_codes_with_category(project_id) < counts["axial_codes"]:
+            suggestions.append("Develop categories from axial codes.")
+    if project_supports_cda(active_project) and counts["actors"] == 0:
+        suggestions.append("Create actors and start voice/silence mapping.")
+    if counts["relations"] == 0:
+        suggestions.append("Create analytical relations in the model builder.")
+    if methodology_counts["active_protocol"] == 0:
+        suggestions.append("Add a methodological protocol note.")
+    return suggestions[:6]
+
+
+def get_first_document_id(project_id: int) -> int | None:
+    row = query_one(
+        """
+        SELECT id
+        FROM documents
+        WHERE project_id = ?
+        ORDER BY datetime(created_at), id
+        LIMIT 1
+        """,
+        (project_id,),
+    )
+    return row["id"] if row else None
+
+
+def count_documents_with_segments(project_id: int) -> int:
+    return query_one(
+        """
+        SELECT COUNT(DISTINCT documents.id) AS count
+        FROM documents
+        JOIN segments ON segments.document_id = documents.id
+        WHERE documents.project_id = ?
+        """,
+        (project_id,),
+    )["count"]
+
+
+def count_segments_with_codes(project_id: int) -> int:
+    return query_one(
+        """
+        SELECT COUNT(DISTINCT segments.id) AS count
+        FROM segments
+        JOIN documents ON documents.id = segments.document_id
+        JOIN segment_codes ON segment_codes.segment_id = segments.id
+        WHERE documents.project_id = ?
+        """,
+        (project_id,),
+    )["count"]
+
+
+def count_codes_with_definitions(project_id: int) -> int:
+    return query_one(
+        """
+        SELECT COUNT(*) AS count
+        FROM codes
+        WHERE project_id = ?
+          AND definition IS NOT NULL
+          AND TRIM(definition) != ''
+        """,
+        (project_id,),
+    )["count"]
+
+
+def count_segments_with_memos(project_id: int) -> int:
+    return query_one(
+        """
+        SELECT COUNT(DISTINCT segments.id) AS count
+        FROM segments
+        JOIN documents ON documents.id = segments.document_id
+        JOIN memos
+            ON memos.linked_entity_type = 'segment'
+           AND memos.linked_entity_id = segments.id
+           AND memos.project_id = documents.project_id
+        WHERE documents.project_id = ?
+        """,
+        (project_id,),
+    )["count"]
+
+
+def count_open_codes_with_axial(project_id: int) -> int:
+    return query_one(
+        """
+        SELECT COUNT(open_codes.id) AS count
+        FROM codes AS open_codes
+        JOIN codes AS axial_codes ON axial_codes.id = open_codes.parent_id
+        WHERE open_codes.project_id = ?
+          AND open_codes.code_type = 'open'
+          AND axial_codes.project_id = open_codes.project_id
+          AND axial_codes.code_type = 'axial'
+        """,
+        (project_id,),
+    )["count"]
+
+
+def count_axial_codes_with_category(project_id: int) -> int:
+    return query_one(
+        """
+        SELECT COUNT(axial_codes.id) AS count
+        FROM codes AS axial_codes
+        JOIN codes AS categories ON categories.id = axial_codes.parent_id
+        WHERE axial_codes.project_id = ?
+          AND axial_codes.code_type = 'axial'
+          AND categories.project_id = axial_codes.project_id
+          AND categories.code_type = 'category'
+        """,
+        (project_id,),
+    )["count"]
+
+
+def count_segments_with_cda_annotations(project_id: int) -> int:
+    return query_one(
+        """
+        SELECT COUNT(DISTINCT segments.id) AS count
+        FROM segments
+        JOIN documents ON documents.id = segments.document_id
+        WHERE documents.project_id = ?
+          AND (
+              EXISTS (
+                  SELECT 1
+                  FROM segment_discourse_markers
+                  WHERE segment_discourse_markers.segment_id = segments.id
+              )
+              OR EXISTS (
+                  SELECT 1
+                  FROM segment_actors
+                  WHERE segment_actors.segment_id = segments.id
+              )
+              OR EXISTS (
+                  SELECT 1
+                  FROM discourse_features
+                  WHERE discourse_features.segment_id = segments.id
+              )
+          )
+        """,
+        (project_id,),
+    )["count"]
+
+
+def count_actors_used(project_id: int) -> int:
+    return query_one(
+        """
+        SELECT COUNT(DISTINCT actors.id) AS count
+        FROM actors
+        JOIN segment_actors ON segment_actors.actor_id = actors.id
+        WHERE actors.project_id = ?
+        """,
+        (project_id,),
+    )["count"]
 
 
 def get_cda_dashboard_preview(project_id: int) -> dict[str, str | int]:
