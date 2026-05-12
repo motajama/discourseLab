@@ -12,8 +12,6 @@ Release label: **local testing release**
 
 The analytical model builder connects project entities such as segments, codes, categories, actors, discourse features, memos, and research questions into explicit analytical relations.
 
-The current UI pass adapts discourseLab to a flat Atari/TOS/GEM-inspired local workstation skin using Libertinus typography from Google Fonts. Document and segment source text remains monospace for careful reading and coding. It does not add analytical features, schema changes, AI, cloud sync, authentication, Node, npm, React, Vue, an external CSS framework, or a frontend build system.
-
 For release testing, read:
 
 - [TESTING.md](TESTING.md)
@@ -23,20 +21,7 @@ For release testing, read:
 
 Keep backups of important data. Use the project backup ZIP regularly from the Exports page. Restore from backup is not implemented yet.
 
-## Atari UI Verification
-
-1. Start the app with `python app.py`.
-2. Confirm the fixed top navigation uses flat Atari-style bordered buttons and the active item is clear.
-3. Confirm dashboards, cards, forms, tables, exports, model, methodology, and network pages use strong rectangular borders and hard shadows.
-4. Confirm the Google Fonts Libertinus link is present in the base template.
-5. Confirm main UI text uses Libertinus with local fallbacks.
-6. Confirm document text, segment text, selected text previews, and coded excerpts use monospace.
-7. Confirm document coding still supports text selection, segment creation, assignment, and scroll preservation.
-8. Confirm delete confirmations still appear.
-9. Confirm no external CSS framework or frontend build system was introduced.
-10. Confirm `/health` returns `"version": "0.1.0-beta"` and `"phase": "beta-prep"`.
-
-## What You Need
+# What You Need
 
 - A computer running Linux, macOS, or Windows
 - Python 3.10 or newer
