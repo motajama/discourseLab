@@ -2,8 +2,6 @@
 
 discourseLab is a local lightweight qualitative analysis workspace for discourse analysis, critical discourse analysis, grounded theory, and generic qualitative coding.
 
-The current UI pass keeps the local Flask/SQLite app structure and adapts discourseLab to a flat Atari/TOS/GEM-inspired workstation skin using Libertinus typography from Google Fonts. Document and segment source text remains monospace.
-
 ## Installation
 
 ```bash
