@@ -1,386 +1,356 @@
 {% extends "base.html" %}
 
 {% block content %}
-<section class="page-header document-detail-page">
-    <p class="eyebrow">Analytical reading view</p>
-    <h1>{{ document.title }}</h1>
-    <p>Active project: {{ active_project.name }}</p>
-</section>
+{% set cda_enabled = active_project.methodology_mode in ["cda", "mixed"] %}
+{% set gt_enabled = active_project.methodology_mode in ["gt", "mixed"] %}
 
-<section class="detail-actions">
-    <a class="button-secondary" href="{{ url_for('documents') }}">Back to Documents</a>
+<section class="document-header-compact">
+    <div class="document-header-main">
+        <div>
+            <p class="eyebrow">Document coding workspace</p>
+            <h1>{{ document.title }}</h1>
+        </div>
+        <div class="document-header-actions">
+            <a class="button-secondary small-button" href="{{ url_for('documents') }}">Back to documents</a>
+            <a class="button-secondary small-button" href="{{ url_for('exports') }}">Exports</a>
+            <a class="button-secondary small-button" href="{{ url_for('export_project_backup') }}">Backup</a>
+        </div>
+    </div>
+
+    <dl class="document-stat-grid">
+        <div><dt>File</dt><dd>{{ document.original_filename }}</dd></div>
+        <div><dt>Type</dt><dd>{{ document.file_type }}</dd></div>
+        <div><dt>Text length</dt><dd>{{ text_length }}</dd></div>
+        <div><dt>Segments</dt><dd>{{ segment_count }}</dd></div>
+        <div><dt>Coded</dt><dd>{{ coded_segment_count }}</dd></div>
+        <div><dt>Memos</dt><dd>{{ document_memo_count }}</dd></div>
+        <div><dt>CDA annotations</dt><dd>{{ cda_annotation_count }}</dd></div>
+    </dl>
+
+    <details class="document-metadata-details">
+        <summary>Document note and timestamps</summary>
+        <dl class="metadata-list">
+            <div><dt>Note</dt><dd>{{ document.note or "No note" }}</dd></div>
+            <div><dt>Created at</dt><dd>{{ document.created_at }}</dd></div>
+            <div><dt>Updated at</dt><dd>{{ document.updated_at }}</dd></div>
+        </dl>
+    </details>
 </section>
 
 {% include "_methodology_helper.html" %}
 
-<section class="dashboard-grid">
-    <article class="info-panel">
-        <h2>Document Metadata</h2>
-        <dl class="metadata-list">
-            <div>
-                <dt>Title</dt>
-                <dd>{{ document.title }}</dd>
+<section class="document-workspace">
+    <div class="document-reading-column">
+        <section class="document-text-panel">
+            <div class="document-panel-header">
+                <div>
+                    <h2>Document Text</h2>
+                    <p>Select text below to create a segment.</p>
+                </div>
+                {% if gt_enabled %}
+                    <span class="methodology-inline-hint">GT coding enabled</span>
+                {% endif %}
             </div>
-            <div>
-                <dt>Original filename</dt>
-                <dd>{{ document.original_filename }}</dd>
-            </div>
-            <div>
-                <dt>File type</dt>
-                <dd>{{ document.file_type }}</dd>
-            </div>
-            <div>
-                <dt>Note</dt>
-                <dd>{{ document.note or "No note" }}</dd>
-            </div>
-            <div>
-                <dt>Created at</dt>
-                <dd>{{ document.created_at }}</dd>
-            </div>
-            <div>
-                <dt>Updated at</dt>
-                <dd>{{ document.updated_at }}</dd>
-            </div>
-            <div>
-                <dt>Text length</dt>
-                <dd>{{ text_length }}</dd>
-            </div>
-            <div>
-                <dt>Segments</dt>
-                <dd>{{ segment_count }}</dd>
-            </div>
-        </dl>
-    </article>
+            <div class="document-text" id="document-text-panel">{{ highlighted_text }}</div>
+        </section>
+    </div>
 
-    <article class="info-panel">
-        <h2>Create Segment</h2>
-        <p>
-            Select a passage inside the document text panel. A bottom selection bar will appear
-            so you can name the segment, add a note, and save it without covering the text.
-        </p>
-    </article>
-
-    <article class="info-panel">
-        <h2>Create New Open Code</h2>
-        <p>Create a code here, then assign it to one or more segments below.</p>
-        <form class="document-form preserve-scroll" action="{{ url_for('create_code') }}" method="post">
-            <input type="hidden" name="document_id" value="{{ document.id }}">
-            <div class="form-grid">
-                <label>
-                    <span>Name</span>
-                    <input type="text" name="name" required>
-                </label>
-                <label>
-                    <span>Color</span>
-                    <input type="color" name="color" value="#f4c542">
-                </label>
+    <aside class="document-segment-column active-segment-sidebar">
+        <div class="segment-column-header">
+            <div>
+                <h2>Coding Panel</h2>
+                <p>Select text to create a segment, or choose an existing segment.</p>
             </div>
-            <label>
-                <span>Description</span>
-                <textarea name="description" rows="3" placeholder="Optional code description"></textarea>
-            </label>
-            <button type="submit" class="button-primary">Create open code</button>
-        </form>
-    </article>
-</section>
-
-<section class="info-panel text-panel-section">
-    <h2>Document Text</h2>
-    <div class="document-text" id="document-text-panel">{{ highlighted_text }}</div>
-</section>
-
-<section class="info-panel">
-    <h2>Document Memos</h2>
-    <form class="compact-memo-form preserve-scroll" action="{{ url_for('create_memo') }}" method="post">
-        <input type="hidden" name="linked_entity_type" value="document">
-        <input type="hidden" name="linked_entity_id" value="{{ document.id }}">
-        <input type="hidden" name="memo_type" value="document">
-        <input type="hidden" name="status" value="draft">
-        <input type="hidden" name="next_url" value="{{ url_for('document_view', document_id=document.id) }}">
-        <input type="text" name="title" placeholder="Document memo title" required>
-        <textarea name="body" rows="3" placeholder="Document memo body" required></textarea>
-        <button type="submit" class="button-secondary">Add document memo</button>
-    </form>
-    {% if document_memos %}
-        <div class="memo-list compact">
-            {% for memo in document_memos %}
-                <article class="memo-card">
-                    <h3>{{ memo.title }}</h3>
-                    <p>{{ memo.body }}</p>
-                    <p class="muted-text">{{ memo_type_labels[memo.memo_type] }} · {{ memo_status_labels[memo.status] }}</p>
-                </article>
-            {% endfor %}
         </div>
-    {% else %}
-        <p>No document memos yet.</p>
-    {% endif %}
-</section>
 
-<section class="info-panel">
-    <h2>Existing Segments</h2>
-    {% if segments %}
-        <div class="segment-list">
-            {% for segment in segments %}
-                <article class="segment-card">
-                    <div class="segment-card-header">
-                        <h3>Segment {{ loop.index }}</h3>
-                        <form class="confirm-delete preserve-scroll" data-confirm="Delete this segment? Code assignments and annotations may no longer be useful." action="{{ url_for('delete_segment', segment_id=segment.id) }}" method="post">
-                            <button type="submit" class="button-danger">Delete</button>
-                        </form>
-                    </div>
-                    {% if segment.name %}
-                        <p class="segment-name">{{ segment.name }}</p>
-                    {% endif %}
-                    <details class="segment-section" open>
-                        <summary>Segment identity</summary>
-                        <blockquote>{{ segment.selected_text }}</blockquote>
-                        <dl class="segment-meta">
-                            <div>
-                                <dt>Note</dt>
-                                <dd>{{ segment.note or "No note" }}</dd>
+        <label class="segment-picker">
+            <span>Segment list</span>
+            <select id="segment-picker">
+                <option value="">Choose segment</option>
+                {% for segment in segments %}
+                    <option value="{{ segment.id }}">{{ segment.name or "Segment #" ~ segment.id }} · {{ segment.selected_text[:60] }}{% if segment.selected_text|length > 60 %}...{% endif %}</option>
+                {% endfor %}
+            </select>
+        </label>
+
+        <section class="active-segment-empty" id="segment-panel-empty">
+            <h3>No active segment</h3>
+            <p>Select text in the document to create a segment, click a highlighted segment, or choose a segment from the list.</p>
+        </section>
+
+        <section class="selection-helper selection-bar hidden" id="selection-helper" aria-live="polite">
+            <form class="document-form preserve-scroll compact-form" action="{{ url_for('create_segment', document_id=document.id) }}" method="post">
+                <input type="hidden" name="selected_text" id="selected-text-input">
+                <input type="hidden" name="start_offset" id="start-offset-input">
+                <input type="hidden" name="end_offset" id="end-offset-input">
+
+                <div class="selection-helper-header">
+                    <h2>Create Segment</h2>
+                    <button type="button" class="button-secondary small-button" id="clear-selection-button">Clear selection</button>
+                </div>
+
+                <div>
+                    <span class="form-label">Selected text</span>
+                    <div class="selection-preview empty" id="selection-preview">No text selected.</div>
+                </div>
+
+                <label>
+                    <span>Segment name</span>
+                    <input type="text" name="name" placeholder="Optional short name">
+                </label>
+
+                <label>
+                    <span>Segment note</span>
+                    <textarea name="note" rows="3" placeholder="Optional segment note"></textarea>
+                </label>
+
+                <button type="submit" class="button-primary small-button" id="create-segment-button" disabled>Create segment</button>
+            </form>
+        </section>
+
+        {% if segments %}
+            <div class="segment-panel-stack">
+                {% for segment in segments %}
+                    {% set cda_count = segment.discourse_markers|length + segment.actors|length + segment.features|length %}
+                    <article class="segment-card segment-card-compact segment-panel hidden" id="segment-{{ segment.id }}" data-segment-panel="{{ segment.id }}">
+                        <header class="segment-card-header">
+                            <div class="segment-heading">
+                                <h3>{{ segment.name or "Segment #" ~ segment.id }}</h3>
+                                <p>{{ segment.selected_text[:180] }}{% if segment.selected_text|length > 180 %}...{% endif %}</p>
+                                <div class="segment-badge-row">
+                                    <span>Codes: {{ segment.codes|length }}</span>
+                                    <span>Memos: {{ segment.memos|length }}</span>
+                                    <span>CDA: {{ segment.discourse_markers|length }}</span>
+                                    <span>Actors: {{ segment.actors|length }}</span>
+                                    <span>Features: {{ segment.features|length }}</span>
+                                    <span>Relations: {{ segment.relation_count }}</span>
+                                </div>
                             </div>
-                            <div>
-                                <dt>Start offset</dt>
-                                <dd>{{ segment.start_offset }}</dd>
+                            <div class="segment-card-actions">
+                                <time>{{ segment.created_at }}</time>
+                                <form class="confirm-delete preserve-scroll" data-confirm="Delete this segment? Code assignments and annotations may no longer be useful." action="{{ url_for('delete_segment', segment_id=segment.id) }}" method="post">
+                                    <button type="submit" class="button-danger small-button danger-button">Delete</button>
+                                </form>
                             </div>
-                            <div>
-                                <dt>End offset</dt>
-                                <dd>{{ segment.end_offset }}</dd>
+                        </header>
+
+                        <details class="segment-section segment-details" open>
+                            <summary>Codes</summary>
+                            <div class="code-badge-row">
+                                {% if segment.codes %}
+                                    {% for code in segment.codes %}
+                                        <form class="inline-form preserve-scroll" action="{{ url_for('remove_code_from_segment', segment_id=segment.id, code_id=code.id) }}" method="post">
+                                            <button type="submit" class="code-badge removable" style="--code-color: {{ code.color }}">
+                                                {{ code.name }} ×
+                                            </button>
+                                        </form>
+                                    {% endfor %}
+                                {% else %}
+                                    <span class="empty-code-note">No codes assigned.</span>
+                                {% endif %}
                             </div>
-                            <div>
-                                <dt>Created at</dt>
-                                <dd>{{ segment.created_at }}</dd>
-                            </div>
-                        </dl>
-                        <div class="relation-mini-panel">
-                            <a class="button-secondary compact-button" href="{{ url_for('model_entity', entity_type='segment', entity_id=segment.id) }}">Relations: {{ segment.relation_count }}</a>
+                            <form class="inline-code-form preserve-scroll compact-form" action="{{ url_for('assign_code_to_segment', segment_id=segment.id) }}" method="post">
+                                <label>
+                                    <span>Assign open code</span>
+                                    <select name="code_id" required>
+                                        <option value="">Choose code</option>
+                                        {% for code in open_codes %}
+                                            <option value="{{ code.id }}">{{ code.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </label>
+                                <button type="submit" class="button-secondary small-button">Assign</button>
+                            </form>
+                        </details>
+
+                        <details class="segment-section segment-details" {{ "open" if active_project.methodology_mode == "gt" else "" }}>
+                            <summary>Memos</summary>
+                            {% if segment.memos %}
+                                <ul class="compact-list">
+                                    {% for memo in segment.memos %}
+                                        <li>
+                                            <span>{{ memo.title }}</span>
+                                            <span>{{ memo_type_labels[memo.memo_type] }} · {{ memo_status_labels[memo.status] }}</span>
+                                        </li>
+                                    {% endfor %}
+                                </ul>
+                            {% else %}
+                                <p class="muted-text">No memos linked to this segment.</p>
+                            {% endif %}
+                            <form class="compact-memo-form preserve-scroll compact-form" action="{{ url_for('create_memo') }}" method="post">
+                                <input type="hidden" name="linked_entity_type" value="segment">
+                                <input type="hidden" name="linked_entity_id" value="{{ segment.id }}">
+                                <input type="hidden" name="memo_type" value="segment">
+                                <input type="hidden" name="status" value="draft">
+                                <input type="hidden" name="next_url" value="{{ url_for('document_view', document_id=document.id) }}">
+                                <input type="text" name="title" placeholder="Segment memo title" required>
+                                <textarea name="body" rows="2" placeholder="Segment memo body" required></textarea>
+                                <button type="submit" class="button-secondary small-button">Add memo</button>
+                            </form>
+                        </details>
+
+                        {% if cda_enabled %}
+                            <details class="segment-section segment-details" open>
+                                <summary>CDA annotations</summary>
+                                <div class="annotation-subsection">
+                                    <h4>Markers</h4>
+                                    <div class="code-badge-row">
+                                        {% if segment.discourse_markers %}
+                                            {% for marker in segment.discourse_markers %}
+                                                <form class="inline-form preserve-scroll" action="{{ url_for('remove_discourse_marker_from_segment', segment_id=segment.id, marker_id=marker.id) }}" method="post">
+                                                    <button type="submit" class="cda-marker-badge removable" style="--marker-color: {{ marker.color }}">
+                                                        {{ marker.name }} ×
+                                                    </button>
+                                                </form>
+                                            {% endfor %}
+                                        {% else %}
+                                            <span class="empty-code-note">No CDA markers assigned.</span>
+                                        {% endif %}
+                                    </div>
+                                    <form class="annotation-form preserve-scroll compact-form" action="{{ url_for('assign_discourse_marker_to_segment', segment_id=segment.id) }}" method="post">
+                                        <label>
+                                            <span>Assign marker</span>
+                                            <select name="marker_id" required>
+                                                <option value="">Choose marker</option>
+                                                {% for marker in discourse_markers %}
+                                                    <option value="{{ marker.id }}">{{ marker.name }} ({{ marker_type_labels[marker.marker_type] }})</option>
+                                                {% endfor %}
+                                            </select>
+                                        </label>
+                                        <label>
+                                            <span>Note</span>
+                                            <input type="text" name="note" placeholder="Optional CDA note">
+                                        </label>
+                                        <button type="submit" class="button-secondary small-button">Assign</button>
+                                    </form>
+                                </div>
+
+                                <div class="annotation-subsection">
+                                    <h4>Actors</h4>
+                                    {% if segment.actors %}
+                                        <div class="actor-card-list">
+                                            {% for actor in segment.actors %}
+                                                <article class="actor-relation-card">
+                                                    <div>
+                                                        <strong>{{ actor.name }}</strong>
+                                                        <span class="actor-badge">{{ actor_relation_type_labels[actor.relation_type] }}</span>
+                                                        <p>{{ actor.note or "No actor note" }}</p>
+                                                    </div>
+                                                    <form class="preserve-scroll" action="{{ url_for('remove_actor_from_segment', segment_id=segment.id, segment_actor_id=actor.id) }}" method="post">
+                                                        <button type="submit" class="button-danger small-button danger-button">Remove</button>
+                                                    </form>
+                                                </article>
+                                            {% endfor %}
+                                        </div>
+                                    {% else %}
+                                        <p class="muted-text">No actors annotated for this segment.</p>
+                                    {% endif %}
+                                    <form class="annotation-form preserve-scroll compact-form" action="{{ url_for('assign_actor_to_segment', segment_id=segment.id) }}" method="post">
+                                        <label>
+                                            <span>Actor</span>
+                                            <select name="actor_id" required>
+                                                <option value="">Choose actor</option>
+                                                {% for actor in actors %}
+                                                    <option value="{{ actor.id }}">{{ actor.name }} ({{ actor_type_labels[actor.actor_type] }})</option>
+                                                {% endfor %}
+                                            </select>
+                                        </label>
+                                        <label>
+                                            <span>Relation</span>
+                                            <select name="relation_type" required>
+                                                <option value="">Choose relation</option>
+                                                {% for value, label in actor_relation_type_labels.items() %}
+                                                    <option value="{{ value }}">{{ label }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        </label>
+                                        <label>
+                                            <span>Note</span>
+                                            <input type="text" name="note" placeholder="Optional actor note">
+                                        </label>
+                                        <button type="submit" class="button-secondary small-button">Assign</button>
+                                    </form>
+                                </div>
+
+                                <div class="annotation-subsection">
+                                    <h4>Features</h4>
+                                    {% if segment.features %}
+                                        <div class="feature-card-list">
+                                            {% for feature in segment.features %}
+                                                <article class="discourse-feature-card">
+                                                    <div>
+                                                        <span class="feature-type-badge">{{ feature_type_labels[feature.feature_type] }}</span>
+                                                        <strong>{{ feature.value }}</strong>
+                                                        <p>{{ feature.interpretation or "No interpretation" }}</p>
+                                                    </div>
+                                                    <form class="confirm-delete preserve-scroll" data-confirm="Delete this discourse feature?" action="{{ url_for('delete_discourse_feature', segment_id=segment.id, feature_id=feature.id) }}" method="post">
+                                                        <button type="submit" class="button-danger small-button danger-button">Delete</button>
+                                                    </form>
+                                                </article>
+                                            {% endfor %}
+                                        </div>
+                                    {% else %}
+                                        <p class="muted-text">No discourse features added.</p>
+                                    {% endif %}
+                                    <form class="annotation-form preserve-scroll compact-form" action="{{ url_for('create_discourse_feature', segment_id=segment.id) }}" method="post">
+                                        <label>
+                                            <span>Feature type</span>
+                                            <select name="feature_type" required>
+                                                <option value="">Choose feature</option>
+                                                {% for value, label in feature_type_labels.items() %}
+                                                    <option value="{{ value }}">{{ label }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        </label>
+                                        <label>
+                                            <span>Value</span>
+                                            <input type="text" name="value" placeholder="e.g. migration wave" required>
+                                        </label>
+                                        <label>
+                                            <span>Interpretation</span>
+                                            <textarea name="interpretation" rows="2" placeholder="Analytical interpretation"></textarea>
+                                        </label>
+                                        <button type="submit" class="button-secondary small-button">Add feature</button>
+                                    </form>
+                                </div>
+                            </details>
+                        {% elif cda_count > 0 %}
+                            <details class="segment-section segment-details">
+                                <summary>CDA data exists but CDA mode is not enabled</summary>
+                                <p class="muted-text">This segment has {{ cda_count }} CDA annotation items. Enable CDA or Mixed mode in project settings to edit them here.</p>
+                            </details>
+                        {% endif %}
+
+                        <details class="segment-section segment-details">
+                            <summary>Relations</summary>
+                            <a class="button-secondary small-button" href="{{ url_for('model_entity', entity_type='segment', entity_id=segment.id) }}">Open relations: {{ segment.relation_count }}</a>
                             {% if segment.relations %}
                                 <ul class="compact-list">
                                     {% for relation in segment.relations %}
                                         <li><span>{{ relation.relation_label }}</span><span>{{ relation.target_label if relation.source_type == 'segment' else relation.source_label }}</span></li>
                                     {% endfor %}
                                 </ul>
-                            {% endif %}
-                        </div>
-                    </details>
-
-                    <details class="segment-section" open>
-                        <summary>Open codes</summary>
-                        <div class="code-badge-row">
-                            {% if segment.codes %}
-                                {% for code in segment.codes %}
-                                    <form class="inline-form preserve-scroll" action="{{ url_for('remove_code_from_segment', segment_id=segment.id, code_id=code.id) }}" method="post">
-                                        <button type="submit" class="code-badge removable" style="--code-color: {{ code.color }}">
-                                            {{ code.name }} ×
-                                        </button>
-                                    </form>
-                                {% endfor %}
                             {% else %}
-                                <span class="empty-code-note">No codes assigned.</span>
+                                <p class="muted-text">No relations for this segment yet.</p>
                             {% endif %}
-                        </div>
-                        <form class="inline-code-form preserve-scroll" action="{{ url_for('assign_code_to_segment', segment_id=segment.id) }}" method="post">
-                            <label>
-                                <span>Assign open code</span>
-                                <select name="code_id" required>
-                                    <option value="">Choose code</option>
-                                    {% for code in open_codes %}
-                                        <option value="{{ code.id }}">{{ code.name }}</option>
-                                    {% endfor %}
-                                </select>
-                            </label>
-                            <button type="submit" class="button-secondary">Assign</button>
-                        </form>
-                    </details>
-
-                    <details class="segment-section">
-                        <summary>Memos</summary>
-                        <form class="compact-memo-form preserve-scroll" action="{{ url_for('create_memo') }}" method="post">
-                            <input type="hidden" name="linked_entity_type" value="segment">
-                            <input type="hidden" name="linked_entity_id" value="{{ segment.id }}">
-                            <input type="hidden" name="memo_type" value="segment">
-                            <input type="hidden" name="status" value="draft">
-                            <input type="hidden" name="next_url" value="{{ url_for('document_view', document_id=document.id) }}">
-                            <input type="text" name="title" placeholder="Segment memo title" required>
-                            <textarea name="body" rows="3" placeholder="Segment memo body" required></textarea>
-                            <button type="submit" class="button-secondary">Add segment memo</button>
-                        </form>
-                        {% if segment.memos %}
-                            <ul class="compact-list">
-                                {% for memo in segment.memos %}
-                                    <li>
-                                        <span>{{ memo.title }}</span>
-                                        <span>{{ memo_type_labels[memo.memo_type] }} · {{ memo_status_labels[memo.status] }}</span>
-                                    </li>
-                                {% endfor %}
-                            </ul>
-                        {% else %}
-                            <p class="muted-text">No memos linked to this segment.</p>
-                        {% endif %}
-                    </details>
-
-                    {% if supports_cda %}
-                        <details class="segment-section" open>
-                            <summary>CDA markers</summary>
-                            <div class="code-badge-row">
-                                {% if segment.discourse_markers %}
-                                    {% for marker in segment.discourse_markers %}
-                                        <form class="inline-form preserve-scroll" action="{{ url_for('remove_discourse_marker_from_segment', segment_id=segment.id, marker_id=marker.id) }}" method="post">
-                                            <button type="submit" class="cda-marker-badge removable" style="--marker-color: {{ marker.color }}">
-                                                {{ marker.name }} ×
-                                            </button>
-                                        </form>
-                                    {% endfor %}
-                                {% else %}
-                                    <span class="empty-code-note">No CDA markers assigned.</span>
-                                {% endif %}
-                            </div>
-                            <form class="annotation-form preserve-scroll" action="{{ url_for('assign_discourse_marker_to_segment', segment_id=segment.id) }}" method="post">
-                                <label>
-                                    <span>Assign CDA marker</span>
-                                    <select name="marker_id" required>
-                                        <option value="">Choose marker</option>
-                                        {% for marker in discourse_markers %}
-                                            <option value="{{ marker.id }}">{{ marker.name }} ({{ marker_type_labels[marker.marker_type] }})</option>
-                                        {% endfor %}
-                                    </select>
-                                </label>
-                                <label>
-                                    <span>Note</span>
-                                    <input type="text" name="note" placeholder="Optional CDA note">
-                                </label>
-                                <button type="submit" class="button-secondary">Assign marker</button>
-                            </form>
                         </details>
 
-                        <details class="segment-section" open>
-                            <summary>Actors</summary>
-                            {% if segment.actors %}
-                                <div class="actor-card-list">
-                                    {% for actor in segment.actors %}
-                                        <article class="actor-relation-card">
-                                            <div>
-                                                <strong>{{ actor.name }}</strong>
-                                                <span class="actor-badge">{{ actor_relation_type_labels[actor.relation_type] }}</span>
-                                                <p>{{ actor.note or "No actor note" }}</p>
-                                            </div>
-                                            <form class="preserve-scroll" action="{{ url_for('remove_actor_from_segment', segment_id=segment.id, segment_actor_id=actor.id) }}" method="post">
-                                                <button type="submit" class="button-danger compact-button">Remove</button>
-                                            </form>
-                                        </article>
-                                    {% endfor %}
-                                </div>
-                            {% else %}
-                                <p class="muted-text">No actors annotated for this segment.</p>
-                            {% endif %}
-                            <form class="annotation-form preserve-scroll" action="{{ url_for('assign_actor_to_segment', segment_id=segment.id) }}" method="post">
-                                <label>
-                                    <span>Actor</span>
-                                    <select name="actor_id" required>
-                                        <option value="">Choose actor</option>
-                                        {% for actor in actors %}
-                                            <option value="{{ actor.id }}">{{ actor.name }} ({{ actor_type_labels[actor.actor_type] }})</option>
-                                        {% endfor %}
-                                    </select>
-                                </label>
-                                <label>
-                                    <span>Relation</span>
-                                    <select name="relation_type" required>
-                                        <option value="">Choose relation</option>
-                                        {% for value, label in actor_relation_type_labels.items() %}
-                                            <option value="{{ value }}">{{ label }}</option>
-                                        {% endfor %}
-                                    </select>
-                                </label>
-                                <label>
-                                    <span>Note</span>
-                                    <input type="text" name="note" placeholder="Optional actor note">
-                                </label>
-                                <button type="submit" class="button-secondary">Assign actor</button>
-                            </form>
+                        <details class="segment-section segment-details">
+                            <summary>Raw metadata</summary>
+                            <dl class="segment-meta">
+                                <div><dt>Start offset</dt><dd>{{ segment.start_offset }}</dd></div>
+                                <div><dt>End offset</dt><dd>{{ segment.end_offset }}</dd></div>
+                                <div><dt>Created at</dt><dd>{{ segment.created_at }}</dd></div>
+                                <div><dt>Note</dt><dd>{{ segment.note or "No note" }}</dd></div>
+                            </dl>
+                            <blockquote>{{ segment.selected_text }}</blockquote>
                         </details>
-
-                        <details class="segment-section" open>
-                            <summary>Discourse features</summary>
-                            {% if segment.features %}
-                                <div class="feature-card-list">
-                                    {% for feature in segment.features %}
-                                        <article class="discourse-feature-card">
-                                            <div>
-                                                <span class="feature-type-badge">{{ feature_type_labels[feature.feature_type] }}</span>
-                                                <strong>{{ feature.value }}</strong>
-                                                <p>{{ feature.interpretation or "No interpretation" }}</p>
-                                            </div>
-                                            <form class="confirm-delete preserve-scroll" data-confirm="Delete this discourse feature?" action="{{ url_for('delete_discourse_feature', segment_id=segment.id, feature_id=feature.id) }}" method="post">
-                                                <button type="submit" class="button-danger compact-button">Delete</button>
-                                            </form>
-                                        </article>
-                                    {% endfor %}
-                                </div>
-                            {% else %}
-                                <p class="muted-text">No discourse features added.</p>
-                            {% endif %}
-                            <form class="annotation-form preserve-scroll" action="{{ url_for('create_discourse_feature', segment_id=segment.id) }}" method="post">
-                                <label>
-                                    <span>Feature type</span>
-                                    <select name="feature_type" required>
-                                        <option value="">Choose feature</option>
-                                        {% for value, label in feature_type_labels.items() %}
-                                            <option value="{{ value }}">{{ label }}</option>
-                                        {% endfor %}
-                                    </select>
-                                </label>
-                                <label>
-                                    <span>Value</span>
-                                    <input type="text" name="value" placeholder="e.g. migration wave" required>
-                                </label>
-                                <label>
-                                    <span>Interpretation</span>
-                                    <textarea name="interpretation" rows="2" placeholder="Analytical interpretation"></textarea>
-                                </label>
-                                <button type="submit" class="button-secondary">Add feature</button>
-                            </form>
-                        </details>
-                    {% else %}
-                        <div class="segment-section disabled-inline">
-                            CDA annotations are hidden in {{ methodology_mode_labels[active_project.methodology_mode] }} mode.
-                        </div>
-                    {% endif %}
-                </article>
-            {% endfor %}
-        </div>
-    {% else %}
-        <p>No segments created for this document yet.</p>
-    {% endif %}
+                    </article>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p class="muted-text">No segments created for this document yet.</p>
+        {% endif %}
+    </aside>
 </section>
-
-<aside class="selection-helper selection-bar hidden" id="selection-helper" aria-live="polite">
-    <form class="document-form preserve-scroll" action="{{ url_for('create_segment', document_id=document.id) }}" method="post">
-        <input type="hidden" name="selected_text" id="selected-text-input">
-        <input type="hidden" name="start_offset" id="start-offset-input">
-        <input type="hidden" name="end_offset" id="end-offset-input">
-
-        <div class="selection-helper-header">
-            <h2>Create Segment</h2>
-            <button type="button" class="button-secondary compact-button" id="clear-selection-button">Clear selection</button>
-        </div>
-
-        <div>
-            <span class="form-label">Selected text</span>
-            <div class="selection-preview empty" id="selection-preview">No text selected.</div>
-        </div>
-
-        <label>
-            <span>Segment name</span>
-            <input type="text" name="name" placeholder="Optional short name">
-        </label>
-
-        <label>
-            <span>Segment note</span>
-            <textarea name="note" rows="3" placeholder="Optional segment note"></textarea>
-        </label>
-
-        <button type="submit" class="button-primary" id="create-segment-button" disabled>Create segment</button>
-    </form>
-</aside>
 {% endblock %}

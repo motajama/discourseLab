@@ -3,6 +3,7 @@ document.addEventListener("DOMContentLoaded", () => {
     setupDeleteConfirmations();
     setupScrollPreservation();
     setupDocumentSelection();
+    setupSegmentPanelSelection();
     restoreDocumentScroll();
 });
 
@@ -109,6 +110,7 @@ function setupDocumentSelection() {
         clearButton.addEventListener("click", () => {
             window.getSelection().removeAllRanges();
             clearSegmentSelection(preview, selectedTextInput, startOffsetInput, endOffsetInput, createButton, helper);
+            showEmptySegmentPanel();
         });
     }
 
@@ -144,8 +146,111 @@ function setupDocumentSelection() {
         endOffsetInput.value = String(offsets.end);
         createButton.disabled = false;
         helper.classList.remove("hidden");
+        showCreateSegmentPanel();
         document.body.classList.add("selection-bar-visible");
     });
+}
+
+function setupSegmentPanelSelection() {
+    const textPanel = document.getElementById("document-text-panel");
+    const picker = document.getElementById("segment-picker");
+    if (!textPanel) {
+        return;
+    }
+
+    if (picker) {
+        picker.addEventListener("change", () => {
+            if (picker.value) {
+                showSegmentPanel(picker.value);
+                scrollSegmentHighlightIntoView(picker.value);
+            } else {
+                showEmptySegmentPanel();
+            }
+        });
+    }
+
+    textPanel.addEventListener("click", (event) => {
+        const highlight = event.target.closest(".segment-highlight");
+        if (!highlight || !textPanel.contains(highlight)) {
+            return;
+        }
+        const segmentId = highlight.dataset.segmentId;
+        if (segmentId) {
+            window.getSelection().removeAllRanges();
+            showSegmentPanel(segmentId);
+        }
+    });
+}
+
+function showCreateSegmentPanel() {
+    hideSegmentPanels();
+    const helper = document.getElementById("selection-helper");
+    const picker = document.getElementById("segment-picker");
+    if (helper) {
+        helper.classList.remove("hidden");
+    }
+    if (picker) {
+        picker.value = "";
+    }
+}
+
+function showSegmentPanel(segmentId) {
+    hideSegmentPanels();
+    const escapedSegmentId = escapeSelectorValue(segmentId);
+    const panel = document.querySelector(`[data-segment-panel="${escapedSegmentId}"]`);
+    const picker = document.getElementById("segment-picker");
+    if (panel) {
+        panel.classList.remove("hidden");
+    }
+    if (picker) {
+        picker.value = segmentId;
+    }
+    document.querySelectorAll(".segment-highlight.is-active").forEach((highlight) => {
+        highlight.classList.remove("is-active");
+    });
+    document.querySelectorAll(`.segment-highlight[data-segment-id="${escapedSegmentId}"]`).forEach((highlight) => {
+        highlight.classList.add("is-active");
+    });
+    document.body.classList.remove("selection-bar-visible");
+}
+
+function showEmptySegmentPanel() {
+    hideSegmentPanels();
+    const emptyPanel = document.getElementById("segment-panel-empty");
+    if (emptyPanel) {
+        emptyPanel.classList.remove("hidden");
+    }
+    document.querySelectorAll(".segment-highlight.is-active").forEach((highlight) => {
+        highlight.classList.remove("is-active");
+    });
+}
+
+function hideSegmentPanels() {
+    document.querySelectorAll("[data-segment-panel]").forEach((panel) => {
+        panel.classList.add("hidden");
+    });
+    const emptyPanel = document.getElementById("segment-panel-empty");
+    if (emptyPanel) {
+        emptyPanel.classList.add("hidden");
+    }
+    const helper = document.getElementById("selection-helper");
+    if (helper) {
+        helper.classList.add("hidden");
+    }
+}
+
+function scrollSegmentHighlightIntoView(segmentId) {
+    const highlight = document.querySelector(`.segment-highlight[data-segment-id="${escapeSelectorValue(segmentId)}"]`);
+    if (highlight) {
+        highlight.scrollIntoView({ block: "center", behavior: "smooth" });
+    }
+}
+
+function escapeSelectorValue(value) {
+    if (window.CSS && typeof window.CSS.escape === "function") {
+        return window.CSS.escape(value);
+    }
+    return String(value).replace(/["\\]/g, "\\$&");
 }
 
 function getOffsetsWithinContainer(container, range) {

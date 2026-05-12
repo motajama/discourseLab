@@ -4,22 +4,23 @@ discourseLab is a local, lightweight qualitative analysis workspace for discours
 
 It runs on your own computer in a web browser. It does not require an account, cloud service, npm, Node, React, or external web services.
 
-Current phase: **Phase 12.5b — Dashboard and horizontal navigation**
+Current phase: **Phase 12.5c — Document coding workspace cleanup**
 
 The analytical model builder connects project entities such as segments, codes, categories, actors, discourse features, memos, and research questions into explicit analytical relations.
 
-Phase 12.5b improves app orientation with fixed horizontal navigation, progress barometers, prominent dashboard action buttons, and rule-based suggested next actions. It keeps the document coding workflow intact and does not add AI, cloud sync, authentication, Node, npm, React, Vue, or external CDN usage.
+Phase 12.5c cleans up the document coding workspace with a compact document header, a more comfortable reading panel, compact segment cards, collapsible Codes/Memos/CDA/Relations sections, a non-overlapping selection bar, and methodology-aware segment tools. It does not add AI, cloud sync, authentication, Node, npm, React, Vue, or external CDN usage.
 
-## Phase 12.5b Verification
+## Phase 12.5c Verification
 
 1. Start the app with `python app.py`.
-2. Confirm the horizontal navigation is fixed at the top.
-3. Confirm the left sidebar no longer consumes workspace width.
-4. Confirm the dashboard shows progress barometers.
-5. Confirm the large dashboard action buttons open the expected sections.
-6. Confirm methodology mode affects GT and CDA navigation availability.
-7. Download `/exports/project-backup.zip`.
-8. Confirm `/health` returns `"phase": "12.5b"`.
+2. Open a document with several segments.
+3. Confirm the document header is compact.
+4. Select text and confirm the segment creation UI appears without covering text.
+5. Create a segment and confirm scroll position is preserved.
+6. Confirm segment cards are compact and organized into collapsible sections.
+7. Confirm methodology mode affects CDA tool visibility.
+8. Confirm existing code assignment, memos, CDA markers, actors, and features still work.
+9. Confirm `/health` returns `"phase": "12.5c"`.
 
 ## What You Need
 

@@ -29,8 +29,8 @@ from werkzeug.utils import secure_filename
 
 
 APP_NAME = "discourseLab"
-APP_PHASE = "12.5b"
-CURRENT_PHASE_LABEL = "Phase 12.5b — Dashboard and horizontal navigation"
+APP_PHASE = "12.5c"
+CURRENT_PHASE_LABEL = "Phase 12.5c — Document coding workspace cleanup"
 DEFAULT_PROJECT_NAME = "Demo Project"
 DEFAULT_PROJECT_DESCRIPTION = "Initial local discourseLab project."
 DEFAULT_CODE_COLOR = "#f4c542"
@@ -533,6 +533,14 @@ def create_app() -> Flask:
             document=document,
             text_length=len(document["text_content"] or ""),
             segment_count=len(segments),
+            coded_segment_count=sum(1 for segment in segments if segment["codes"]),
+            document_memo_count=len(document_memos),
+            cda_annotation_count=sum(
+                len(segment["discourse_markers"])
+                + len(segment["actors"])
+                + len(segment["features"])
+                for segment in segments
+            ),
             segments=segments,
             open_codes=open_codes,
             discourse_markers=discourse_markers,
