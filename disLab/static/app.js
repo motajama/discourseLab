@@ -1,7 +1,74 @@
 document.addEventListener("DOMContentLoaded", () => {
     document.body.classList.add("js-ready");
+    setupDeleteConfirmations();
+    setupScrollPreservation();
     setupDocumentSelection();
+    restoreDocumentScroll();
 });
+
+function setupDeleteConfirmations() {
+    document.addEventListener("submit", (event) => {
+        const form = event.target;
+        if (!(form instanceof HTMLFormElement) || !form.classList.contains("confirm-delete")) {
+            return;
+        }
+        const message = form.dataset.confirm || "Delete this item?";
+        if (!window.confirm(message)) {
+            event.preventDefault();
+        }
+    });
+}
+
+function setupScrollPreservation() {
+    document.addEventListener("submit", (event) => {
+        const form = event.target;
+        if (!(form instanceof HTMLFormElement) || !isDocumentPageForm(form)) {
+            return;
+        }
+
+        let input = form.querySelector('input[name="scroll_y"]');
+        if (!input) {
+            input = document.createElement("input");
+            input.type = "hidden";
+            input.name = "scroll_y";
+            form.appendChild(input);
+        }
+        input.value = String(Math.max(0, Math.round(window.scrollY)));
+
+        const nextUrlInput = form.querySelector('input[name="next_url"]');
+        if (nextUrlInput && nextUrlInput.value.startsWith("/documents/")) {
+            nextUrlInput.value = withScrollY(nextUrlInput.value, input.value);
+        }
+    });
+}
+
+function isDocumentPageForm(form) {
+    return Boolean(document.getElementById("document-text-panel")) && (
+        form.classList.contains("preserve-scroll") || form.closest(".segment-card") || form.closest("#selection-helper")
+    );
+}
+
+function withScrollY(url, scrollY) {
+    const parsedUrl = new URL(url, window.location.origin);
+    parsedUrl.searchParams.set("scroll_y", scrollY);
+    return parsedUrl.pathname + parsedUrl.search + parsedUrl.hash;
+}
+
+function restoreDocumentScroll() {
+    if (!document.getElementById("document-text-panel")) {
+        return;
+    }
+    const url = new URL(window.location.href);
+    const scrollY = parseInt(url.searchParams.get("scroll_y") || "", 10);
+    if (!Number.isFinite(scrollY) || scrollY < 0) {
+        return;
+    }
+    window.requestAnimationFrame(() => {
+        window.scrollTo(0, scrollY);
+        url.searchParams.delete("scroll_y");
+        window.history.replaceState({}, "", url.pathname + url.search + url.hash);
+    });
+}
 
 function setupDocumentSelection() {
     const textPanel = document.getElementById("document-text-panel");
@@ -27,11 +94,13 @@ function setupDocumentSelection() {
     document.addEventListener("selectionchange", () => {
         const selection = window.getSelection();
         if (!selection || selection.rangeCount === 0 || selection.isCollapsed) {
+            clearSegmentSelection(preview, selectedTextInput, startOffsetInput, endOffsetInput, createButton, helper);
             return;
         }
 
         const range = selection.getRangeAt(0);
         if (!textPanel.contains(range.commonAncestorContainer)) {
+            clearSegmentSelection(preview, selectedTextInput, startOffsetInput, endOffsetInput, createButton, helper);
             return;
         }
 
@@ -54,6 +123,7 @@ function setupDocumentSelection() {
         endOffsetInput.value = String(offsets.end);
         createButton.disabled = false;
         helper.classList.remove("hidden");
+        document.body.classList.add("selection-bar-visible");
     });
 }
 
@@ -83,4 +153,5 @@ function clearSegmentSelection(preview, selectedTextInput, startOffsetInput, end
     if (helper) {
         helper.classList.add("hidden");
     }
+    document.body.classList.remove("selection-bar-visible");
 }

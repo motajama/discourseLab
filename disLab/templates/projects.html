@@ -47,7 +47,7 @@
                                     </form>
                                 {% endif %}
                                 <a class="button-secondary" href="{{ url_for('edit_project', project_id=project.id) }}">Edit</a>
-                                <form action="{{ url_for('soft_delete_project', project_id=project.id) }}" method="post">
+                                <form class="confirm-delete" data-confirm="Delete this project? It will be hidden from the project list, but its data will not be physically erased in this phase." action="{{ url_for('soft_delete_project', project_id=project.id) }}" method="post">
                                     <button type="submit" class="button-danger">Delete</button>
                                 </form>
                             </td>

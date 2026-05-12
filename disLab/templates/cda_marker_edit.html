@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="page-header">
+    <p class="eyebrow">CDA marker</p>
+    <h1>Edit CDA Marker</h1>
+    <p>Active project: {{ active_project.name }}</p>
+</section>
+
+<section class="detail-actions">
+    <a class="button-secondary" href="{{ url_for('cda_workspace') }}">Back to CDA Workspace</a>
+</section>
+
+<section class="info-panel">
+    <form class="document-form" action="{{ url_for('update_discourse_marker', marker_id=marker.id) }}" method="post">
+        <div class="form-grid">
+            <label>
+                <span>Name</span>
+                <input type="text" name="name" value="{{ marker.name }}" required>
+            </label>
+            <label>
+                <span>Marker type</span>
+                <select name="marker_type" required>
+                    {% for value, label in marker_type_labels.items() %}
+                        <option value="{{ value }}" {{ "selected" if value == marker.marker_type else "" }}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+        </div>
+        <div class="form-grid">
+            <label>
+                <span>Color</span>
+                <input type="color" name="color" value="{{ marker.color }}">
+            </label>
+            <label>
+                <span>Description</span>
+                <textarea name="description" rows="4">{{ marker.description or "" }}</textarea>
+            </label>
+        </div>
+        <button type="submit" class="button-primary">Save marker</button>
+    </form>
+</section>
+{% endblock %}

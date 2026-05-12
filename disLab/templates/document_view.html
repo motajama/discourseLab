@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 
 {% block content %}
-<section class="page-header">
+<section class="page-header document-detail-page">
     <p class="eyebrow">Analytical reading view</p>
     <h1>{{ document.title }}</h1>
     <p>Active project: {{ active_project.name }}</p>
@@ -55,15 +55,15 @@
     <article class="info-panel">
         <h2>Create Segment</h2>
         <p>
-            Select a passage inside the document text panel. A floating helper will appear
-            so you can name the segment, add a note, and save it without scrolling.
+            Select a passage inside the document text panel. A bottom selection bar will appear
+            so you can name the segment, add a note, and save it without covering the text.
         </p>
     </article>
 
     <article class="info-panel">
         <h2>Create New Open Code</h2>
         <p>Create a code here, then assign it to one or more segments below.</p>
-        <form class="document-form" action="{{ url_for('create_code') }}" method="post">
+        <form class="document-form preserve-scroll" action="{{ url_for('create_code') }}" method="post">
             <input type="hidden" name="document_id" value="{{ document.id }}">
             <div class="form-grid">
                 <label>
@@ -91,7 +91,7 @@
 
 <section class="info-panel">
     <h2>Document Memos</h2>
-    <form class="compact-memo-form" action="{{ url_for('create_memo') }}" method="post">
+    <form class="compact-memo-form preserve-scroll" action="{{ url_for('create_memo') }}" method="post">
         <input type="hidden" name="linked_entity_type" value="document">
         <input type="hidden" name="linked_entity_id" value="{{ document.id }}">
         <input type="hidden" name="memo_type" value="document">
@@ -124,7 +124,7 @@
                 <article class="segment-card">
                     <div class="segment-card-header">
                         <h3>Segment {{ loop.index }}</h3>
-                        <form action="{{ url_for('delete_segment', segment_id=segment.id) }}" method="post">
+                        <form class="confirm-delete preserve-scroll" data-confirm="Delete this segment? Code assignments and annotations may no longer be useful." action="{{ url_for('delete_segment', segment_id=segment.id) }}" method="post">
                             <button type="submit" class="button-danger">Delete</button>
                         </form>
                     </div>
@@ -169,7 +169,7 @@
                         <div class="code-badge-row">
                             {% if segment.codes %}
                                 {% for code in segment.codes %}
-                                    <form class="inline-form" action="{{ url_for('remove_code_from_segment', segment_id=segment.id, code_id=code.id) }}" method="post">
+                                    <form class="inline-form preserve-scroll" action="{{ url_for('remove_code_from_segment', segment_id=segment.id, code_id=code.id) }}" method="post">
                                         <button type="submit" class="code-badge removable" style="--code-color: {{ code.color }}">
                                             {{ code.name }} ×
                                         </button>
@@ -179,7 +179,7 @@
                                 <span class="empty-code-note">No codes assigned.</span>
                             {% endif %}
                         </div>
-                        <form class="inline-code-form" action="{{ url_for('assign_code_to_segment', segment_id=segment.id) }}" method="post">
+                        <form class="inline-code-form preserve-scroll" action="{{ url_for('assign_code_to_segment', segment_id=segment.id) }}" method="post">
                             <label>
                                 <span>Assign open code</span>
                                 <select name="code_id" required>
@@ -195,7 +195,7 @@
 
                     <details class="segment-section">
                         <summary>Memos</summary>
-                        <form class="compact-memo-form" action="{{ url_for('create_memo') }}" method="post">
+                        <form class="compact-memo-form preserve-scroll" action="{{ url_for('create_memo') }}" method="post">
                             <input type="hidden" name="linked_entity_type" value="segment">
                             <input type="hidden" name="linked_entity_id" value="{{ segment.id }}">
                             <input type="hidden" name="memo_type" value="segment">
@@ -225,7 +225,7 @@
                             <div class="code-badge-row">
                                 {% if segment.discourse_markers %}
                                     {% for marker in segment.discourse_markers %}
-                                        <form class="inline-form" action="{{ url_for('remove_discourse_marker_from_segment', segment_id=segment.id, marker_id=marker.id) }}" method="post">
+                                        <form class="inline-form preserve-scroll" action="{{ url_for('remove_discourse_marker_from_segment', segment_id=segment.id, marker_id=marker.id) }}" method="post">
                                             <button type="submit" class="cda-marker-badge removable" style="--marker-color: {{ marker.color }}">
                                                 {{ marker.name }} ×
                                             </button>
@@ -235,7 +235,7 @@
                                     <span class="empty-code-note">No CDA markers assigned.</span>
                                 {% endif %}
                             </div>
-                            <form class="annotation-form" action="{{ url_for('assign_discourse_marker_to_segment', segment_id=segment.id) }}" method="post">
+                            <form class="annotation-form preserve-scroll" action="{{ url_for('assign_discourse_marker_to_segment', segment_id=segment.id) }}" method="post">
                                 <label>
                                     <span>Assign CDA marker</span>
                                     <select name="marker_id" required>
@@ -264,7 +264,7 @@
                                                 <span class="actor-badge">{{ actor_relation_type_labels[actor.relation_type] }}</span>
                                                 <p>{{ actor.note or "No actor note" }}</p>
                                             </div>
-                                            <form action="{{ url_for('remove_actor_from_segment', segment_id=segment.id, segment_actor_id=actor.id) }}" method="post">
+                                            <form class="preserve-scroll" action="{{ url_for('remove_actor_from_segment', segment_id=segment.id, segment_actor_id=actor.id) }}" method="post">
                                                 <button type="submit" class="button-danger compact-button">Remove</button>
                                             </form>
                                         </article>
@@ -273,7 +273,7 @@
                             {% else %}
                                 <p class="muted-text">No actors annotated for this segment.</p>
                             {% endif %}
-                            <form class="annotation-form" action="{{ url_for('assign_actor_to_segment', segment_id=segment.id) }}" method="post">
+                            <form class="annotation-form preserve-scroll" action="{{ url_for('assign_actor_to_segment', segment_id=segment.id) }}" method="post">
                                 <label>
                                     <span>Actor</span>
                                     <select name="actor_id" required>
@@ -311,7 +311,7 @@
                                                 <strong>{{ feature.value }}</strong>
                                                 <p>{{ feature.interpretation or "No interpretation" }}</p>
                                             </div>
-                                            <form action="{{ url_for('delete_discourse_feature', segment_id=segment.id, feature_id=feature.id) }}" method="post">
+                                            <form class="confirm-delete preserve-scroll" data-confirm="Delete this discourse feature?" action="{{ url_for('delete_discourse_feature', segment_id=segment.id, feature_id=feature.id) }}" method="post">
                                                 <button type="submit" class="button-danger compact-button">Delete</button>
                                             </form>
                                         </article>
@@ -320,7 +320,7 @@
                             {% else %}
                                 <p class="muted-text">No discourse features added.</p>
                             {% endif %}
-                            <form class="annotation-form" action="{{ url_for('create_discourse_feature', segment_id=segment.id) }}" method="post">
+                            <form class="annotation-form preserve-scroll" action="{{ url_for('create_discourse_feature', segment_id=segment.id) }}" method="post">
                                 <label>
                                     <span>Feature type</span>
                                     <select name="feature_type" required>
@@ -354,15 +354,15 @@
     {% endif %}
 </section>
 
-<aside class="selection-helper hidden" id="selection-helper" aria-live="polite">
-    <form class="document-form" action="{{ url_for('create_segment', document_id=document.id) }}" method="post">
+<aside class="selection-helper selection-bar hidden" id="selection-helper" aria-live="polite">
+    <form class="document-form preserve-scroll" action="{{ url_for('create_segment', document_id=document.id) }}" method="post">
         <input type="hidden" name="selected_text" id="selected-text-input">
         <input type="hidden" name="start_offset" id="start-offset-input">
         <input type="hidden" name="end_offset" id="end-offset-input">
 
         <div class="selection-helper-header">
             <h2>Create Segment</h2>
-            <button type="button" class="button-secondary compact-button" id="clear-selection-button">Close</button>
+            <button type="button" class="button-secondary compact-button" id="clear-selection-button">Clear selection</button>
         </div>
 
         <div>

@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="page-header">
+    <p class="eyebrow">CDA actor</p>
+    <h1>Edit Actor</h1>
+    <p>Active project: {{ active_project.name }}</p>
+</section>
+
+<section class="detail-actions">
+    <a class="button-secondary" href="{{ url_for('cda_workspace') }}">Back to CDA Workspace</a>
+</section>
+
+<section class="info-panel">
+    <form class="document-form" action="{{ url_for('update_actor', actor_id=actor.id) }}" method="post">
+        <div class="form-grid">
+            <label>
+                <span>Name</span>
+                <input type="text" name="name" value="{{ actor.name }}" required>
+            </label>
+            <label>
+                <span>Actor type</span>
+                <select name="actor_type" required>
+                    {% for value, label in actor_type_labels.items() %}
+                        <option value="{{ value }}" {{ "selected" if value == actor.actor_type else "" }}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+        </div>
+        <label>
+            <span>Description</span>
+            <textarea name="description" rows="4">{{ actor.description or "" }}</textarea>
+        </label>
+        <button type="submit" class="button-primary">Save actor</button>
+    </form>
+</section>
+{% endblock %}

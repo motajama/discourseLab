@@ -29,8 +29,8 @@ from werkzeug.utils import secure_filename
 
 
 APP_NAME = "discourseLab"
-APP_PHASE = "12"
-CURRENT_PHASE_LABEL = "Phase 12 — Methodology helper library and project protocol"
+APP_PHASE = "12.5a"
+CURRENT_PHASE_LABEL = "Phase 12.5a — Safety and workflow hotfixes"
 DEFAULT_PROJECT_NAME = "Demo Project"
 DEFAULT_PROJECT_DESCRIPTION = "Initial local discourseLab project."
 DEFAULT_CODE_COLOR = "#f4c542"
@@ -578,14 +578,14 @@ def create_app() -> Flask:
             end_offset = int(request.form.get("end_offset", ""))
         except ValueError:
             flash("Invalid selection. Select text inside the document panel.", "error")
-            return redirect(url_for("document_view", document_id=document_id))
+            return redirect_to_document(document_id)
 
         document_text = document["text_content"] or ""
         if not is_valid_segment_selection(
             document_text, selected_text, start_offset, end_offset
         ):
             flash("Invalid selection. Select a passage inside the document text.", "error")
-            return redirect(url_for("document_view", document_id=document_id))
+            return redirect_to_document(document_id)
 
         selected_text = document_text[start_offset:end_offset]
         segment_id = execute_write(
@@ -605,7 +605,7 @@ def create_app() -> Flask:
             details=f"Created segment in document: {document['title']}",
         )
         flash("Segment created.", "success")
-        return redirect(url_for("document_view", document_id=document_id))
+        return redirect_to_document(document_id)
 
     @app.route("/documents/<int:document_id>/delete", methods=["POST"])
     def delete_document(document_id: int):
@@ -649,7 +649,7 @@ def create_app() -> Flask:
             details=f"Deleted segment from document: {segment['document_title']}",
         )
         flash("Segment deleted.", "success")
-        return redirect(url_for("document_view", document_id=segment["document_id"]))
+        return redirect_to_document(segment["document_id"])
 
     @app.route("/codes")
     def codes():
@@ -860,16 +860,16 @@ def create_app() -> Flask:
             code_id = int(request.form.get("code_id", ""))
         except ValueError:
             flash("Invalid code.", "error")
-            return redirect(url_for("document_view", document_id=segment["document_id"]))
+            return redirect_to_document(segment["document_id"])
 
         code = get_code_for_project(code_id, active_project["id"])
         if code is None:
             flash("Invalid code.", "error")
-            return redirect(url_for("document_view", document_id=segment["document_id"]))
+            return redirect_to_document(segment["document_id"])
 
         if segment_has_code(segment_id, code_id):
             flash("Code already assigned to this segment.", "error")
-            return redirect(url_for("document_view", document_id=segment["document_id"]))
+            return redirect_to_document(segment["document_id"])
 
         execute_write(
             "INSERT INTO segment_codes (segment_id, code_id) VALUES (?, ?)",
@@ -884,7 +884,7 @@ def create_app() -> Flask:
             details=f"Assigned code {code['name']} to {segment_label}",
         )
         flash(f"Assigned code: {code['name']}", "success")
-        return redirect(url_for("document_view", document_id=segment["document_id"]))
+        return redirect_to_document(segment["document_id"])
 
     @app.route("/segments/<int:segment_id>/codes/<int:code_id>/remove", methods=["POST"])
     def remove_code_from_segment(segment_id: int, code_id: int):
@@ -897,7 +897,7 @@ def create_app() -> Flask:
         code = get_code_for_project(code_id, active_project["id"])
         if code is None:
             flash("Invalid code.", "error")
-            return redirect(url_for("document_view", document_id=segment["document_id"]))
+            return redirect_to_document(segment["document_id"])
 
         execute_write(
             "DELETE FROM segment_codes WHERE segment_id = ? AND code_id = ?",
@@ -912,7 +912,7 @@ def create_app() -> Flask:
             details=f"Removed code {code['name']} from {segment_label}",
         )
         flash(f"Removed code: {code['name']}", "success")
-        return redirect(url_for("document_view", document_id=segment["document_id"]))
+        return redirect_to_document(segment["document_id"])
 
     @app.route("/memos")
     def memos():
@@ -1276,6 +1276,64 @@ def create_app() -> Flask:
         flash(f"CDA marker created: {name}", "success")
         return redirect(url_for("cda_workspace"))
 
+    @app.route("/cda/markers/<int:marker_id>/edit")
+    def edit_discourse_marker(marker_id: int):
+        active_project = get_active_project()
+        if not project_supports_cda(active_project):
+            flash("CDA Workspace is disabled for this project's methodology mode.", "error")
+            return redirect(url_for("dashboard"))
+        marker = get_discourse_marker_for_project(marker_id, active_project["id"])
+        if marker is None:
+            flash("Invalid marker.", "error")
+            return redirect(url_for("cda_workspace"))
+        return render_template(
+            "cda_marker_edit.html",
+            title=f"Edit CDA Marker: {marker['name']}",
+            active_page="cda",
+            active_project=active_project,
+            marker=marker,
+            marker_type_labels=CDA_MARKER_TYPES,
+        )
+
+    @app.route("/cda/markers/<int:marker_id>/edit", methods=["POST"])
+    def update_discourse_marker(marker_id: int):
+        active_project = get_active_project()
+        if not project_supports_cda(active_project):
+            flash("CDA Workspace is disabled for this project's methodology mode.", "error")
+            return redirect(url_for("dashboard"))
+        marker = get_discourse_marker_for_project(marker_id, active_project["id"])
+        if marker is None:
+            flash("Invalid marker.", "error")
+            return redirect(url_for("cda_workspace"))
+
+        name = request.form.get("name", "").strip()
+        marker_type = request.form.get("marker_type", "").strip()
+        description = request.form.get("description", "").strip()
+        color = normalize_cda_color(request.form.get("color", ""))
+        if not name:
+            flash("CDA marker name is required.", "error")
+            return redirect(url_for("edit_discourse_marker", marker_id=marker_id))
+        if marker_type not in CDA_MARKER_TYPES:
+            flash("Invalid marker.", "error")
+            return redirect(url_for("edit_discourse_marker", marker_id=marker_id))
+        execute_write(
+            """
+            UPDATE discourse_markers
+            SET name = ?, marker_type = ?, description = ?, color = ?, updated_at = CURRENT_TIMESTAMP
+            WHERE id = ? AND project_id = ?
+            """,
+            (name, marker_type, description, color, marker_id, active_project["id"]),
+        )
+        log_action(
+            active_project["id"],
+            "discourse_marker",
+            marker_id,
+            "update_discourse_marker",
+            f"Updated CDA marker: {name}",
+        )
+        flash(f"CDA marker updated: {name}", "success")
+        return redirect(url_for("cda_workspace"))
+
     @app.route("/cda/markers/<int:marker_id>/delete", methods=["POST"])
     def delete_discourse_marker(marker_id: int):
         active_project = get_active_project()
@@ -1335,6 +1393,63 @@ def create_app() -> Flask:
         flash(f"Actor created: {name}", "success")
         return redirect(url_for("cda_workspace"))
 
+    @app.route("/cda/actors/<int:actor_id>/edit")
+    def edit_actor(actor_id: int):
+        active_project = get_active_project()
+        if not project_supports_cda(active_project):
+            flash("CDA Workspace is disabled for this project's methodology mode.", "error")
+            return redirect(url_for("dashboard"))
+        actor = get_actor_for_project(actor_id, active_project["id"])
+        if actor is None:
+            flash("Invalid actor.", "error")
+            return redirect(url_for("cda_workspace"))
+        return render_template(
+            "cda_actor_edit.html",
+            title=f"Edit Actor: {actor['name']}",
+            active_page="cda",
+            active_project=active_project,
+            actor=actor,
+            actor_type_labels=ACTOR_TYPES,
+        )
+
+    @app.route("/cda/actors/<int:actor_id>/edit", methods=["POST"])
+    def update_actor(actor_id: int):
+        active_project = get_active_project()
+        if not project_supports_cda(active_project):
+            flash("CDA Workspace is disabled for this project's methodology mode.", "error")
+            return redirect(url_for("dashboard"))
+        actor = get_actor_for_project(actor_id, active_project["id"])
+        if actor is None:
+            flash("Invalid actor.", "error")
+            return redirect(url_for("cda_workspace"))
+
+        name = request.form.get("name", "").strip()
+        actor_type = request.form.get("actor_type", "").strip()
+        description = request.form.get("description", "").strip()
+        if not name:
+            flash("Actor name is required.", "error")
+            return redirect(url_for("edit_actor", actor_id=actor_id))
+        if actor_type not in ACTOR_TYPES:
+            flash("Invalid actor.", "error")
+            return redirect(url_for("edit_actor", actor_id=actor_id))
+        execute_write(
+            """
+            UPDATE actors
+            SET name = ?, actor_type = ?, description = ?, updated_at = CURRENT_TIMESTAMP
+            WHERE id = ? AND project_id = ?
+            """,
+            (name, actor_type, description, actor_id, active_project["id"]),
+        )
+        log_action(
+            active_project["id"],
+            "actor",
+            actor_id,
+            "update_actor",
+            f"Updated actor: {name}",
+        )
+        flash(f"Actor updated: {name}", "success")
+        return redirect(url_for("cda_workspace"))
+
     @app.route("/cda/actors/<int:actor_id>/delete", methods=["POST"])
     def delete_actor(actor_id: int):
         active_project = get_active_project()
@@ -1376,14 +1491,14 @@ def create_app() -> Flask:
             marker_id = int(request.form.get("marker_id", ""))
         except ValueError:
             flash("Invalid marker.", "error")
-            return redirect(url_for("document_view", document_id=segment["document_id"]))
+            return redirect_to_document(segment["document_id"])
         marker = get_discourse_marker_for_project(marker_id, active_project["id"])
         if marker is None:
             flash("Invalid marker.", "error")
-            return redirect(url_for("document_view", document_id=segment["document_id"]))
+            return redirect_to_document(segment["document_id"])
         if segment_has_discourse_marker(segment_id, marker_id):
             flash("CDA marker already assigned to this segment.", "error")
-            return redirect(url_for("document_view", document_id=segment["document_id"]))
+            return redirect_to_document(segment["document_id"])
         execute_write(
             """
             INSERT INTO segment_discourse_markers (segment_id, marker_id, note)
@@ -1400,7 +1515,7 @@ def create_app() -> Flask:
             f"Assigned CDA marker {marker['name']} to {segment_label}",
         )
         flash(f"Marker assigned to segment: {marker['name']}", "success")
-        return redirect(url_for("document_view", document_id=segment["document_id"]))
+        return redirect_to_document(segment["document_id"])
 
     @app.route("/segments/<int:segment_id>/discourse-markers/<int:marker_id>/remove", methods=["POST"])
     def remove_discourse_marker_from_segment(segment_id: int, marker_id: int):
@@ -1415,7 +1530,7 @@ def create_app() -> Flask:
             abort(404)
         if marker is None:
             flash("Invalid marker.", "error")
-            return redirect(url_for("document_view", document_id=segment["document_id"]))
+            return redirect_to_document(segment["document_id"])
         execute_write(
             "DELETE FROM segment_discourse_markers WHERE segment_id = ? AND marker_id = ?",
             (segment_id, marker_id),
@@ -1429,7 +1544,7 @@ def create_app() -> Flask:
             f"Removed CDA marker {marker['name']} from {segment_label}",
         )
         flash(f"Marker removed from segment: {marker['name']}", "success")
-        return redirect(url_for("document_view", document_id=segment["document_id"]))
+        return redirect_to_document(segment["document_id"])
 
     @app.route("/segments/<int:segment_id>/actors", methods=["POST"])
     def assign_actor_to_segment(segment_id: int):
@@ -1445,15 +1560,15 @@ def create_app() -> Flask:
             actor_id = int(request.form.get("actor_id", ""))
         except ValueError:
             flash("Invalid actor.", "error")
-            return redirect(url_for("document_view", document_id=segment["document_id"]))
+            return redirect_to_document(segment["document_id"])
         relation_type = request.form.get("relation_type", "").strip()
         actor = get_actor_for_project(actor_id, active_project["id"])
         if actor is None:
             flash("Invalid actor.", "error")
-            return redirect(url_for("document_view", document_id=segment["document_id"]))
+            return redirect_to_document(segment["document_id"])
         if relation_type not in ACTOR_RELATION_TYPES:
             flash("Invalid actor relation.", "error")
-            return redirect(url_for("document_view", document_id=segment["document_id"]))
+            return redirect_to_document(segment["document_id"])
         execute_write(
             """
             INSERT INTO segment_actors (segment_id, actor_id, relation_type, note)
@@ -1470,7 +1585,7 @@ def create_app() -> Flask:
             f"Assigned actor {actor['name']} as {relation_type} to {segment_label}",
         )
         flash(f"Actor assigned to segment: {actor['name']}", "success")
-        return redirect(url_for("document_view", document_id=segment["document_id"]))
+        return redirect_to_document(segment["document_id"])
 
     @app.route("/segments/<int:segment_id>/actors/<int:segment_actor_id>/remove", methods=["POST"])
     def remove_actor_from_segment(segment_id: int, segment_actor_id: int):
@@ -1492,7 +1607,7 @@ def create_app() -> Flask:
             f"Removed actor annotation from {segment_label}",
         )
         flash("Actor annotation removed from segment.", "success")
-        return redirect(url_for("document_view", document_id=segment_actor["document_id"]))
+        return redirect_to_document(segment_actor["document_id"])
 
     @app.route("/segments/<int:segment_id>/features", methods=["POST"])
     def create_discourse_feature(segment_id: int):
@@ -1509,10 +1624,10 @@ def create_app() -> Flask:
         interpretation = request.form.get("interpretation", "").strip()
         if feature_type not in DISCOURSE_FEATURE_TYPES:
             flash("Invalid feature.", "error")
-            return redirect(url_for("document_view", document_id=segment["document_id"]))
+            return redirect_to_document(segment["document_id"])
         if not value:
             flash("Invalid feature.", "error")
-            return redirect(url_for("document_view", document_id=segment["document_id"]))
+            return redirect_to_document(segment["document_id"])
         feature_id = execute_write(
             """
             INSERT INTO discourse_features (segment_id, feature_type, value, interpretation)
@@ -1529,7 +1644,7 @@ def create_app() -> Flask:
             f"Created discourse feature {feature_type} for {segment_label}",
         )
         flash(f"Discourse feature created: {feature_type}", "success")
-        return redirect(url_for("document_view", document_id=segment["document_id"]))
+        return redirect_to_document(segment["document_id"])
 
     @app.route("/segments/<int:segment_id>/features/<int:feature_id>/delete", methods=["POST"])
     def delete_discourse_feature(segment_id: int, feature_id: int):
@@ -1551,7 +1666,7 @@ def create_app() -> Flask:
             f"Deleted discourse feature {feature['feature_type']} from {segment_label}",
         )
         flash(f"Discourse feature deleted: {feature['feature_type']}", "success")
-        return redirect(url_for("document_view", document_id=feature["document_id"]))
+        return redirect_to_document(feature["document_id"])
 
     @app.route("/cda/features")
     def cda_features():
@@ -2095,6 +2210,13 @@ def create_app() -> Flask:
                         "endpoint": "export_project_package",
                         "button": "Download package",
                     },
+                    {
+                        "title": "Project backup ZIP",
+                        "description": "Basic active-project backup bundle for local archiving. Restore is not implemented yet.",
+                        "format": "ZIP",
+                        "endpoint": "export_project_backup",
+                        "button": "Download backup",
+                    },
                 ],
             },
         ]
@@ -2266,6 +2388,15 @@ def create_app() -> Flask:
         return download_binary(
             generate_project_package_zip(active_project),
             "discourseLab_research_package.zip",
+            "application/zip",
+        )
+
+    @app.route("/exports/project-backup.zip")
+    def export_project_backup():
+        active_project = get_active_project()
+        return download_binary(
+            generate_project_backup_zip(active_project),
+            "discourseLab_project_backup.zip",
             "application/zip",
         )
 
@@ -2485,6 +2616,17 @@ def run_migrations() -> None:
             ON methodology_notes (status);
         """
     )
+    for table in ("discourse_markers", "actors"):
+        columns = {row["name"] for row in db.execute(f"PRAGMA table_info({table})").fetchall()}
+        if "updated_at" not in columns:
+            db.execute(f"ALTER TABLE {table} ADD COLUMN updated_at TEXT")
+        db.execute(
+            f"""
+            UPDATE {table}
+            SET updated_at = created_at
+            WHERE updated_at IS NULL OR TRIM(updated_at) = ''
+            """
+        )
     db.commit()
 
 
@@ -4600,12 +4742,20 @@ def render_placeholder(
     )
 
 
+def redirect_to_document(document_id: int, scroll_y: str | None = None):
+    scroll_y = scroll_y if scroll_y is not None else request.form.get("scroll_y", "")
+    kwargs = {"document_id": document_id}
+    if str(scroll_y).isdigit():
+        kwargs["scroll_y"] = str(scroll_y)
+    return redirect(url_for("document_view", **kwargs))
+
+
 def redirect_after_code_change(document_id: str):
     if document_id.isdigit():
         active_project = get_active_project()
         document = get_document_for_project(int(document_id), active_project["id"])
         if document is not None:
-            return redirect(url_for("document_view", document_id=document["id"]))
+            return redirect_to_document(document["id"])
     return redirect(url_for("codes"))
 
 
@@ -6337,6 +6487,38 @@ def generate_project_package_zip(active_project: sqlite3.Row) -> bytes:
         files["voice_silence.csv"] = generate_voice_silence_csv(active_project)
     output = io.BytesIO()
     with zipfile.ZipFile(output, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+        for filename, content in files.items():
+            archive.writestr(filename, content.encode("utf-8"))
+    return output.getvalue()
+
+
+def generate_project_backup_zip(active_project: sqlite3.Row) -> bytes:
+    timestamp = export_timestamp()
+    files = {
+        "project.json": generate_project_json(active_project),
+        "codebook.md": build_codebook_markdown(active_project),
+        "memos.md": generate_memos_markdown(active_project),
+        "analytical_model.md": generate_model_markdown(active_project),
+        "methodology_protocol.md": generate_methodology_protocol_markdown(active_project),
+    }
+    readme_lines = [
+        "discourseLab project backup",
+        "",
+        "Generated by discourseLab",
+        f"Project name: {active_project['name']}",
+        f"Timestamp: {timestamp}",
+        "",
+        "Contents:",
+        *[f"- {name}" for name in sorted(files.keys())],
+        "- README_BACKUP.txt",
+        "",
+        "Restore from backup is not implemented yet.",
+        "Original uploaded source files are not included because this project stores extracted text but not per-document upload paths.",
+        "",
+    ]
+    output = io.BytesIO()
+    with zipfile.ZipFile(output, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+        archive.writestr("README_BACKUP.txt", "\n".join(readme_lines).encode("utf-8"))
         for filename, content in files.items():
             archive.writestr(filename, content.encode("utf-8"))
     return output.getvalue()

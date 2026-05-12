@@ -216,7 +216,7 @@
                         </div>
                         <div class="actions-cell">
                             <a class="button-secondary" href="{{ url_for('edit_relation', relation_id=relation.id) }}">Edit</a>
-                            <form action="{{ url_for('delete_relation', relation_id=relation.id) }}" method="post">
+                            <form class="confirm-delete" data-confirm="Delete this analytical relation?" action="{{ url_for('delete_relation', relation_id=relation.id) }}" method="post">
                                 <button type="submit" class="button-danger">Delete</button>
                             </form>
                         </div>
