@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% import "_help_tip.html" as ui %}
 
 {% block content %}
 <section class="page-header">
@@ -11,11 +12,11 @@
     <h2>Filters</h2>
     <form class="filter-form" method="get" action="{{ url_for('cda_features') }}">
         <label>
-            <span>Feature type</span>
+            <span class="label-row">Feature type {{ ui.help_tip("Classifies the CDA feature observed in a segment.", "Feature type") }}</span>
             <select name="feature_type">
                 <option value="">All feature types</option>
                 {% for value, label in feature_type_labels.items() %}
-                    <option value="{{ value }}" {{ "selected" if filters.feature_type == value else "" }}>{{ label }}</option>
+                    <option value="{{ value }}" title="{{ feature_type_explanations[value] }}" {{ "selected" if filters.feature_type == value else "" }}>{{ label }}</option>
                 {% endfor %}
             </select>
         </label>
@@ -39,7 +40,7 @@
         {% if counts %}
             <ul class="compact-list">
                 {% for row in counts %}
-                    <li><span>{{ feature_type_labels[row.feature_type] }}</span><span>{{ row.count }}</span></li>
+                    <li><span>{{ feature_type_labels[row.feature_type] }} {{ ui.help_tip(feature_type_explanations.get(row.feature_type), "Feature type") }}</span><span>{{ row.count }}</span></li>
                 {% endfor %}
             </ul>
         {% else %}
@@ -74,7 +75,7 @@
                 <tbody>
                     {% for feature in features %}
                         <tr>
-                            <td>{{ feature_type_labels[feature.feature_type] }}</td>
+                            <td>{{ feature_type_labels[feature.feature_type] }} {{ ui.help_tip(feature_type_explanations.get(feature.feature_type), "Feature type") }}</td>
                             <td>{{ feature.value }}</td>
                             <td>{{ feature.interpretation or "" }}</td>
                             <td><a href="{{ url_for('document_view', document_id=feature.document_id) }}">{{ feature.document_title }}</a></td>

@@ -4,23 +4,24 @@ discourseLab is a local, lightweight qualitative analysis workspace for discours
 
 It runs on your own computer in a web browser. It does not require an account, cloud service, npm, Node, React, or external web services.
 
-Current phase: **Phase 12.5c — Document coding workspace cleanup**
+Current phase: **Phase 12.5d - Atari skin, methodology tooltips, and codebook additions**
 
 The analytical model builder connects project entities such as segments, codes, categories, actors, discourse features, memos, and research questions into explicit analytical relations.
 
-Phase 12.5c cleans up the document coding workspace with a compact document header, a more comfortable reading panel, compact segment cards, collapsible Codes/Memos/CDA/Relations sections, a non-overlapping selection bar, and methodology-aware segment tools. It does not add AI, cloud sync, authentication, Node, npm, React, Vue, or external CDN usage.
+Phase 12.5d adds a compact Atari ST / TOS / GEM-inspired visual skin, local methodology tooltips, compact contextual helper panels, and CDA marker/actor coverage in the codebook export. It does not add AI, cloud sync, authentication, Node, npm, React, Vue, or external CDN usage.
 
-## Phase 12.5c Verification
+## Phase 12.5d Verification
 
 1. Start the app with `python app.py`.
-2. Open a document with several segments.
-3. Confirm the document header is compact.
-4. Select text and confirm the segment creation UI appears without covering text.
-5. Create a segment and confirm scroll position is preserved.
-6. Confirm segment cards are compact and organized into collapsible sections.
-7. Confirm methodology mode affects CDA tool visibility.
-8. Confirm existing code assignment, memos, CDA markers, actors, and features still work.
-9. Confirm `/health` returns `"phase": "12.5c"`.
+2. Confirm the UI uses flat, compact Atari/TOS/GEM-inspired styling.
+3. Confirm the fixed top navigation remains usable.
+4. Hover or focus help icons and confirm tooltips appear.
+5. Confirm marker type and actor type explanations appear in CDA forms.
+6. Confirm methodology mode explanations appear in project settings.
+7. Confirm large methodology panels are compact or collapsed.
+8. Download `/exports/codebook.md` and confirm CDA markers and actors are included.
+9. Download the complete research package ZIP and confirm its `codebook.md` has the same sections.
+10. Confirm `/health` returns `"phase": "12.5d"`.
 
 ## What You Need
 
@@ -276,7 +277,7 @@ py app.py
 30. Link a methodology note to a code or segment.
 31. Edit and filter methodology notes.
 32. Delete a methodology note.
-33. Open GT, CDA, Model, and document pages and confirm methodology helper panels use library content.
+33. Open GT, CDA, Model, and document pages and confirm methodology helper panels are compact or collapsed and use library content.
 34. Download methodology protocol Markdown.
 35. Download the complete research package ZIP and confirm `methodology_protocol.md` is included.
 36. Download project JSON and confirm `methodology_notes` are included.
@@ -323,6 +324,13 @@ dot -Tpng discourseLab_analytical_model.dot -o model.png
 
 - TikZ `.tikz`: a snippet to include inside a LaTeX document with TikZ enabled.
 - SVG `.svg`: open directly in a browser or vector editor.
+
+## Phase 12.5d Notes
+
+- The visual skin uses only local CSS: light gray workspace, crisp rectangular panels, thin dark borders, flat compact controls, and restrained blue accents.
+- Tooltips use local HTML/CSS with `title` fallback and keyboard focus support.
+- Explanations cover methodology modes, CDA marker types, actor types, actor relation types, discourse feature types, GT terms, model relation types, and relation strengths.
+- Codebook exports now include `## CDA Markers` and `## Actors`; the research package ZIP includes the updated codebook automatically.
 
 ## Data Storage
 

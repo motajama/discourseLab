@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% import "_help_tip.html" as ui %}
 
 {% block content %}
 <section class="page-header">
@@ -39,11 +40,11 @@
                     <input type="text" name="name" required>
                 </label>
                 <label>
-                    <span>Marker type</span>
+                    <span class="label-row">Marker type {{ ui.help_tip("Classifies what kind of CDA evidence this marker captures.", "Marker type") }}</span>
                     <select name="marker_type" required>
                         <option value="">Choose type</option>
                         {% for value, label in marker_type_labels.items() %}
-                            <option value="{{ value }}">{{ label }}</option>
+                            <option value="{{ value }}" title="{{ marker_type_explanations[value] }}">{{ label }}</option>
                         {% endfor %}
                     </select>
                 </label>
@@ -71,11 +72,11 @@
                     <input type="text" name="name" required>
                 </label>
                 <label>
-                    <span>Actor type</span>
+                    <span class="label-row">Actor type {{ ui.help_tip("Classifies the represented social actor.", "Actor type") }}</span>
                     <select name="actor_type" required>
                         <option value="">Choose type</option>
                         {% for value, label in actor_type_labels.items() %}
-                            <option value="{{ value }}">{{ label }}</option>
+                            <option value="{{ value }}" title="{{ actor_type_explanations[value] }}">{{ label }}</option>
                         {% endfor %}
                     </select>
                 </label>
@@ -97,7 +98,7 @@
                 {% for marker in markers %}
                     <li>
                         <span><span class="color-swatch small" style="background: {{ marker.color }}"></span>{{ marker.name }}</span>
-                        <span>{{ marker_type_labels[marker.marker_type] }} · {{ marker.assigned_segment_count }} assigned segments</span>
+                        <span>{{ marker_type_labels[marker.marker_type] }} {{ ui.help_tip(marker_type_explanations.get(marker.marker_type), "Marker type") }} · {{ marker.assigned_segment_count }} assigned segments</span>
                         {% if marker.description %}<span>{{ marker.description }}</span>{% endif %}
                         <span class="actions-cell">
                             <a class="button-secondary compact-button" href="{{ url_for('edit_discourse_marker', marker_id=marker.id) }}">Edit</a>
@@ -120,7 +121,7 @@
                 {% for actor in actors %}
                     <li>
                         <span>{{ actor.name }}</span>
-                        <span>{{ actor_type_labels[actor.actor_type] }} · {{ actor.annotation_count }} annotations · {{ actor.relation_count }} relations</span>
+                        <span>{{ actor_type_labels[actor.actor_type] }} {{ ui.help_tip(actor_type_explanations.get(actor.actor_type), "Actor type") }} · {{ actor.annotation_count }} annotations · {{ actor.relation_count }} relations</span>
                         {% if actor.description %}<span>{{ actor.description }}</span>{% endif %}
                         <span class="actions-cell">
                             <a class="button-secondary compact-button" href="{{ url_for('edit_actor', actor_id=actor.id) }}">Edit</a>

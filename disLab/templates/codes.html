@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% import "_help_tip.html" as ui %}
 
 {% block content %}
 <section class="page-header">
@@ -7,7 +8,7 @@
 </section>
 
 <section class="info-panel import-panel">
-    <h2>Create Open Code</h2>
+    <h2>Create Open Code {{ ui.help_tip(gt_term_explanations.open_code, "Open code") }}</h2>
     <form class="document-form" action="{{ url_for('create_code') }}" method="post">
         <div class="form-grid">
             <label>
@@ -42,7 +43,7 @@
                     <tr>
                         <th>Color</th>
                         <th>Name</th>
-                        <th>Type</th>
+                        <th>Type {{ ui.help_tip("Open codes stay close to data; axial codes group open codes; categories integrate axial codes.", "Code type") }}</th>
                         {% if supports_gt %}<th>Parent</th>{% endif %}
                         <th>Assigned segments</th>
                         <th>Codebook</th>
@@ -55,7 +56,7 @@
                         <tr>
                             <td><span class="color-swatch" style="background: {{ code.color }}"></span></td>
                             <td>{{ code.name }}</td>
-                            <td>{{ code.code_type }}</td>
+                            <td>{{ code.code_type }}{% if code.code_type == "open" %} {{ ui.help_tip(gt_term_explanations.open_code, "Open code") }}{% elif code.code_type == "axial" %} {{ ui.help_tip(gt_term_explanations.axial_code, "Axial code") }}{% elif code.code_type == "category" %} {{ ui.help_tip(gt_term_explanations.category, "Category") }}{% endif %}</td>
                             {% if supports_gt %}<td>{{ code.parent_name or "None" }}</td>{% endif %}
                             <td>{{ code.assigned_segment_count }}</td>
                             <td><span class="status-badge">{{ code.completeness }}</span></td>

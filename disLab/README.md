@@ -1,10 +1,10 @@
 # discourseLab
 
-Phase: 12.5a — Safety and workflow hotfixes
+Phase: 12.5d - Atari skin, methodology tooltips, and codebook additions
 
 discourseLab is a local lightweight qualitative analysis workspace for discourse analysis, critical discourse analysis, grounded theory, and generic qualitative coding.
 
-Phase 12.5a keeps the local Flask/SQLite app structure and adds small safety and workflow fixes: CDA marker editing, actor editing, delete confirmations, document-view scroll preservation after coding actions, a non-overlapping bottom segment selection bar, and a basic project backup ZIP export.
+Phase 12.5d keeps the local Flask/SQLite app structure and adds a compact Atari ST / TOS / GEM-inspired skin, local methodology tooltips, compact helper panels, and CDA marker/actor sections in the codebook export.
 
 ## Installation
 
@@ -52,19 +52,21 @@ Available libraries:
 4. Try deleting a segment, document, or code and confirm the warning appears.
 5. Open a long document, scroll down, create a segment, and confirm scroll position is preserved.
 6. Confirm the segment creation UI appears as a bottom bar and does not cover selected text.
-7. Download `/exports/project-backup.zip`.
-8. Restart the app and confirm existing data is still present.
+7. Confirm marker type, actor type, feature type, methodology mode, and relation strength tooltips appear.
+8. Download `/exports/codebook.md` and confirm CDA markers and actors are included.
+9. Download `/exports/package.zip` and confirm its codebook includes the same sections.
+10. Confirm `/health` reports `phase: "12.5d"`.
+11. Restart the app and confirm existing data is still present.
 
-## Current Phase 12.5a
+## Current Phase 12.5d
 
-Phase 12.5a adds:
+Phase 12.5d adds:
 
-- Editable CDA markers
-- Editable actors
-- Confirmation dialogs for destructive forms
-- Scroll preservation on the document detail page after coding and annotation actions
-- Fixed bottom segment selection bar replacing the floating popup
-- Basic project backup ZIP export
-- `/health` reports `phase: "12.5a"`
+- Flat Atari/TOS/GEM-inspired local CSS skin
+- Local hover/focus methodology tooltips
+- Compact or collapsed methodology helper panels
+- Explanations for methodology modes, CDA markers, actors, feature types, GT terms, relation types, and strengths
+- CDA marker and actor sections in codebook exports
+- `/health` reports `phase: "12.5d"`
 
 This phase does not implement the Atari/TOS/GEM skin, dashboard redesign, navigation redesign, AI, cloud sync, authentication, React, Vue, Node, npm, or external CDN usage.

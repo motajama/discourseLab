@@ -1,0 +1,5 @@
+{% macro help_tip(text, label="Help") -%}
+    {% if text %}
+        <span class="help-tip" tabindex="0" title="{{ text }}" aria-label="{{ label }}: {{ text }}" data-tooltip="{{ text }}">?</span>
+    {% endif %}
+{%- endmacro %}

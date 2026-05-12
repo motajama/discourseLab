@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% import "_help_tip.html" as ui %}
 
 {% block content %}
 <section class="page-header">
@@ -19,22 +20,22 @@
                 <span>Name</span>
                 <input type="text" name="name" value="{{ project.name if project else '' }}" required>
             </label>
+            {% set selected_mode = project.methodology_mode if project else "mixed" %}
             <label>
-                <span>Methodology mode</span>
+                <span class="label-row">Methodology mode {{ ui.help_tip("Choose the analytical workflow for this project. " ~ methodology_mode_explanations.get(selected_mode if project else "mixed", ""), "Methodology mode") }}</span>
                 <select name="methodology_mode" required>
-                    {% set selected_mode = project.methodology_mode if project else "mixed" %}
                     {% for value, label in methodology_mode_labels.items() %}
-                        <option value="{{ value }}" {{ "selected" if selected_mode == value else "" }}>{{ label }}</option>
+                        <option value="{{ value }}" title="{{ methodology_mode_explanations[value] }}" {{ "selected" if selected_mode == value else "" }}>{{ label }}</option>
                     {% endfor %}
                 </select>
             </label>
         </div>
-        <div class="methodology-mode-help">
-            <p><strong>Generic qualitative coding:</strong> open coding, memos, exports.</p>
-            <p><strong>Grounded Theory:</strong> enables GT workspace and GT helper prompts.</p>
-            <p><strong>CDA:</strong> enables CDA workspace and CDA helper prompts.</p>
-            <p><strong>Mixed GT + CDA:</strong> enables both, but requires explicit protocol decisions.</p>
-        </div>
+        <details class="methodology-mode-help compact-details">
+            <summary>Methodology mode guide</summary>
+            {% for value, label in methodology_mode_labels.items() %}
+                <p><strong>{{ label }}:</strong> {{ methodology_mode_explanations[value] }}</p>
+            {% endfor %}
+        </details>
         <label>
             <span>Description</span>
             <textarea name="description" rows="3">{{ project.description if project else "" }}</textarea>

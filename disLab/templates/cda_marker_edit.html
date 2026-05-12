@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% import "_help_tip.html" as ui %}
 
 {% block content %}
 <section class="page-header">
@@ -19,10 +20,10 @@
                 <input type="text" name="name" value="{{ marker.name }}" required>
             </label>
             <label>
-                <span>Marker type</span>
+                <span class="label-row">Marker type {{ ui.help_tip("Classifies what kind of CDA evidence this marker captures.", "Marker type") }}</span>
                 <select name="marker_type" required>
                     {% for value, label in marker_type_labels.items() %}
-                        <option value="{{ value }}" {{ "selected" if value == marker.marker_type else "" }}>{{ label }}</option>
+                        <option value="{{ value }}" title="{{ marker_type_explanations[value] }}" {{ "selected" if value == marker.marker_type else "" }}>{{ label }}</option>
                     {% endfor %}
                 </select>
             </label>

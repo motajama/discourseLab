@@ -29,8 +29,8 @@ from werkzeug.utils import secure_filename
 
 
 APP_NAME = "discourseLab"
-APP_PHASE = "12.5c"
-CURRENT_PHASE_LABEL = "Phase 12.5c — Document coding workspace cleanup"
+APP_PHASE = "12.5d"
+CURRENT_PHASE_LABEL = "Phase 12.5d - Atari skin, tooltips, and codebook additions"
 DEFAULT_PROJECT_NAME = "Demo Project"
 DEFAULT_PROJECT_DESCRIPTION = "Initial local discourseLab project."
 DEFAULT_CODE_COLOR = "#f4c542"
@@ -40,6 +40,12 @@ METHODOLOGY_MODES = {
     "gt": "Grounded Theory",
     "cda": "Critical Discourse Analysis",
     "mixed": "Mixed",
+}
+METHODOLOGY_MODE_EXPLANATIONS = {
+    "generic": "Generic qualitative coding: documents, segments, open codes, memos, and exports.",
+    "gt": "Grounded Theory: open coding, axial coding, categories, constant comparison, and theoretical integration.",
+    "cda": "Critical Discourse Analysis: textual, discursive-practice, and social-practice analysis with attention to power, ideology, actors, voice, and discourse features.",
+    "mixed": "Mixed GT + CDA: combines grounded theory development with critical discourse analysis; requires explicit protocol decisions.",
 }
 ALLOWED_EXTENSIONS = {"txt", "docx"}
 MAX_UPLOAD_SIZE = 16 * 1024 * 1024
@@ -90,6 +96,27 @@ CDA_MARKER_TYPES = {
     "power_relation": "Power relation",
     "other": "Other",
 }
+CDA_MARKER_TYPE_EXPLANATIONS = {
+    "textual": "Textual-level features such as vocabulary, grammar, modality, metaphor, nominalization, or passivization.",
+    "discursive_practice": "Features concerning production, circulation, genre, intertextuality, voice, quotation, and reception.",
+    "social_practice": "Features connecting discourse to institutions, ideology, power, hegemony, and broader social relations.",
+    "actor": "A discourse participant or represented social actor.",
+    "agency": "How action, responsibility, and capacity to act are assigned or removed.",
+    "voice": "Who is allowed to speak directly or indirectly.",
+    "silence": "Who is absent, backgrounded, or denied voice.",
+    "modality": "Expressions of necessity, possibility, certainty, obligation, or probability.",
+    "evaluation": "Positive or negative valuation, judgment, affect, or appraisal.",
+    "metaphor": "A meaning transfer where one domain is understood through another, such as migration as a wave.",
+    "presupposition": "Something treated as already given or taken for granted by the text.",
+    "nominalization": "Turning processes or actions into nouns, often hiding agency.",
+    "passivization": "Using passive constructions that may background or omit the actor.",
+    "intertextuality": "Links to other texts, voices, genres, discourses, or quoted authorities.",
+    "legitimation": "Discursive justification of actions, policies, hierarchies, or institutions.",
+    "framing": "Selection and organization of meaning that defines what the issue is about.",
+    "ideology": "A structured system of meanings that supports or contests social power.",
+    "power_relation": "A relation of domination, authority, access, dependence, or control.",
+    "other": "A project-specific discourse feature not covered by existing types.",
+}
 ACTOR_TYPES = {
     "individual": "Individual",
     "group": "Group",
@@ -103,6 +130,19 @@ ACTOR_TYPES = {
     "abstract_actor": "Abstract actor",
     "other": "Other",
 }
+ACTOR_TYPE_EXPLANATIONS = {
+    "individual": "A named or individualized person.",
+    "group": "A collective actor such as migrants, citizens, workers, or audiences.",
+    "institution": "An organization or institutional body.",
+    "state_actor": "A state body, authority, police, military, court, ministry, or government agency.",
+    "expert": "A speaker positioned as specialist, analyst, scientist, professional, or authority.",
+    "journalist": "A journalist, presenter, reporter, editor, or media worker.",
+    "politician": "An elected official, party representative, candidate, or political spokesperson.",
+    "public": "The general public, citizens, audiences, or public opinion.",
+    "vulnerable_group": "A socially vulnerable or marginalized group represented in discourse.",
+    "abstract_actor": "An abstract entity represented as acting, such as the market, Europe, the state, or history.",
+    "other": "A project-specific actor type.",
+}
 ACTOR_RELATION_TYPES = {
     "speaks": "Speaks",
     "is_quoted": "Is quoted",
@@ -114,6 +154,18 @@ ACTOR_RELATION_TYPES = {
     "is_backgrounded": "Is backgrounded",
     "is_aggregated": "Is aggregated",
     "is_individualized": "Is individualized",
+}
+ACTOR_RELATION_TYPE_EXPLANATIONS = {
+    "speaks": "The actor is given direct or indirect speech.",
+    "is_quoted": "The actor's words are quoted or reported as a source.",
+    "is_spoken_about": "The actor is represented as an object of discussion.",
+    "is_evaluated": "The actor is judged, appraised, praised, blamed, or otherwise valued.",
+    "acts": "The actor is represented as doing something or causing an action.",
+    "is_acted_upon": "The actor is represented as receiving, suffering, or being affected by action.",
+    "is_silenced": "The actor is absent as a speaker or denied voice.",
+    "is_backgrounded": "The actor is present but made less visible or less central.",
+    "is_aggregated": "The actor is represented as part of a collective or mass.",
+    "is_individualized": "The actor is represented as a specific person or individualized case.",
 }
 DISCOURSE_FEATURE_TYPES = {
     "metaphor": "Metaphor",
@@ -129,6 +181,11 @@ DISCOURSE_FEATURE_TYPES = {
     "ideology": "Ideology",
     "power_relation": "Power relation",
     "other": "Other",
+}
+DISCOURSE_FEATURE_TYPE_EXPLANATIONS = {
+    key: CDA_MARKER_TYPE_EXPLANATIONS[key]
+    for key in DISCOURSE_FEATURE_TYPES
+    if key in CDA_MARKER_TYPE_EXPLANATIONS
 }
 RELATION_ENTITY_TYPES = {
     "document": "Document",
@@ -178,11 +235,66 @@ RELATION_TYPES = {
     "presupposes": "Presupposes",
     "metaphorizes": "Metaphorizes",
 }
+RELATION_TYPE_EXPLANATIONS = {
+    "supports": "The source strengthens, corroborates, or gives backing to the target.",
+    "contradicts": "The source conflicts with, challenges, or weakens the target.",
+    "elaborates": "The source adds detail, nuance, or specification to the target.",
+    "explains": "The source helps account for why the target occurs or matters.",
+    "is_evidence_for": "The source is empirical evidence for the target claim, code, or relation.",
+    "is_example_of": "The source is a concrete instance of the target concept.",
+    "is_negative_case_for": "The source is a case that complicates or challenges the target pattern.",
+    "is_part_of": "The source belongs within the target as a component or subpart.",
+    "contrasts_with": "The source is analytically different from the target in a meaningful way.",
+    "leads_to": "The source precedes or contributes to the target as a processual outcome.",
+    "conditions": "The source shapes the circumstances under which the target becomes possible.",
+    "causes": "The source is interpreted as a cause of the target.",
+    "enables": "The source makes the target possible or easier to occur.",
+    "limits": "The source constrains, blocks, or narrows the target.",
+    "transforms_into": "The source changes into or is reworked as the target.",
+    "open_code_supports_axial_code": "An open code provides grounded evidence for an axial code.",
+    "axial_code_supports_category": "An axial code contributes to a broader category.",
+    "category_integrates": "A category organizes or integrates other analytical elements.",
+    "property_of": "The source names a property or attribute of the target.",
+    "dimension_of": "The source names a dimension or range of variation of the target.",
+    "consequence_of": "The source is an outcome or consequence of the target.",
+    "condition_for": "The source is a condition that supports or shapes the target.",
+    "frames": "The source defines how the target should be understood.",
+    "legitimizes": "The source justifies or normalizes the target.",
+    "delegitimizes": "The source undermines or contests the target's legitimacy.",
+    "naturalizes": "The source makes the target appear normal, inevitable, or common sense.",
+    "silences": "The source suppresses, omits, or denies voice to the target.",
+    "foregrounds": "The source makes the target more visible or central.",
+    "backgrounds": "The source makes the target less visible or less central.",
+    "individualizes": "The source represents the target as a specific person or individualized case.",
+    "aggregates": "The source represents the target as a collective, mass, or category.",
+    "constructs_actor_as": "The source represents an actor through a specific identity, role, or attribute.",
+    "reproduces_power_relation": "The source sustains a relation of authority, domination, dependence, or control.",
+    "challenges_power_relation": "The source contests a relation of authority, domination, dependence, or control.",
+    "presupposes": "The source treats the target as already given or taken for granted.",
+    "metaphorizes": "The source understands the target through a metaphorical domain.",
+}
 RELATION_STRENGTHS = {
     "weak": "Weak",
     "moderate": "Moderate",
     "strong": "Strong",
     "uncertain": "Uncertain",
+}
+RELATION_STRENGTH_EXPLANATIONS = {
+    "weak": "An exploratory or minor relation with limited evidence.",
+    "moderate": "A plausible relation supported by some evidence.",
+    "strong": "A central or well-supported analytical relation.",
+    "uncertain": "A tentative relation that requires further checking.",
+}
+GT_TERM_EXPLANATIONS = {
+    "open_code": "A close-to-data code that names what is happening in a segment.",
+    "axial_code": "A higher-level code that groups open codes around conditions, actions, consequences, properties, or dimensions.",
+    "category": "An integrating analytical concept with explanatory weight across several codes.",
+    "conditions": "Circumstances that shape or enable the phenomenon.",
+    "context": "The setting, situation, or background that gives the phenomenon meaning.",
+    "actions_interactions": "Actions, strategies, responses, or interactions connected to the phenomenon.",
+    "consequences": "Outcomes or effects that follow from actions or conditions.",
+    "properties": "Attributes or characteristics that define a code or category.",
+    "dimensions": "Variations, ranges, or degrees along which a property changes.",
 }
 VISUAL_MODEL_MODES = {
     "simplified": "Simplified",
@@ -262,6 +374,14 @@ def create_app() -> Flask:
         return {
             "active_project": active_project,
             "methodology_mode_labels": METHODOLOGY_MODES,
+            "methodology_mode_explanations": METHODOLOGY_MODE_EXPLANATIONS,
+            "marker_type_explanations": CDA_MARKER_TYPE_EXPLANATIONS,
+            "actor_type_explanations": ACTOR_TYPE_EXPLANATIONS,
+            "actor_relation_type_explanations": ACTOR_RELATION_TYPE_EXPLANATIONS,
+            "feature_type_explanations": DISCOURSE_FEATURE_TYPE_EXPLANATIONS,
+            "relation_type_explanations": RELATION_TYPE_EXPLANATIONS,
+            "relation_strength_explanations": RELATION_STRENGTH_EXPLANATIONS,
+            "gt_term_explanations": GT_TERM_EXPLANATIONS,
             "supports_gt": project_supports_gt(active_project),
             "supports_cda": project_supports_cda(active_project),
             "visual_model_modes": VISUAL_MODEL_MODES,
@@ -2054,7 +2174,7 @@ def create_app() -> Flask:
                 "cards": [
                     {
                         "title": "Codebook Markdown",
-                        "description": "Complete codebook with hierarchy, GT fields, usage counts, and memo counts.",
+                        "description": "Complete codebook with hierarchy, GT fields, CDA markers, actors, usage counts, and memo counts.",
                         "format": "Markdown",
                         "endpoint": "export_codebook_markdown",
                         "button": "Download codebook",
@@ -5419,7 +5539,6 @@ def build_codebook_markdown(active_project: sqlite3.Row) -> str:
     if not codes:
         lines.append("No codes created yet.")
         lines.append("")
-        return "\n".join(lines)
 
     for code in codes:
         lines.extend(
@@ -5465,6 +5584,104 @@ def build_codebook_markdown(active_project: sqlite3.Row) -> str:
                     "",
                 ]
             )
+    marker_rows = query_all(
+        """
+        SELECT
+            discourse_markers.id,
+            discourse_markers.name,
+            discourse_markers.marker_type,
+            discourse_markers.description,
+            discourse_markers.color,
+            discourse_markers.created_at,
+            discourse_markers.updated_at,
+            COUNT(DISTINCT segment_discourse_markers.segment_id) AS usage_count
+        FROM discourse_markers
+        LEFT JOIN segment_discourse_markers
+            ON segment_discourse_markers.marker_id = discourse_markers.id
+        WHERE discourse_markers.project_id = ?
+        GROUP BY discourse_markers.id
+        ORDER BY discourse_markers.marker_type COLLATE NOCASE, discourse_markers.name COLLATE NOCASE
+        """,
+        (project_id,),
+    )
+    lines.extend(["## CDA Markers", ""])
+    if marker_rows:
+        for marker in marker_rows:
+            lines.extend(
+                [
+                    f"### {marker['name']}",
+                    "",
+                    f"- Type: {marker['marker_type']}",
+                    f"- Type explanation: {CDA_MARKER_TYPE_EXPLANATIONS.get(marker['marker_type'], '')}",
+                    f"- Description: {marker['description'] or ''}",
+                    f"- Color: {marker['color'] or ''}",
+                    f"- Usage count: {marker['usage_count']}",
+                    f"- Created at: {marker['created_at']}",
+                    f"- Updated at: {marker['updated_at']}",
+                    "",
+                ]
+            )
+    else:
+        lines.extend(["No CDA markers created yet.", ""])
+
+    actor_rows = query_all(
+        """
+        SELECT
+            actors.id,
+            actors.name,
+            actors.actor_type,
+            actors.description,
+            actors.created_at,
+            actors.updated_at,
+            COUNT(DISTINCT segment_actors.id) AS annotation_count
+        FROM actors
+        LEFT JOIN segment_actors ON segment_actors.actor_id = actors.id
+        WHERE actors.project_id = ?
+        GROUP BY actors.id
+        ORDER BY actors.actor_type COLLATE NOCASE, actors.name COLLATE NOCASE
+        """,
+        (project_id,),
+    )
+    relation_count_rows = query_all(
+        """
+        SELECT actors.id AS actor_id, segment_actors.relation_type, COUNT(*) AS relation_count
+        FROM actors
+        JOIN segment_actors ON segment_actors.actor_id = actors.id
+        WHERE actors.project_id = ?
+        GROUP BY actors.id, segment_actors.relation_type
+        """,
+        (project_id,),
+    )
+    actor_relation_counts: dict[int, dict[str, int]] = {}
+    for row in relation_count_rows:
+        actor_relation_counts.setdefault(row["actor_id"], {})[row["relation_type"]] = row["relation_count"]
+
+    lines.extend(["## Actors", ""])
+    if actor_rows:
+        for actor in actor_rows:
+            counts = actor_relation_counts.get(actor["id"], {})
+            lines.extend(
+                [
+                    f"### {actor['name']}",
+                    "",
+                    f"- Type: {actor['actor_type']}",
+                    f"- Type explanation: {ACTOR_TYPE_EXPLANATIONS.get(actor['actor_type'], '')}",
+                    f"- Description: {actor['description'] or ''}",
+                    f"- Annotation count: {actor['annotation_count']}",
+                    "- Relation counts:",
+                ]
+            )
+            for relation_type in ACTOR_RELATION_TYPES:
+                lines.append(f"  - {relation_type}: {counts.get(relation_type, 0)}")
+            lines.extend(
+                [
+                    f"- Created at: {actor['created_at']}",
+                    f"- Updated at: {actor['updated_at']}",
+                    "",
+                ]
+            )
+    else:
+        lines.extend(["No actors created yet.", ""])
     return "\n".join(lines)
 
 

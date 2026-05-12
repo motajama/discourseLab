@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% import "_help_tip.html" as ui %}
 
 {% block content %}
 <section class="page-header">
@@ -14,7 +15,7 @@
 
 <section class="dashboard-grid">
     <article class="info-panel">
-        <h2>Create Axial Code</h2>
+        <h2>Create Axial Code {{ ui.help_tip(gt_term_explanations.axial_code, "Axial code") }}</h2>
         <form class="document-form" action="{{ url_for('create_axial_code') }}" method="post">
             <input type="text" name="name" placeholder="Axial code name" required>
             <textarea name="description" rows="3" placeholder="Optional description"></textarea>
@@ -23,7 +24,7 @@
         </form>
     </article>
     <article class="info-panel">
-        <h2>Create Category</h2>
+        <h2>Create Category {{ ui.help_tip(gt_term_explanations.category, "Category") }}</h2>
         <form class="document-form" action="{{ url_for('create_category_code') }}" method="post">
             <input type="text" name="name" placeholder="Category name" required>
             <textarea name="description" rows="3" placeholder="Optional description"></textarea>
@@ -35,7 +36,7 @@
 
 <section class="gt-board">
     <div class="gt-column">
-        <h2>Open Codes</h2>
+        <h2>Open Codes {{ ui.help_tip(gt_term_explanations.open_code, "Open code") }}</h2>
         {% for code in open_codes %}
             <article class="gt-card">
                 <h3><span class="color-swatch small" style="background: {{ code.color }}"></span>{{ code.name }}</h3>
@@ -66,7 +67,7 @@
     </div>
 
     <div class="gt-column">
-        <h2>Axial Codes</h2>
+        <h2>Axial Codes {{ ui.help_tip(gt_term_explanations.axial_code, "Axial code") }}</h2>
         {% for code in axial_codes %}
             <article class="gt-card">
                 <h3><span class="color-swatch small" style="background: {{ code.color }}"></span>{{ code.name }}</h3>
@@ -98,7 +99,7 @@
     </div>
 
     <div class="gt-column">
-        <h2>Categories</h2>
+        <h2>Categories {{ ui.help_tip(gt_term_explanations.category, "Category") }}</h2>
         {% for code in categories %}
             <article class="gt-card">
                 <h3><span class="color-swatch small" style="background: {{ code.color }}"></span>{{ code.name }}</h3>

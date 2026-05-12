@@ -1,16 +1,32 @@
 {% if methodology_helper and methodology_helper.prompts %}
-<section class="info-panel helper-panel methodology-helper-panel">
-    <div class="section-heading">
-        <h2>{{ methodology_helper.title }}</h2>
-        <a class="button-secondary compact-button" href="{{ url_for('methodology') }}">Open Methodology</a>
-    </div>
-    <ul class="prompt-list compact-list">
-        {% for item in methodology_helper.prompts %}
-            <li>
-                <span>{{ item.prompt }}</span>
-                <span>{{ item.phase_title }}</span>
-            </li>
-        {% endfor %}
-    </ul>
-</section>
+    {% if request.endpoint == "document_view" %}
+        <section class="mode-strip methodology-helper-panel">
+            <div>
+                <strong>Mode: {{ methodology_mode_labels[active_project.methodology_mode] }}</strong>
+                <span>{{ methodology_mode_explanations[active_project.methodology_mode] }}</span>
+            </div>
+            <ul>
+                {% for item in methodology_helper.prompts[:4] %}
+                    <li>{{ item.prompt }}</li>
+                {% endfor %}
+            </ul>
+            <a class="button-secondary compact-button" href="{{ url_for('methodology') }}">Methodology</a>
+        </section>
+    {% else %}
+        <details class="info-panel helper-panel methodology-helper-panel compact-details">
+            <summary>{{ methodology_helper.title }}</summary>
+            <div class="section-heading">
+                <p>Contextual prompts for the active methodology mode.</p>
+                <a class="button-secondary compact-button" href="{{ url_for('methodology') }}">Open Methodology</a>
+            </div>
+            <ul class="prompt-list compact-list">
+                {% for item in methodology_helper.prompts %}
+                    <li>
+                        <span>{{ item.prompt }}</span>
+                        <span>{{ item.phase_title }}</span>
+                    </li>
+                {% endfor %}
+            </ul>
+        </details>
+    {% endif %}
 {% endif %}

@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% import "_help_tip.html" as ui %}
 
 {% block content %}
 {% set cda_enabled = active_project.methodology_mode in ["cda", "mixed"] %}
@@ -256,11 +257,11 @@
                                             </select>
                                         </label>
                                         <label>
-                                            <span>Relation</span>
+                                            <span class="label-row">Relation {{ ui.help_tip("How this actor is represented in the selected segment.", "Actor relation") }}</span>
                                             <select name="relation_type" required>
                                                 <option value="">Choose relation</option>
                                                 {% for value, label in actor_relation_type_labels.items() %}
-                                                    <option value="{{ value }}">{{ label }}</option>
+                                                    <option value="{{ value }}" title="{{ actor_relation_type_explanations[value] }}">{{ label }}</option>
                                                 {% endfor %}
                                             </select>
                                         </label>
@@ -294,11 +295,11 @@
                                     {% endif %}
                                     <form class="annotation-form preserve-scroll compact-form" action="{{ url_for('create_discourse_feature', segment_id=segment.id) }}" method="post">
                                         <label>
-                                            <span>Feature type</span>
+                                            <span class="label-row">Feature type {{ ui.help_tip("Classifies the CDA feature observed in this segment.", "Feature type") }}</span>
                                             <select name="feature_type" required>
                                                 <option value="">Choose feature</option>
                                                 {% for value, label in feature_type_labels.items() %}
-                                                    <option value="{{ value }}">{{ label }}</option>
+                                                    <option value="{{ value }}" title="{{ feature_type_explanations[value] }}">{{ label }}</option>
                                                 {% endfor %}
                                             </select>
                                         </label>

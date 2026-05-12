@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% import "_help_tip.html" as ui %}
 
 {% block content %}
 <section class="page-header">
@@ -22,16 +23,16 @@
         <label><span>Definition</span><textarea name="definition" rows="3">{{ code.definition or "" }}</textarea></label>
         <label><span>Analytical note</span><textarea name="analytical_note" rows="3">{{ code.analytical_note or "" }}</textarea></label>
         <div class="form-grid">
-            <label><span>Conditions</span><textarea name="gt_conditions" rows="4">{{ code.gt_conditions or "" }}</textarea></label>
-            <label><span>Context</span><textarea name="gt_context" rows="4">{{ code.gt_context or "" }}</textarea></label>
+            <label><span class="label-row">Conditions {{ ui.help_tip(gt_term_explanations.conditions, "Conditions") }}</span><textarea name="gt_conditions" rows="4">{{ code.gt_conditions or "" }}</textarea></label>
+            <label><span class="label-row">Context {{ ui.help_tip(gt_term_explanations.context, "Context") }}</span><textarea name="gt_context" rows="4">{{ code.gt_context or "" }}</textarea></label>
         </div>
         <div class="form-grid">
-            <label><span>Actions/interactions</span><textarea name="gt_actions_interactions" rows="4">{{ code.gt_actions_interactions or "" }}</textarea></label>
-            <label><span>Consequences</span><textarea name="gt_consequences" rows="4">{{ code.gt_consequences or "" }}</textarea></label>
+            <label><span class="label-row">Actions/interactions {{ ui.help_tip(gt_term_explanations.actions_interactions, "Actions/interactions") }}</span><textarea name="gt_actions_interactions" rows="4">{{ code.gt_actions_interactions or "" }}</textarea></label>
+            <label><span class="label-row">Consequences {{ ui.help_tip(gt_term_explanations.consequences, "Consequences") }}</span><textarea name="gt_consequences" rows="4">{{ code.gt_consequences or "" }}</textarea></label>
         </div>
         <div class="form-grid">
-            <label><span>Properties</span><textarea name="gt_properties" rows="4">{{ code.gt_properties or "" }}</textarea></label>
-            <label><span>Dimensions</span><textarea name="gt_dimensions" rows="4">{{ code.gt_dimensions or "" }}</textarea></label>
+            <label><span class="label-row">Properties {{ ui.help_tip(gt_term_explanations.properties, "Properties") }}</span><textarea name="gt_properties" rows="4">{{ code.gt_properties or "" }}</textarea></label>
+            <label><span class="label-row">Dimensions {{ ui.help_tip(gt_term_explanations.dimensions, "Dimensions") }}</span><textarea name="gt_dimensions" rows="4">{{ code.gt_dimensions or "" }}</textarea></label>
         </div>
         <label><span>Theoretical note</span><textarea name="gt_theoretical_note" rows="5">{{ code.gt_theoretical_note or "" }}</textarea></label>
         <button type="submit" class="button-primary">Save GT fields</button>

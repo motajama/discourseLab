@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% import "_help_tip.html" as ui %}
 
 {% block content %}
 <section class="page-header">
@@ -19,10 +20,10 @@
                 <input type="text" name="name" value="{{ actor.name }}" required>
             </label>
             <label>
-                <span>Actor type</span>
+                <span class="label-row">Actor type {{ ui.help_tip("Classifies the represented social actor.", "Actor type") }}</span>
                 <select name="actor_type" required>
                     {% for value, label in actor_type_labels.items() %}
-                        <option value="{{ value }}" {{ "selected" if value == actor.actor_type else "" }}>{{ label }}</option>
+                        <option value="{{ value }}" title="{{ actor_type_explanations[value] }}" {{ "selected" if value == actor.actor_type else "" }}>{{ label }}</option>
                     {% endfor %}
                 </select>
             </label>
