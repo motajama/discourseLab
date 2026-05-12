@@ -14,7 +14,7 @@
         Existing data is retained and will be available again if the project mode is changed.
     </p>
     <div class="link-row">
-        <a class="button-secondary" href="{{ url_for('projects') }}">Edit project mode</a>
+        <a class="button-secondary" href="{{ url_for('edit_project', project_id=active_project.id) }}">Edit project mode</a>
         <a class="button-secondary" href="{{ url_for('dashboard') }}">Back to Dashboard</a>
     </div>
 </section>

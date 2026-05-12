@@ -1,10 +1,10 @@
 # discourseLab
 
-Phase: 12.5d - Atari skin, methodology tooltips, and codebook additions
+Phase: Atari Libertinus UI skin
 
 discourseLab is a local lightweight qualitative analysis workspace for discourse analysis, critical discourse analysis, grounded theory, and generic qualitative coding.
 
-Phase 12.5d keeps the local Flask/SQLite app structure and adds a compact Atari ST / TOS / GEM-inspired skin, local methodology tooltips, compact helper panels, and CDA marker/actor sections in the codebook export.
+The current UI pass keeps the local Flask/SQLite app structure and adapts discourseLab to a flat Atari/TOS/GEM-inspired workstation skin using Libertinus typography from Google Fonts. Document and segment source text remains monospace.
 
 ## Installation
 
@@ -47,26 +47,23 @@ Available libraries:
 ## Verification
 
 1. Start the app with `python app.py`.
-2. Edit a CDA marker.
-3. Edit an actor.
-4. Try deleting a segment, document, or code and confirm the warning appears.
-5. Open a long document, scroll down, create a segment, and confirm scroll position is preserved.
-6. Confirm the segment creation UI appears as a bottom bar and does not cover selected text.
-7. Confirm marker type, actor type, feature type, methodology mode, and relation strength tooltips appear.
-8. Download `/exports/codebook.md` and confirm CDA markers and actors are included.
-9. Download `/exports/package.zip` and confirm its codebook includes the same sections.
-10. Confirm `/health` reports `phase: "12.5d"`.
-11. Restart the app and confirm existing data is still present.
+2. Confirm the fixed top navigation uses flat bordered buttons and the active item is clear.
+3. Confirm dashboard, document, exports, methodology, model, and network pages use rectangular Atari-style panels.
+4. Confirm document text, segment text, selected text previews, and coded excerpts use monospace.
+5. Confirm document coding still supports text selection, segment creation, assignment, and scroll preservation.
+6. Confirm delete confirmations still appear.
+7. Confirm `/health` reports `phase: "atari-libertinus-ui"`.
+8. Restart the app and confirm existing data is still present.
 
-## Current Phase 12.5d
+## Current UI Skin
 
-Phase 12.5d adds:
+This pass adds:
 
-- Flat Atari/TOS/GEM-inspired local CSS skin
-- Local hover/focus methodology tooltips
-- Compact or collapsed methodology helper panels
-- Explanations for methodology modes, CDA markers, actors, feature types, GT terms, relation types, and strengths
-- CDA marker and actor sections in codebook exports
-- `/health` reports `phase: "12.5d"`
+- Libertinus Serif and Libertinus Sans from Google Fonts in the base template
+- CSS font variables for body, headings, UI controls, and monospace excerpts
+- Atari/TOS/GEM-style color, border, and hard-shadow tokens
+- Consistent styling for navigation, panels, cards, buttons, forms, tables, badges, tooltips, document coding, exports, model, and network pages
 
-This phase does not implement the Atari/TOS/GEM skin, dashboard redesign, navigation redesign, AI, cloud sync, authentication, React, Vue, Node, npm, or external CDN usage.
+If offline, the browser falls back to local serif and sans-serif fonts. No font files are bundled in the repository.
+
+This phase does not implement analytical features, schema changes, AI suggestions, cloud sync, authentication, React, Vue, Node, npm, or a frontend build system.

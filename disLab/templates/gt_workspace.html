@@ -56,7 +56,7 @@
                     <button type="submit" class="button-secondary">Assign</button>
                 </form>
                 {% if code.parent_id %}
-                    <form action="{{ url_for('unassign_open_from_axial', open_code_id=code.id) }}" method="post">
+                    <form class="confirm-delete" data-confirm="Unassign this open code from its axial parent?" action="{{ url_for('unassign_open_from_axial', open_code_id=code.id) }}" method="post">
                         <button type="submit" class="button-danger">Unassign</button>
                     </form>
                 {% endif %}
@@ -88,7 +88,7 @@
                     <button type="submit" class="button-secondary">Assign</button>
                 </form>
                 {% if code.parent_id %}
-                    <form action="{{ url_for('unassign_axial_from_category', axial_code_id=code.id) }}" method="post">
+                    <form class="confirm-delete" data-confirm="Unassign this axial code from its category parent?" action="{{ url_for('unassign_axial_from_category', axial_code_id=code.id) }}" method="post">
                         <button type="submit" class="button-danger">Unassign</button>
                     </form>
                 {% endif %}

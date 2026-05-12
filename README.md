@@ -2,26 +2,26 @@
 
 discourseLab is a local, lightweight qualitative analysis workspace for discourse analysis, critical discourse analysis, grounded theory, and generic qualitative coding.
 
-It runs on your own computer in a web browser. It does not require an account, cloud service, npm, Node, React, or external web services.
+It runs on your own computer in a web browser. It does not require an account, cloud service, npm, Node, React, or a frontend build system. The UI attempts to load Libertinus from Google Fonts when online and falls back to local fonts when offline.
 
-Current phase: **Phase 12.5d - Atari skin, methodology tooltips, and codebook additions**
+Current phase: **Atari Libertinus UI skin**
 
 The analytical model builder connects project entities such as segments, codes, categories, actors, discourse features, memos, and research questions into explicit analytical relations.
 
-Phase 12.5d adds a compact Atari ST / TOS / GEM-inspired visual skin, local methodology tooltips, compact contextual helper panels, and CDA marker/actor coverage in the codebook export. It does not add AI, cloud sync, authentication, Node, npm, React, Vue, or external CDN usage.
+The current UI pass adapts discourseLab to a flat Atari/TOS/GEM-inspired local workstation skin using Libertinus typography from Google Fonts. Document and segment source text remains monospace for careful reading and coding. It does not add analytical features, schema changes, AI, cloud sync, authentication, Node, npm, React, Vue, an external CSS framework, or a frontend build system.
 
-## Phase 12.5d Verification
+## Atari UI Verification
 
 1. Start the app with `python app.py`.
-2. Confirm the UI uses flat, compact Atari/TOS/GEM-inspired styling.
-3. Confirm the fixed top navigation remains usable.
-4. Hover or focus help icons and confirm tooltips appear.
-5. Confirm marker type and actor type explanations appear in CDA forms.
-6. Confirm methodology mode explanations appear in project settings.
-7. Confirm large methodology panels are compact or collapsed.
-8. Download `/exports/codebook.md` and confirm CDA markers and actors are included.
-9. Download the complete research package ZIP and confirm its `codebook.md` has the same sections.
-10. Confirm `/health` returns `"phase": "12.5d"`.
+2. Confirm the fixed top navigation uses flat Atari-style bordered buttons and the active item is clear.
+3. Confirm dashboards, cards, forms, tables, exports, model, methodology, and network pages use strong rectangular borders and hard shadows.
+4. Confirm the Google Fonts Libertinus link is present in the base template.
+5. Confirm main UI text uses Libertinus with local fallbacks.
+6. Confirm document text, segment text, selected text previews, and coded excerpts use monospace.
+7. Confirm document coding still supports text selection, segment creation, assignment, and scroll preservation.
+8. Confirm delete confirmations still appear.
+9. Confirm no external CSS framework or frontend build system was introduced.
+10. Confirm `/health` returns `"phase": "atari-libertinus-ui"`.
 
 ## What You Need
 
@@ -278,10 +278,11 @@ py app.py
 31. Edit and filter methodology notes.
 32. Delete a methodology note.
 33. Open GT, CDA, Model, and document pages and confirm methodology helper panels are compact or collapsed and use library content.
-34. Download methodology protocol Markdown.
-35. Download the complete research package ZIP and confirm `methodology_protocol.md` is included.
-36. Download project JSON and confirm `methodology_notes` are included.
-37. Restart the app and confirm methodology notes persist.
+34. Open **Network** and confirm empirical co-occurrence between segment assignments is shown.
+35. Download methodology protocol Markdown.
+36. Download the complete research package ZIP and confirm `methodology_protocol.md` and `cooccurrence_network.json` are included.
+37. Download project JSON and confirm `methodology_notes` are included.
+38. Restart the app and confirm methodology notes persist.
 
 ## Methodology Helper Library
 
@@ -324,6 +325,26 @@ dot -Tpng discourseLab_analytical_model.dot -o model.png
 
 - TikZ `.tikz`: a snippet to include inside a LaTeX document with TikZ enabled.
 - SVG `.svg`: open directly in a browser or vector editor.
+
+## Co-occurrence Network
+
+The Co-occurrence Network is generated from segment assignments. It connects codes, CDA markers, actors, and discourse features when they appear in the same segment.
+
+This network shows empirical co-presence. It is not the same as the manually curated Analytical Model, and it does not imply causality or replace interpretation. Use it to explore which coding and annotation items cluster together, then use the Model page to create explicit analytical relations.
+
+Available outputs:
+
+- `/network`: interactive in-app SVG network explorer.
+- `/network/data`: JSON data endpoint for the current active project.
+- `/exports/cooccurrence-network.json`: downloadable graph JSON.
+- `/exports/cooccurrence-edges.csv`: downloadable edge list.
+- Complete research package ZIP includes `cooccurrence_network.json` and `cooccurrence_edges.csv`.
+
+## Atari UI Skin With Libertinus Typography
+
+discourseLab uses a flat Atari ST / TOS / GEM-inspired local workstation style: gray workspace background, rectangular panels, strong dark borders, hard pixel-like shadows, compact controls, and no external CSS framework.
+
+The main UI uses Libertinus from Google Fonts. If offline, the browser falls back to local serif and sans-serif fonts. Document and segment text remains monospace so source excerpts are easy to inspect and code.
 
 ## Phase 12.5d Notes
 
@@ -397,7 +418,7 @@ http://127.0.0.1:5001
 ## Project Notes
 
 - App name: discourseLab
-- Current phase: Phase 12 — Methodology helper library and project protocol
+- Current phase: Atari Libertinus UI skin
 - Technology: Python, Flask, SQLite, HTML, CSS, vanilla JavaScript
 - Runs locally in your browser
 - No authentication

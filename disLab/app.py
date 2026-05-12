@@ -29,8 +29,8 @@ from werkzeug.utils import secure_filename
 
 
 APP_NAME = "discourseLab"
-APP_PHASE = "12.5d"
-CURRENT_PHASE_LABEL = "Phase 12.5d - Atari skin, tooltips, and codebook additions"
+APP_PHASE = "atari-libertinus-ui"
+CURRENT_PHASE_LABEL = "Atari Libertinus UI skin"
 DEFAULT_PROJECT_NAME = "Demo Project"
 DEFAULT_PROJECT_DESCRIPTION = "Initial local discourseLab project."
 DEFAULT_CODE_COLOR = "#f4c542"
@@ -941,13 +941,13 @@ def create_app() -> Flask:
             db.execute("DELETE FROM segment_codes WHERE code_id = ?", (code_id,))
         if code["code_type"] == "axial":
             db.execute(
-                "UPDATE codes SET parent_id = NULL WHERE parent_id = ? AND code_type = 'open'",
-                (code_id,),
+                "UPDATE codes SET parent_id = NULL WHERE parent_id = ? AND project_id = ? AND code_type = 'open'",
+                (code_id, active_project["id"]),
             )
         if code["code_type"] == "category":
             db.execute(
-                "UPDATE codes SET parent_id = NULL WHERE parent_id = ? AND code_type = 'axial'",
-                (code_id,),
+                "UPDATE codes SET parent_id = NULL WHERE parent_id = ? AND project_id = ? AND code_type = 'axial'",
+                (code_id, active_project["id"]),
             )
         db.execute(
             "DELETE FROM codes WHERE id = ? AND project_id = ?",
@@ -1714,7 +1714,10 @@ def create_app() -> Flask:
             flash("Invalid actor.", "error")
             abort(404)
         segment_label = segment_actor["segment_name"] or f"segment {segment_id}"
-        execute_write("DELETE FROM segment_actors WHERE id = ?", (segment_actor_id,))
+        execute_write(
+            "DELETE FROM segment_actors WHERE id = ? AND segment_id = ?",
+            (segment_actor_id, segment_id),
+        )
         log_action(
             active_project["id"],
             "segment",
@@ -1773,7 +1776,10 @@ def create_app() -> Flask:
             flash("Invalid feature.", "error")
             abort(404)
         segment_label = feature["segment_name"] or f"segment {segment_id}"
-        execute_write("DELETE FROM discourse_features WHERE id = ?", (feature_id,))
+        execute_write(
+            "DELETE FROM discourse_features WHERE id = ? AND segment_id = ?",
+            (feature_id, segment_id),
+        )
         log_action(
             active_project["id"],
             "segment",
@@ -1988,6 +1994,29 @@ def create_app() -> Flask:
             related_memos=get_related_memos_for_model_entity(active_project["id"], entity_type, entity_id),
             mode_prompts=get_model_mode_prompts(active_project),
         )
+
+    @app.route("/network")
+    def network_explorer():
+        active_project = get_active_project()
+        filters = get_network_filters()
+        return render_template(
+            "network.html",
+            title="Co-occurrence Network",
+            active_page="network",
+            active_project=active_project,
+            filters=filters,
+            documents=get_documents_for_project(active_project["id"]),
+            code_type_labels={"": "All code types", **{value: value.title() for value in ["open", "axial", "category"]}},
+            marker_type_labels={"": "All marker types", **CDA_MARKER_TYPES},
+            actor_type_labels={"": "All actor types", **ACTOR_TYPES},
+            feature_type_labels={"": "All feature types", **DISCOURSE_FEATURE_TYPES},
+            layout_labels={"columns": "Columns", "force": "Force", "circle": "Circle"},
+        )
+
+    @app.route("/network/data")
+    def network_data():
+        active_project = get_active_project()
+        return jsonify(build_cooccurrence_network(active_project, get_network_filters()))
 
     @app.route("/research-questions/create", methods=["POST"])
     def create_research_question():
@@ -2289,6 +2318,25 @@ def create_app() -> Flask:
                 ],
             },
             {
+                "title": "Co-occurrence network exports",
+                "cards": [
+                    {
+                        "title": "Co-occurrence network JSON",
+                        "description": "Empirical network generated from segment-level code, marker, actor, and feature co-presence.",
+                        "format": "JSON",
+                        "endpoint": "export_cooccurrence_network_json",
+                        "button": "Download network JSON",
+                    },
+                    {
+                        "title": "Co-occurrence edges CSV",
+                        "description": "One row per co-occurring node pair, with edge weights and segment IDs.",
+                        "format": "CSV",
+                        "endpoint": "export_cooccurrence_edges_csv",
+                        "button": "Download edge CSV",
+                    },
+                ],
+            },
+            {
                 "title": "Project exports",
                 "cards": [
                     {
@@ -2487,6 +2535,24 @@ def create_app() -> Flask:
             generate_model_svg(active_project, get_visual_export_filters()),
             "discourseLab_analytical_model.svg",
             "image/svg+xml; charset=utf-8",
+        )
+
+    @app.route("/exports/cooccurrence-network.json")
+    def export_cooccurrence_network_json():
+        active_project = get_active_project()
+        return download_text(
+            generate_cooccurrence_network_json(active_project, get_network_filters()),
+            "discourseLab_cooccurrence_network.json",
+            "application/json; charset=utf-8",
+        )
+
+    @app.route("/exports/cooccurrence-edges.csv")
+    def export_cooccurrence_edges_csv():
+        active_project = get_active_project()
+        return download_text(
+            generate_cooccurrence_edges_csv(active_project, get_network_filters()),
+            "discourseLab_cooccurrence_edges.csv",
+            "text/csv; charset=utf-8",
         )
 
     @app.route("/exports/project.json")
@@ -5508,6 +5574,349 @@ def markdown_blockquote(text: str) -> str:
     return "\n".join(f"> {line}" if line else ">" for line in text.splitlines())
 
 
+def get_network_filters() -> dict:
+    def bool_param(name: str, default: bool = True) -> bool:
+        values = request.args.getlist(name)
+        if not values:
+            return default
+        value = values[-1]
+        return value not in {"0", "false", "False", "off", ""}
+
+    def int_param(name: str, default: int, minimum: int, maximum: int) -> int:
+        try:
+            value = int(request.args.get(name, default))
+        except (TypeError, ValueError):
+            value = default
+        return max(minimum, min(maximum, value))
+
+    document_id_raw = request.args.get("document_id", "").strip()
+    document_id = int(document_id_raw) if document_id_raw.isdigit() else None
+    code_type = request.args.get("code_type", "").strip()
+    marker_type = request.args.get("marker_type", "").strip()
+    actor_type = request.args.get("actor_type", "").strip()
+    feature_type = request.args.get("feature_type", "").strip()
+    layout = request.args.get("layout", "columns").strip()
+    return {
+        "include_codes": bool_param("include_codes", True),
+        "include_markers": bool_param("include_markers", True),
+        "include_actors": bool_param("include_actors", True),
+        "include_features": bool_param("include_features", True),
+        "include_hierarchy": bool_param("include_hierarchy", False),
+        "min_weight": int_param("min_weight", 1, 1, 999),
+        "max_nodes": int_param("max_nodes", 80, 5, 300),
+        "document_id": document_id,
+        "code_type": code_type if code_type in {"open", "axial", "category"} else "",
+        "marker_type": marker_type if marker_type in CDA_MARKER_TYPES else "",
+        "actor_type": actor_type if actor_type in ACTOR_TYPES else "",
+        "feature_type": feature_type if feature_type in DISCOURSE_FEATURE_TYPES else "",
+        "layout": layout if layout in {"columns", "force", "circle"} else "columns",
+    }
+
+
+def default_network_filters() -> dict:
+    return {
+        "include_codes": True,
+        "include_markers": True,
+        "include_actors": True,
+        "include_features": True,
+        "include_hierarchy": False,
+        "min_weight": 1,
+        "max_nodes": 80,
+        "document_id": None,
+        "code_type": "",
+        "marker_type": "",
+        "actor_type": "",
+        "feature_type": "",
+        "layout": "columns",
+    }
+
+
+def normalize_network_feature_value(value: str) -> str:
+    normalized = re.sub(r"\s+", " ", empty(value).strip().lower())
+    normalized = re.sub(r"[^a-z0-9_ -]+", "", normalized)
+    normalized = normalized.replace(" ", "_")
+    return normalized[:48] or "feature"
+
+
+def add_network_node(nodes: dict, node_id: str, node_type: str, subtype: str, label: str, color: str = "") -> None:
+    if node_id not in nodes:
+        nodes[node_id] = {
+            "id": node_id,
+            "type": node_type,
+            "subtype": subtype,
+            "label": label,
+            "count": 0,
+        }
+        if color:
+            nodes[node_id]["color"] = color
+
+
+def append_segment_node(segment_nodes: dict[int, set[str]], segment_id: int, node_id: str) -> None:
+    segment_nodes.setdefault(segment_id, set()).add(node_id)
+
+
+def build_cooccurrence_network(active_project: sqlite3.Row, filters: dict) -> dict:
+    project_id = active_project["id"]
+    nodes: dict[str, dict] = {}
+    segment_nodes: dict[int, set[str]] = {}
+    segment_previews = get_network_segment_previews(project_id, filters["document_id"])
+
+    if filters["include_codes"]:
+        add_code_network_nodes(project_id, filters, nodes, segment_nodes)
+    if filters["include_markers"]:
+        add_marker_network_nodes(project_id, filters, nodes, segment_nodes)
+    if filters["include_actors"]:
+        add_actor_network_nodes(project_id, filters, nodes, segment_nodes)
+    if filters["include_features"]:
+        add_feature_network_nodes(project_id, filters, nodes, segment_nodes)
+
+    nodes = {
+        node_id: node
+        for node_id, node in sorted(
+            nodes.items(),
+            key=lambda item: (-item[1]["count"], item[1]["type"], item[1]["label"].lower(), item[0]),
+        )[: filters["max_nodes"]]
+    }
+    allowed_node_ids = set(nodes)
+    edges: dict[tuple[str, str], dict] = {}
+    for segment_id, node_ids in segment_nodes.items():
+        present = sorted(node_id for node_id in node_ids if node_id in allowed_node_ids)
+        for index, source in enumerate(present):
+            for target in present[index + 1:]:
+                edge_key = (source, target)
+                if edge_key not in edges:
+                    edges[edge_key] = {
+                        "source": source,
+                        "target": target,
+                        "weight": 0,
+                        "relation": "co_occurs_in_segment",
+                        "segments": [],
+                    }
+                edges[edge_key]["weight"] += 1
+                edges[edge_key]["segments"].append(segment_id)
+
+    filtered_edges = []
+    for edge in edges.values():
+        if edge["weight"] < filters["min_weight"]:
+            continue
+        previews = [segment_previews[segment_id] for segment_id in edge["segments"][:10] if segment_id in segment_previews]
+        edge["segment_previews"] = previews
+        edge["segment_preview_count"] = len(previews)
+        edge["segment_count"] = len(edge["segments"])
+        filtered_edges.append(edge)
+
+    connected_node_ids = {edge["source"] for edge in filtered_edges} | {edge["target"] for edge in filtered_edges}
+    if filtered_edges:
+        nodes = {node_id: node for node_id, node in nodes.items() if node_id in connected_node_ids}
+
+    return {
+        "nodes": list(nodes.values()),
+        "edges": sorted(filtered_edges, key=lambda edge: (-edge["weight"], edge["source"], edge["target"])),
+        "meta": {
+            "project_id": project_id,
+            "project_name": active_project["name"],
+            "generated_at": export_timestamp(),
+            "mode": active_project["methodology_mode"],
+            "min_weight": filters["min_weight"],
+            "max_nodes": filters["max_nodes"],
+            "layout": filters["layout"],
+            "filters": filters,
+        },
+    }
+
+
+def add_code_network_nodes(project_id: int, filters: dict, nodes: dict, segment_nodes: dict[int, set[str]]) -> None:
+    params: list = [project_id]
+    where = ["documents.project_id = ?"]
+    if filters["document_id"]:
+        where.append("documents.id = ?")
+        params.append(filters["document_id"])
+    rows = query_all(
+        f"""
+        SELECT
+            segments.id AS segment_id,
+            codes.id, codes.name, codes.code_type, codes.color,
+            axial.id AS axial_id, axial.name AS axial_name, axial.color AS axial_color,
+            category.id AS category_id, category.name AS category_name, category.color AS category_color
+        FROM segment_codes
+        JOIN segments ON segments.id = segment_codes.segment_id
+        JOIN documents ON documents.id = segments.document_id
+        JOIN codes ON codes.id = segment_codes.code_id
+        LEFT JOIN codes AS axial ON axial.id = codes.parent_id AND axial.project_id = codes.project_id
+        LEFT JOIN codes AS category ON category.id = axial.parent_id AND category.project_id = codes.project_id
+        WHERE {" AND ".join(where)}
+        ORDER BY segments.id, codes.name COLLATE NOCASE
+        """,
+        tuple(params),
+    )
+    counted_pairs: set[tuple[str, int]] = set()
+    for row in rows:
+        candidates = [(row["id"], row["name"], row["code_type"], row["color"])]
+        if filters["include_hierarchy"]:
+            if row["axial_id"]:
+                candidates.append((row["axial_id"], row["axial_name"], "axial", row["axial_color"]))
+            if row["category_id"]:
+                candidates.append((row["category_id"], row["category_name"], "category", row["category_color"]))
+        for code_id, name, code_type, color in candidates:
+            if filters["code_type"] and code_type != filters["code_type"]:
+                continue
+            node_id = f"code_{code_id}"
+            add_network_node(nodes, node_id, "code", code_type, name, color or "")
+            pair = (node_id, row["segment_id"])
+            if pair not in counted_pairs:
+                nodes[node_id]["count"] += 1
+                counted_pairs.add(pair)
+            append_segment_node(segment_nodes, row["segment_id"], node_id)
+
+
+def add_marker_network_nodes(project_id: int, filters: dict, nodes: dict, segment_nodes: dict[int, set[str]]) -> None:
+    params: list = [project_id]
+    where = ["documents.project_id = ?"]
+    if filters["document_id"]:
+        where.append("documents.id = ?")
+        params.append(filters["document_id"])
+    if filters["marker_type"]:
+        where.append("discourse_markers.marker_type = ?")
+        params.append(filters["marker_type"])
+    rows = query_all(
+        f"""
+        SELECT segments.id AS segment_id, discourse_markers.id,
+               discourse_markers.name, discourse_markers.marker_type, discourse_markers.color
+        FROM segment_discourse_markers
+        JOIN segments ON segments.id = segment_discourse_markers.segment_id
+        JOIN documents ON documents.id = segments.document_id
+        JOIN discourse_markers ON discourse_markers.id = segment_discourse_markers.marker_id
+        WHERE {" AND ".join(where)}
+        ORDER BY segments.id, discourse_markers.name COLLATE NOCASE
+        """,
+        tuple(params),
+    )
+    for row in rows:
+        node_id = f"marker_{row['id']}"
+        add_network_node(nodes, node_id, "discourse_marker", row["marker_type"], row["name"], row["color"] or "")
+        nodes[node_id]["count"] += 1
+        append_segment_node(segment_nodes, row["segment_id"], node_id)
+
+
+def add_actor_network_nodes(project_id: int, filters: dict, nodes: dict, segment_nodes: dict[int, set[str]]) -> None:
+    params: list = [project_id]
+    where = ["documents.project_id = ?"]
+    if filters["document_id"]:
+        where.append("documents.id = ?")
+        params.append(filters["document_id"])
+    if filters["actor_type"]:
+        where.append("actors.actor_type = ?")
+        params.append(filters["actor_type"])
+    rows = query_all(
+        f"""
+        SELECT segments.id AS segment_id, actors.id, actors.name, actors.actor_type,
+               segment_actors.relation_type
+        FROM segment_actors
+        JOIN segments ON segments.id = segment_actors.segment_id
+        JOIN documents ON documents.id = segments.document_id
+        JOIN actors ON actors.id = segment_actors.actor_id
+        WHERE {" AND ".join(where)}
+        ORDER BY segments.id, actors.name COLLATE NOCASE
+        """,
+        tuple(params),
+    )
+    for row in rows:
+        node_id = f"actor_{row['id']}"
+        add_network_node(nodes, node_id, "actor", row["actor_type"], row["name"])
+        nodes[node_id]["count"] += 1
+        relation_counts = nodes[node_id].setdefault("relation_counts", {})
+        relation_counts[row["relation_type"]] = relation_counts.get(row["relation_type"], 0) + 1
+        append_segment_node(segment_nodes, row["segment_id"], node_id)
+
+
+def add_feature_network_nodes(project_id: int, filters: dict, nodes: dict, segment_nodes: dict[int, set[str]]) -> None:
+    params: list = [project_id]
+    where = ["documents.project_id = ?"]
+    if filters["document_id"]:
+        where.append("documents.id = ?")
+        params.append(filters["document_id"])
+    if filters["feature_type"]:
+        where.append("discourse_features.feature_type = ?")
+        params.append(filters["feature_type"])
+    rows = query_all(
+        f"""
+        SELECT segments.id AS segment_id, discourse_features.feature_type,
+               discourse_features.value
+        FROM discourse_features
+        JOIN segments ON segments.id = discourse_features.segment_id
+        JOIN documents ON documents.id = segments.document_id
+        WHERE {" AND ".join(where)}
+        ORDER BY segments.id, discourse_features.feature_type COLLATE NOCASE, discourse_features.value COLLATE NOCASE
+        """,
+        tuple(params),
+    )
+    for row in rows:
+        normalized_value = normalize_network_feature_value(row["value"])
+        node_id = f"feature_{row['feature_type']}_{normalized_value}"
+        label = f"{DISCOURSE_FEATURE_TYPES.get(row['feature_type'], row['feature_type'])}: {truncate_text(row['value'], 44)}"
+        add_network_node(nodes, node_id, "discourse_feature", row["feature_type"], label)
+        nodes[node_id]["count"] += 1
+        append_segment_node(segment_nodes, row["segment_id"], node_id)
+
+
+def get_network_segment_previews(project_id: int, document_id: int | None = None) -> dict[int, dict]:
+    params: list = [project_id]
+    where = ["documents.project_id = ?"]
+    if document_id:
+        where.append("documents.id = ?")
+        params.append(document_id)
+    rows = query_all(
+        f"""
+        SELECT segments.id AS segment_id, segments.document_id,
+               COALESCE(segments.name, '') AS segment_title,
+               segments.selected_text, documents.title AS document_title
+        FROM segments
+        JOIN documents ON documents.id = segments.document_id
+        WHERE {" AND ".join(where)}
+        """,
+        tuple(params),
+    )
+    return {
+        row["segment_id"]: {
+            "segment_id": row["segment_id"],
+            "document_id": row["document_id"],
+            "document_title": row["document_title"],
+            "segment_title": row["segment_title"] or f"Segment {row['segment_id']}",
+            "text_preview": truncate_text(row["selected_text"], 180),
+        }
+        for row in rows
+    }
+
+
+def generate_cooccurrence_network_json(active_project: sqlite3.Row, filters: dict) -> str:
+    return json.dumps(build_cooccurrence_network(active_project, filters), ensure_ascii=False, indent=2)
+
+
+def generate_cooccurrence_edges_csv(active_project: sqlite3.Row, filters: dict) -> str:
+    graph = build_cooccurrence_network(active_project, filters)
+    nodes = {node["id"]: node for node in graph["nodes"]}
+    rows = []
+    for edge in graph["edges"]:
+        source = nodes.get(edge["source"], {})
+        target = nodes.get(edge["target"], {})
+        rows.append(
+            {
+                "source_id": edge["source"],
+                "source_label": source.get("label", ""),
+                "source_type": source.get("type", ""),
+                "target_id": edge["target"],
+                "target_label": target.get("label", ""),
+                "target_type": target.get("type", ""),
+                "weight": edge["weight"],
+                "segment_ids": ";".join(str(segment_id) for segment_id in edge["segments"]),
+            }
+        )
+    return make_csv(
+        ["source_id", "source_label", "source_type", "target_id", "target_label", "target_type", "weight", "segment_ids"],
+        rows,
+    )
+
+
 def build_codebook_markdown(active_project: sqlite3.Row) -> str:
     project_id = active_project["id"]
     lines = [
@@ -6916,6 +7325,8 @@ def generate_project_package_zip(active_project: sqlite3.Row) -> bytes:
             "- analytical_model_[mode].dot for simplified, argument, evidence, gt, cda, full",
             "- analytical_model_[mode].tikz for simplified, argument, evidence, gt, cda, full",
             "- analytical_model_[mode].svg for simplified, argument, evidence, gt, cda, full",
+            "- cooccurrence_network.json",
+            "- cooccurrence_edges.csv",
             *(
                 ["- gt_hierarchy.md"]
                 if project_supports_gt(active_project)
@@ -6928,6 +7339,7 @@ def generate_project_package_zip(active_project: sqlite3.Row) -> bytes:
             ),
             "",
             "Visual model exports are generated from saved analytical relations.",
+            "The co-occurrence network is generated from segment-level assignments. It is not the same as the manually curated analytical model.",
             "Model modes:",
             "- simplified: strong and moderate relations by default, capped for readability.",
             "- argument: research questions, categories, axial codes, memos, strong relations, and argument-building relation types.",
@@ -6936,7 +7348,7 @@ def generate_project_package_zip(active_project: sqlite3.Row) -> bytes:
             "- cda: actor, marker, feature, and CDA relation structure.",
             "- full: all relations, including weak and uncertain, capped at 100.",
             "",
-            "Uploaded source documents are not included in this package in Phase 12.",
+            "Uploaded source documents are not included in this package in Phase 14.",
             "",
         ]
     )
@@ -6950,6 +7362,8 @@ def generate_project_package_zip(active_project: sqlite3.Row) -> bytes:
         "project.json": generate_project_json(active_project),
         "analytical_model.md": generate_model_markdown(active_project),
         "analytical_model.json": generate_model_json(active_project),
+        "cooccurrence_network.json": generate_cooccurrence_network_json(active_project, default_network_filters()),
+        "cooccurrence_edges.csv": generate_cooccurrence_edges_csv(active_project, default_network_filters()),
         "README_EXPORT.txt": readme,
     }
     for mode in VISUAL_MODEL_MODE_ORDER:

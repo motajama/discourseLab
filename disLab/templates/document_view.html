@@ -140,7 +140,7 @@
                             <div class="code-badge-row">
                                 {% if segment.codes %}
                                     {% for code in segment.codes %}
-                                        <form class="inline-form preserve-scroll" action="{{ url_for('remove_code_from_segment', segment_id=segment.id, code_id=code.id) }}" method="post">
+                                        <form class="inline-form preserve-scroll confirm-delete" data-confirm="Remove this code assignment from the segment?" action="{{ url_for('remove_code_from_segment', segment_id=segment.id, code_id=code.id) }}" method="post">
                                             <button type="submit" class="code-badge removable" style="--code-color: {{ code.color }}">
                                                 {{ code.name }} ×
                                             </button>
@@ -198,7 +198,7 @@
                                     <div class="code-badge-row">
                                         {% if segment.discourse_markers %}
                                             {% for marker in segment.discourse_markers %}
-                                                <form class="inline-form preserve-scroll" action="{{ url_for('remove_discourse_marker_from_segment', segment_id=segment.id, marker_id=marker.id) }}" method="post">
+                                                <form class="inline-form preserve-scroll confirm-delete" data-confirm="Remove this CDA marker assignment from the segment?" action="{{ url_for('remove_discourse_marker_from_segment', segment_id=segment.id, marker_id=marker.id) }}" method="post">
                                                     <button type="submit" class="cda-marker-badge removable" style="--marker-color: {{ marker.color }}">
                                                         {{ marker.name }} ×
                                                     </button>
@@ -237,7 +237,7 @@
                                                         <span class="actor-badge">{{ actor_relation_type_labels[actor.relation_type] }}</span>
                                                         <p>{{ actor.note or "No actor note" }}</p>
                                                     </div>
-                                                    <form class="preserve-scroll" action="{{ url_for('remove_actor_from_segment', segment_id=segment.id, segment_actor_id=actor.id) }}" method="post">
+                                                    <form class="preserve-scroll confirm-delete" data-confirm="Remove this actor annotation from the segment?" action="{{ url_for('remove_actor_from_segment', segment_id=segment.id, segment_actor_id=actor.id) }}" method="post">
                                                         <button type="submit" class="button-danger small-button danger-button">Remove</button>
                                                     </form>
                                                 </article>

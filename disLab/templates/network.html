@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="page-header network-header">
+    <p class="eyebrow">Empirical network</p>
+    <h1>Co-occurrence Network</h1>
+    <p>Generated from codes, CDA markers, actors, and discourse features assigned to the same segments.</p>
+</section>
+
+<section class="info-panel network-distinction">
+    <p>
+        This network shows empirical co-occurrence within segments. It does not represent manually created analytical relations.
+        Use the <a href="{{ url_for('model_builder') }}">Model page</a> for explicit analytical relations.
+    </p>
+</section>
+
+<section class="network-layout">
+    <aside class="info-panel network-filter-panel">
+        <h2>Filters</h2>
+        <form id="network-filter-form" class="document-form compact-form" method="get" action="{{ url_for('network_explorer') }}">
+            <div class="checkbox-grid">
+                <input type="hidden" name="include_codes" value="0">
+                <label><input type="checkbox" name="include_codes" value="1" {{ "checked" if filters.include_codes else "" }}> Codes</label>
+                <input type="hidden" name="include_markers" value="0">
+                <label><input type="checkbox" name="include_markers" value="1" {{ "checked" if filters.include_markers else "" }}> CDA markers</label>
+                <input type="hidden" name="include_actors" value="0">
+                <label><input type="checkbox" name="include_actors" value="1" {{ "checked" if filters.include_actors else "" }}> Actors</label>
+                <input type="hidden" name="include_features" value="0">
+                <label><input type="checkbox" name="include_features" value="1" {{ "checked" if filters.include_features else "" }}> Discourse features</label>
+                <input type="hidden" name="include_hierarchy" value="0">
+                <label><input type="checkbox" name="include_hierarchy" value="1" {{ "checked" if filters.include_hierarchy else "" }}> Include GT hierarchy</label>
+            </div>
+
+            <label>
+                <span>Document</span>
+                <select name="document_id">
+                    <option value="">All documents</option>
+                    {% for document in documents %}
+                        <option value="{{ document.id }}" {{ "selected" if filters.document_id == document.id else "" }}>{{ document.title }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+
+            <div class="form-grid">
+                <label>
+                    <span>Min weight</span>
+                    <input type="number" name="min_weight" min="1" max="999" value="{{ filters.min_weight }}">
+                </label>
+                <label>
+                    <span>Max nodes</span>
+                    <input type="number" name="max_nodes" min="5" max="300" value="{{ filters.max_nodes }}">
+                </label>
+            </div>
+
+            <label>
+                <span>Code type</span>
+                <select name="code_type">
+                    {% for value, label in code_type_labels.items() %}
+                        <option value="{{ value }}" {{ "selected" if filters.code_type == value else "" }}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <label>
+                <span>Marker type</span>
+                <select name="marker_type">
+                    {% for value, label in marker_type_labels.items() %}
+                        <option value="{{ value }}" {{ "selected" if filters.marker_type == value else "" }}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <label>
+                <span>Actor type</span>
+                <select name="actor_type">
+                    {% for value, label in actor_type_labels.items() %}
+                        <option value="{{ value }}" {{ "selected" if filters.actor_type == value else "" }}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <label>
+                <span>Feature type</span>
+                <select name="feature_type">
+                    {% for value, label in feature_type_labels.items() %}
+                        <option value="{{ value }}" {{ "selected" if filters.feature_type == value else "" }}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <label>
+                <span>Layout</span>
+                <select name="layout">
+                    {% for value, label in layout_labels.items() %}
+                        <option value="{{ value }}" {{ "selected" if filters.layout == value else "" }}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+
+            <div class="button-row">
+                <button type="submit" class="button-primary">Apply filters</button>
+                <a class="button-secondary" href="{{ url_for('network_explorer') }}">Reset</a>
+            </div>
+            <div class="button-row">
+                <a class="button-secondary" id="network-json-download" href="{{ url_for('export_cooccurrence_network_json') }}">Download network JSON</a>
+                <a class="button-secondary" id="network-csv-download" href="{{ url_for('export_cooccurrence_edges_csv') }}">Download edge CSV</a>
+            </div>
+        </form>
+    </aside>
+
+    <section class="info-panel network-main-panel">
+        <div class="section-heading">
+            <h2>Graph</h2>
+            <p id="network-summary">Loading network...</p>
+        </div>
+        <div class="network-legend" aria-label="Node type legend">
+            <span><i class="legend-dot code"></i>Code</span>
+            <span><i class="legend-dot marker"></i>CDA marker</span>
+            <span><i class="legend-dot actor"></i>Actor</span>
+            <span><i class="legend-dot feature"></i>Discourse feature</span>
+        </div>
+        <div class="network-canvas-wrap">
+            <svg id="cooccurrence-network" class="network-svg" role="img" aria-label="Co-occurrence network"></svg>
+            <div id="network-empty" class="network-empty hidden">
+                <h3>No co-occurrence network can be generated yet.</h3>
+                <p>Create segments and assign at least two codes, CDA markers, actors, or discourse features to the same segment first.</p>
+            </div>
+            <div id="network-tooltip" class="network-tooltip hidden"></div>
+        </div>
+    </section>
+
+    <aside class="info-panel network-detail-panel" id="network-detail-panel">
+        <h2>Selection</h2>
+        <p class="muted-text">Click a node or edge to inspect co-occurring items and segment previews.</p>
+    </aside>
+</section>
+{% endblock %}

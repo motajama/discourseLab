@@ -4,6 +4,9 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ title }} - discourseLab</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Libertinus+Sans:wght@400;700&family=Libertinus+Serif:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <script src="{{ url_for('static', filename='app.js') }}" defer></script>
 </head>
@@ -35,6 +38,7 @@
                     <span class="nav-disabled">CDA</span>
                 {% endif %}
                 <a href="{{ url_for('model_builder') }}" class="{{ 'active' if active_page == 'model' else '' }}">Model</a>
+                <a href="{{ url_for('network_explorer') }}" class="{{ 'active' if active_page == 'network' else '' }}">Network</a>
                 <a href="{{ url_for('methodology') }}" class="{{ 'active' if active_page == 'methodology' else '' }}">Methodology</a>
                 <a href="{{ url_for('exports') }}" class="{{ 'active' if active_page == 'exports' else '' }}">Exports</a>
             </nav>
