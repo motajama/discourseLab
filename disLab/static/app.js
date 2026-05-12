@@ -35,9 +35,20 @@ function setupScrollPreservation() {
         }
         input.value = String(Math.max(0, Math.round(window.scrollY)));
 
+        const textPanel = document.getElementById("document-text-panel");
+        const documentScrollY = textPanel ? String(Math.max(0, Math.round(textPanel.scrollTop))) : "";
+        let documentScrollInput = form.querySelector('input[name="document_scroll_y"]');
+        if (!documentScrollInput) {
+            documentScrollInput = document.createElement("input");
+            documentScrollInput.type = "hidden";
+            documentScrollInput.name = "document_scroll_y";
+            form.appendChild(documentScrollInput);
+        }
+        documentScrollInput.value = documentScrollY;
+
         const nextUrlInput = form.querySelector('input[name="next_url"]');
         if (nextUrlInput && nextUrlInput.value.startsWith("/documents/")) {
-            nextUrlInput.value = withScrollY(nextUrlInput.value, input.value);
+            nextUrlInput.value = withScrollPosition(nextUrlInput.value, input.value, documentScrollY);
         }
     });
 }
@@ -48,9 +59,12 @@ function isDocumentPageForm(form) {
     );
 }
 
-function withScrollY(url, scrollY) {
+function withScrollPosition(url, scrollY, documentScrollY) {
     const parsedUrl = new URL(url, window.location.origin);
     parsedUrl.searchParams.set("scroll_y", scrollY);
+    if (documentScrollY !== "") {
+        parsedUrl.searchParams.set("document_scroll_y", documentScrollY);
+    }
     return parsedUrl.pathname + parsedUrl.search + parsedUrl.hash;
 }
 
@@ -60,12 +74,19 @@ function restoreDocumentScroll() {
     }
     const url = new URL(window.location.href);
     const scrollY = parseInt(url.searchParams.get("scroll_y") || "", 10);
-    if (!Number.isFinite(scrollY) || scrollY < 0) {
+    const documentScrollY = parseInt(url.searchParams.get("document_scroll_y") || "", 10);
+    if ((!Number.isFinite(scrollY) || scrollY < 0) && (!Number.isFinite(documentScrollY) || documentScrollY < 0)) {
         return;
     }
     window.requestAnimationFrame(() => {
-        window.scrollTo(0, scrollY);
+        if (Number.isFinite(scrollY) && scrollY >= 0) {
+            window.scrollTo(0, scrollY);
+        }
+        if (Number.isFinite(documentScrollY) && documentScrollY >= 0) {
+            document.getElementById("document-text-panel").scrollTop = documentScrollY;
+        }
         url.searchParams.delete("scroll_y");
+        url.searchParams.delete("document_scroll_y");
         window.history.replaceState({}, "", url.pathname + url.search + url.hash);
     });
 }

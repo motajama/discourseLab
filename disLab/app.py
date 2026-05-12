@@ -4744,9 +4744,12 @@ def render_placeholder(
 
 def redirect_to_document(document_id: int, scroll_y: str | None = None):
     scroll_y = scroll_y if scroll_y is not None else request.form.get("scroll_y", "")
+    document_scroll_y = request.form.get("document_scroll_y", "")
     kwargs = {"document_id": document_id}
     if str(scroll_y).isdigit():
         kwargs["scroll_y"] = str(scroll_y)
+    if str(document_scroll_y).isdigit():
+        kwargs["document_scroll_y"] = str(document_scroll_y)
     return redirect(url_for("document_view", **kwargs))
 
 
