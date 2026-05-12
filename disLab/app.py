@@ -27,10 +27,13 @@ from flask import (
 from markupsafe import Markup, escape
 from werkzeug.utils import secure_filename
 
+try:
+    from version import APP_NAME, APP_PHASE, APP_RELEASE_LABEL, APP_VERSION
+except ImportError:
+    from disLab.version import APP_NAME, APP_PHASE, APP_RELEASE_LABEL, APP_VERSION
 
-APP_NAME = "discourseLab"
-APP_PHASE = "atari-libertinus-ui"
-CURRENT_PHASE_LABEL = "Atari Libertinus UI skin"
+
+CURRENT_PHASE_LABEL = f"{APP_VERSION} - {APP_RELEASE_LABEL}"
 DEFAULT_PROJECT_NAME = "Demo Project"
 DEFAULT_PROJECT_DESCRIPTION = "Initial local discourseLab project."
 DEFAULT_CODE_COLOR = "#f4c542"
@@ -2582,6 +2585,17 @@ def create_app() -> Flask:
             "application/zip",
         )
 
+    @app.route("/admin/integrity")
+    def integrity_check():
+        active_project = get_active_project()
+        return render_template(
+            "integrity.html",
+            title="Integrity Check",
+            active_page="integrity",
+            active_project=active_project,
+            report=build_integrity_report(active_project),
+        )
+
     @app.route("/health")
     def health():
         active_project = get_active_project()
@@ -2589,7 +2603,9 @@ def create_app() -> Flask:
             {
                 "status": "ok",
                 "app": APP_NAME,
+                "version": APP_VERSION,
                 "phase": APP_PHASE,
+                "release_label": APP_RELEASE_LABEL,
                 "active_project_id": active_project["id"],
                 "methodology_mode": active_project["methodology_mode"],
             }
@@ -5915,6 +5931,178 @@ def generate_cooccurrence_edges_csv(active_project: sqlite3.Row, filters: dict) 
         ["source_id", "source_label", "source_type", "target_id", "target_label", "target_type", "weight", "segment_ids"],
         rows,
     )
+
+
+def build_integrity_report(active_project: sqlite3.Row) -> dict:
+    db = get_db()
+    checks = [
+        (
+            "Segments without documents",
+            """
+            SELECT COUNT(*) AS count
+            FROM segments s
+            LEFT JOIN documents d ON d.id = s.document_id
+            WHERE d.id IS NULL
+            """,
+        ),
+        (
+            "Segment-code links with missing segments",
+            """
+            SELECT COUNT(*) AS count
+            FROM segment_codes sc
+            LEFT JOIN segments s ON s.id = sc.segment_id
+            WHERE s.id IS NULL
+            """,
+        ),
+        (
+            "Segment-code links with missing codes",
+            """
+            SELECT COUNT(*) AS count
+            FROM segment_codes sc
+            LEFT JOIN codes c ON c.id = sc.code_id
+            WHERE c.id IS NULL
+            """,
+        ),
+        (
+            "Code hierarchy links with missing parents",
+            """
+            SELECT COUNT(*) AS count
+            FROM codes child
+            LEFT JOIN codes parent ON parent.id = child.parent_id
+            WHERE child.parent_id IS NOT NULL
+                AND parent.id IS NULL
+            """,
+        ),
+        (
+            "Segment-marker links with missing segments",
+            """
+            SELECT COUNT(*) AS count
+            FROM segment_discourse_markers sdm
+            LEFT JOIN segments s ON s.id = sdm.segment_id
+            WHERE s.id IS NULL
+            """,
+        ),
+        (
+            "Segment-marker links with missing markers",
+            """
+            SELECT COUNT(*) AS count
+            FROM segment_discourse_markers sdm
+            LEFT JOIN discourse_markers dm ON dm.id = sdm.marker_id
+            WHERE dm.id IS NULL
+            """,
+        ),
+        (
+            "Segment-actor annotations with missing segments",
+            """
+            SELECT COUNT(*) AS count
+            FROM segment_actors sa
+            LEFT JOIN segments s ON s.id = sa.segment_id
+            WHERE s.id IS NULL
+            """,
+        ),
+        (
+            "Segment-actor annotations with missing actors",
+            """
+            SELECT COUNT(*) AS count
+            FROM segment_actors sa
+            LEFT JOIN actors a ON a.id = sa.actor_id
+            WHERE a.id IS NULL
+            """,
+        ),
+        (
+            "Discourse features with missing segments",
+            """
+            SELECT COUNT(*) AS count
+            FROM discourse_features df
+            LEFT JOIN segments s ON s.id = df.segment_id
+            WHERE s.id IS NULL
+            """,
+        ),
+        (
+            "Document-tag links with missing documents",
+            """
+            SELECT COUNT(*) AS count
+            FROM document_tags dt
+            LEFT JOIN documents d ON d.id = dt.document_id
+            WHERE d.id IS NULL
+            """,
+        ),
+        (
+            "Document-tag links with missing tags",
+            """
+            SELECT COUNT(*) AS count
+            FROM document_tags dt
+            LEFT JOIN tags t ON t.id = dt.tag_id
+            WHERE t.id IS NULL
+            """,
+        ),
+    ]
+    check_results = []
+    for label, sql in checks:
+        count = db.execute(sql).fetchone()["count"]
+        check_results.append(
+            {
+                "label": label,
+                "count": count,
+                "status": "ok" if count == 0 else "warning",
+            }
+        )
+
+    project_id = active_project["id"]
+    counts = [
+        (
+            "Documents",
+            "SELECT COUNT(*) AS count FROM documents WHERE project_id = ?",
+        ),
+        (
+            "Codes",
+            "SELECT COUNT(*) AS count FROM codes WHERE project_id = ?",
+        ),
+        (
+            "Memos",
+            "SELECT COUNT(*) AS count FROM memos WHERE project_id = ?",
+        ),
+        (
+            "CDA markers",
+            "SELECT COUNT(*) AS count FROM discourse_markers WHERE project_id = ?",
+        ),
+        (
+            "Actors",
+            "SELECT COUNT(*) AS count FROM actors WHERE project_id = ?",
+        ),
+        (
+            "Analytical relations",
+            "SELECT COUNT(*) AS count FROM relations WHERE project_id = ?",
+        ),
+    ]
+    count_results = [
+        {
+            "label": label,
+            "count": db.execute(sql, (project_id,)).fetchone()["count"],
+        }
+        for label, sql in counts
+    ]
+    count_results.insert(
+        1,
+        {
+            "label": "Segments",
+            "count": db.execute(
+                """
+                SELECT COUNT(*) AS count
+                FROM segments s
+                JOIN documents d ON d.id = s.document_id
+                WHERE d.project_id = ?
+                """,
+                (project_id,),
+            ).fetchone()["count"],
+        },
+    )
+    return {
+        "generated_at": datetime.utcnow().isoformat(timespec="seconds") + "Z",
+        "checks": check_results,
+        "counts": count_results,
+        "warning_count": sum(1 for check in check_results if check["count"]),
+    }
 
 
 def build_codebook_markdown(active_project: sqlite3.Row) -> str:

@@ -340,9 +340,12 @@ function renderNetworkGraph(graph, svg, summary, empty, detail, tooltip) {
     const edges = graph.edges || [];
     svg.textContent = "";
     if (summary) {
-        summary.textContent = `${nodes.length} nodes · ${edges.length} edges · min weight ${graph.meta.min_weight}`;
+        const baseSummary = `${nodes.length} nodes · ${edges.length} edges · min weight ${graph.meta.min_weight}`;
+        summary.textContent = edges.length
+            ? baseSummary
+            : `${baseSummary} · no co-occurrences under current filters`;
     }
-    if (!nodes.length || !edges.length) {
+    if (!nodes.length) {
         if (empty) {
             empty.classList.remove("hidden");
         }
@@ -350,6 +353,13 @@ function renderNetworkGraph(graph, svg, summary, empty, detail, tooltip) {
     }
     if (empty) {
         empty.classList.add("hidden");
+    }
+    if (!edges.length && detail) {
+        detail.innerHTML = `
+            <h2>No visible co-occurrences</h2>
+            <p class="muted-text">The selected filters found assigned items, but no two visible items co-occur in the same segment at the current minimum weight.</p>
+            <p class="muted-text">Try including codes, CDA markers, actors, and discourse features together, lowering the minimum weight, or assigning at least two items to the same segment.</p>
+        `;
     }
 
     const width = Math.max(760, svg.clientWidth || 960);

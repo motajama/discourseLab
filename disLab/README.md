@@ -1,10 +1,18 @@
 # discourseLab
 
-Phase: Atari Libertinus UI skin
+Version: 0.1.0-beta
+
+Phase: beta-prep
+
+Release label: local testing release
 
 discourseLab is a local lightweight qualitative analysis workspace for discourse analysis, critical discourse analysis, grounded theory, and generic qualitative coding.
 
 The current UI pass keeps the local Flask/SQLite app structure and adapts discourseLab to a flat Atari/TOS/GEM-inspired workstation skin using Libertinus typography from Google Fonts. Document and segment source text remains monospace.
+
+For release testing from the repository root, see `TESTING.md`, `RELEASE_CHECKLIST.md`, `CHANGELOG.md`, and `RELEASE_NOTES.md`.
+
+Keep backups of important data. Use the project backup ZIP regularly. Restore from backup is not implemented yet.
 
 ## Installation
 
@@ -52,7 +60,7 @@ Available libraries:
 4. Confirm document text, segment text, selected text previews, and coded excerpts use monospace.
 5. Confirm document coding still supports text selection, segment creation, assignment, and scroll preservation.
 6. Confirm delete confirmations still appear.
-7. Confirm `/health` reports `phase: "atari-libertinus-ui"`.
+7. Confirm `/health` reports `version: "0.1.0-beta"` and `phase: "beta-prep"`.
 8. Restart the app and confirm existing data is still present.
 
 ## Current UI Skin

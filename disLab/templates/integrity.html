@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="page-header">
+    <p class="eyebrow">Admin</p>
+    <h1>Integrity Check</h1>
+    <p>Read-only release smoke check for orphaned records and active-project counts. This page does not repair or delete data.</p>
+</section>
+
+<section class="info-panel">
+    <h2>Summary</h2>
+    <dl class="metadata-list">
+        <div><dt>Project</dt><dd>{{ active_project.name }}</dd></div>
+        <div><dt>Generated</dt><dd>{{ report.generated_at }}</dd></div>
+        <div><dt>Warnings</dt><dd>{{ report.warning_count }}</dd></div>
+    </dl>
+</section>
+
+<section class="dashboard-grid">
+    <article class="info-panel">
+        <h2>Active Project Counts</h2>
+        <ul class="compact-list">
+            {% for item in report.counts %}
+                <li><span>{{ item.label }}</span><span>{{ item.count }}</span></li>
+            {% endfor %}
+        </ul>
+    </article>
+
+    <article class="info-panel">
+        <h2>Orphan Checks</h2>
+        <div class="table-wrap">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Check</th>
+                        <th>Status</th>
+                        <th>Count</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for check in report.checks %}
+                        <tr>
+                            <td>{{ check.label }}</td>
+                            <td><span class="status-badge status-{{ check.status }}">{{ check.status }}</span></td>
+                            <td>{{ check.count }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </article>
+</section>
+{% endblock %}

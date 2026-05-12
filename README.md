@@ -4,11 +4,24 @@ discourseLab is a local, lightweight qualitative analysis workspace for discours
 
 It runs on your own computer in a web browser. It does not require an account, cloud service, npm, Node, React, or a frontend build system. The UI attempts to load Libertinus from Google Fonts when online and falls back to local fonts when offline.
 
-Current phase: **Atari Libertinus UI skin**
+Version: **0.1.0-beta**
+
+Current phase: **beta-prep**
+
+Release label: **local testing release**
 
 The analytical model builder connects project entities such as segments, codes, categories, actors, discourse features, memos, and research questions into explicit analytical relations.
 
 The current UI pass adapts discourseLab to a flat Atari/TOS/GEM-inspired local workstation skin using Libertinus typography from Google Fonts. Document and segment source text remains monospace for careful reading and coding. It does not add analytical features, schema changes, AI, cloud sync, authentication, Node, npm, React, Vue, an external CSS framework, or a frontend build system.
+
+For release testing, read:
+
+- [TESTING.md](TESTING.md)
+- [RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md)
+- [CHANGELOG.md](CHANGELOG.md)
+- [RELEASE_NOTES.md](RELEASE_NOTES.md)
+
+Keep backups of important data. Use the project backup ZIP regularly from the Exports page. Restore from backup is not implemented yet.
 
 ## Atari UI Verification
 
@@ -21,7 +34,7 @@ The current UI pass adapts discourseLab to a flat Atari/TOS/GEM-inspired local w
 7. Confirm document coding still supports text selection, segment creation, assignment, and scroll preservation.
 8. Confirm delete confirmations still appear.
 9. Confirm no external CSS framework or frontend build system was introduced.
-10. Confirm `/health` returns `"phase": "atari-libertinus-ui"`.
+10. Confirm `/health` returns `"version": "0.1.0-beta"` and `"phase": "beta-prep"`.
 
 ## What You Need
 
@@ -369,6 +382,20 @@ disLab/uploads/
 
 Do not delete these files unless you intentionally want to remove your local project data.
 
+## 0.1.0-beta Testing Notes
+
+This is a local testing release. Use non-sensitive test material first, export the complete research package when testing major workflows, and create project backup ZIP files regularly.
+
+Known limitations:
+
+- Restore from backup is not implemented yet.
+- PDF import and OCR are not implemented.
+- Full-text search is not implemented yet.
+- Inter-coder mode is not implemented.
+- Cloud sync and authentication are not implemented.
+- DOCX import extracts text, not full formatting.
+- SVG and network visualizations are exploratory.
+
 ## Troubleshooting
 
 ### `python: command not found`
@@ -418,7 +445,9 @@ http://127.0.0.1:5001
 ## Project Notes
 
 - App name: discourseLab
-- Current phase: Atari Libertinus UI skin
+- Version: 0.1.0-beta
+- Current phase: beta-prep
+- Release label: local testing release
 - Technology: Python, Flask, SQLite, HTML, CSS, vanilla JavaScript
 - Runs locally in your browser
 - No authentication

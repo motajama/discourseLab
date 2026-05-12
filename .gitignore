@@ -4,3 +4,5 @@ disLab/.venv/
 
 disLab/uploads/*
 disLab/exports/*
+disLab/instance/*.sqlite
+disLab/instance/*.sqlite3
