@@ -106,6 +106,14 @@ function setupDocumentSelection() {
         return;
     }
 
+    let isInteractingWithSelectionHelper = false;
+    document.addEventListener("pointerdown", (event) => {
+        isInteractingWithSelectionHelper = helper.contains(event.target);
+    }, true);
+    helper.addEventListener("focusin", () => {
+        isInteractingWithSelectionHelper = true;
+    });
+
     if (clearButton) {
         clearButton.addEventListener("click", () => {
             window.getSelection().removeAllRanges();
@@ -117,12 +125,18 @@ function setupDocumentSelection() {
     document.addEventListener("selectionchange", () => {
         const selection = window.getSelection();
         if (!selection || selection.rangeCount === 0 || selection.isCollapsed) {
+            if (isInteractingWithSelectionHelper && selectedTextInput.value.trim()) {
+                return;
+            }
             clearSegmentSelection(preview, selectedTextInput, startOffsetInput, endOffsetInput, createButton, helper);
             return;
         }
 
         const range = selection.getRangeAt(0);
         if (!textPanel.contains(range.commonAncestorContainer)) {
+            if (isInteractingWithSelectionHelper && selectedTextInput.value.trim()) {
+                return;
+            }
             clearSegmentSelection(preview, selectedTextInput, startOffsetInput, endOffsetInput, createButton, helper);
             return;
         }
